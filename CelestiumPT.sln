@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35013.160
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CelestiumPT", "CelestiumPT\CelestiumPT.vcxproj", "{7A15F594-8EF8-4FF8-889E-7503E6171302}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EditorApp", "EditorApp\EditorApp.vcxproj", "{870DC06C-A00D-4511-8DB7-CB298E6F6F69}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7A15F594-8EF8-4FF8-889E-7503E6171302}.Debug|x64.ActiveCfg = Debug|x64
+		{7A15F594-8EF8-4FF8-889E-7503E6171302}.Debug|x64.Build.0 = Debug|x64
+		{7A15F594-8EF8-4FF8-889E-7503E6171302}.Release|x64.ActiveCfg = Release|x64
+		{7A15F594-8EF8-4FF8-889E-7503E6171302}.Release|x64.Build.0 = Release|x64
+		{870DC06C-A00D-4511-8DB7-CB298E6F6F69}.Debug|x64.ActiveCfg = Debug|x64
+		{870DC06C-A00D-4511-8DB7-CB298E6F6F69}.Debug|x64.Build.0 = Debug|x64
+		{870DC06C-A00D-4511-8DB7-CB298E6F6F69}.Release|x64.ActiveCfg = Release|x64
+		{870DC06C-A00D-4511-8DB7-CB298E6F6F69}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BE54F391-7388-4DD1-9C3D-5505056AEF90}
+	EndGlobalSection
+EndGlobal
