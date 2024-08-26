@@ -26,7 +26,7 @@ Application::~Application()
 
 void Application::run()
 {
-	printf("start run..\n");
+	fprintf(stdout, "start run..\n");
 	//int width, height;
 	glClearColor(0.f, 0.24f, 0.3f, 1.f);
 
@@ -86,7 +86,7 @@ void Application::run()
 
 void Application::initialize()
 {
-	printf("initializing app\n");
+	fprintf(stdout, "initializing app\n");
 	glfwSetErrorCallback(glfw_error_callback);
 
 	if (!glfwInit()) exit(EXIT_FAILURE);
@@ -125,7 +125,7 @@ void Application::initialize()
 
 void Application::close()
 {
-	printf("closing app\n");
+	fprintf(stdout, "closing app\n");
 
 	ImGui_ImplGlfw_Shutdown();
 	ImGui_ImplOpenGL3_Shutdown();
