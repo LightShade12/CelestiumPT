@@ -5,6 +5,7 @@
 #include <cstdint>
 
 struct CudaAPI;
+struct CelestiumPT_API;
 
 class Renderer
 {
@@ -28,6 +29,7 @@ private:
 	uint32_t m_NativeRenderResolutionHeight = NULL;
 
 	CudaAPI* m_CudaResourceAPI = nullptr;
+	CelestiumPT_API* m_CelestiumPTResourceAPI = nullptr;
 
 	//cudaEvent_t start, stop;
 

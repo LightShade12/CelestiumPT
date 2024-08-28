@@ -111,11 +111,13 @@
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="src\kernel.cu" />
+    <CudaCompile Include="src\ErrorCheck.cu" />
+    <CudaCompile Include="src\Integrator.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\CelestiumPT.hpp" />
-    <ClInclude Include="src\kernel.hpp" />
+    <ClInclude Include="src\ErrorCheck.cuh" />
+    <ClInclude Include="src\Integrator.cuh" />
     <ClInclude Include="src\Renderer.hpp" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
     <ClInclude Include="thirdparty\glad\include\KHR\khrplatform.h" />
