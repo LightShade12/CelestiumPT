@@ -87,26 +87,22 @@ void Renderer::renderFrame()
 		render_target_texture_resource_descriptor.resType = cudaResourceTypeArray;
 		render_target_texture_resource_descriptor.res.array.array = render_target_texture_sub_resource_array;
 	}
-	cudaSurfaceObject_t render_target_texture_surface_object;
-	cudaCreateSurfaceObject(&render_target_texture_surface_object, &render_target_texture_resource_descriptor);
 
+	//prepare globals--------------------
+	cudaCreateSurfaceObject(&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object), &render_target_texture_resource_descriptor);
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.frameidx = g_frameIndex;
-	IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals, render_target_texture_surface_object,
-		m_CudaResourceAPI->m_BlockGridDimensions, m_CudaResourceAPI->m_ThreadBlockDimensions,
-		m_NativeRenderResolutionWidth,
-		m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.resolution = make_float2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+
+	IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+		m_CudaResourceAPI->m_BlockGridDimensions, m_CudaResourceAPI->m_ThreadBlockDimensions);
 	g_frameIndex++;
-	//invokeRenderKernel(render_target_texture_surface_object, m_BufferWidth, m_BufferHeight,
-		//m_BlockGridDimensions, m_ThreadBlockDimensions, m_CurrentCamera.getDeviceCamera(), m_DeviceSceneData, m_FrameIndex,
-		//thrust::raw_pointer_cast(m_AccumulationFrameBuffer->ColorDataBuffer.data()));
 
 	checkCudaErrors(cudaGetLastError());
-
 	checkCudaErrors(cudaDeviceSynchronize());
 	//----
 
 	//post render cuda---------------------------------------------------------------------------------
-	cudaDestroySurfaceObject(render_target_texture_surface_object);
+	cudaDestroySurfaceObject(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object);
 	cudaGraphicsUnmapResources(1, &(m_CudaResourceAPI->m_CompositeRenderTargetTextureCudaResource));
 	cudaStreamSynchronize(0);
 	//m_FrameIndex++;

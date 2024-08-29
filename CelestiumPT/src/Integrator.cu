@@ -20,31 +20,29 @@ __device__ float get1D_PCGHash(uint32_t& seed) { return randF_PCGHash(seed); };
 __device__ float2 get2D_PCGHash(uint32_t& seed) { return make_float2(get1D_PCGHash(seed), get1D_PCGHash(seed)); };
 __device__ float2 getPixel2D_PCGHash(uint32_t& seed) { return get2D_PCGHash(seed); };
 
-void IntegratorPipeline::invokeRenderKernel(IntegratorGlobals globals, cudaSurfaceObject_t composite_render_surface_obj, dim3 block_grid_dims, dim3 thread_block_dims, int frame_width, int frame_height)
+void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& globals, dim3 block_grid_dims, dim3 thread_block_dims)
 {
-	renderKernel << < block_grid_dims, thread_block_dims >> > (globals, composite_render_surface_obj, frame_width, frame_height);
+	renderKernel << < block_grid_dims, thread_block_dims >> > (globals);
 };
 
-__global__ void renderKernel(IntegratorGlobals globals, cudaSurfaceObject_t composite_render_surface_obj, int frame_width, int frame_height)
+__global__ void renderKernel(IntegratorGlobals globals)
 {
 	int thread_pixel_coord_x = threadIdx.x + blockIdx.x * blockDim.x;
 	int thread_pixel_coord_y = threadIdx.y + blockIdx.y * blockDim.y;
+	float2 frameres = globals.FrameBuffer.resolution;
 
-	if ((thread_pixel_coord_x >= frame_width) || (thread_pixel_coord_y >= frame_height)) return;
+	if ((thread_pixel_coord_x >= frameres.x) || (thread_pixel_coord_y >= frameres.y)) return;
 
-	//float3 outcolor = { (float)thread_pixel_coord_x / frame_width,(float)thread_pixel_coord_y / frame_height,0.5 };
-	float3 sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, { (float)thread_pixel_coord_x,(float)thread_pixel_coord_y },
-		frame_width, frame_height);
+	float3 sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, { (float)thread_pixel_coord_x,(float)thread_pixel_coord_y });
 
 	float4 fragcolor = { sampled_radiance.x,sampled_radiance.y,sampled_radiance.z, 1 };
 
-	surf2Dwrite(fragcolor, composite_render_surface_obj, thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
+	surf2Dwrite(fragcolor, globals.FrameBuffer.composite_render_surface_object, thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
 }
 
-__device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel, int frame_width, int frame_height)
+__device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel)
 {
-	uint32_t seed = ppixel.x + ppixel.y * frame_width;
+	uint32_t seed = ppixel.x + ppixel.y * globals.FrameBuffer.resolution.x;
 	seed *= globals.frameidx;
-	//return make_float3(ppixel.x / frame_width, ppixel.y / frame_height, 0.5);
 	return make_float3(get1D_PCGHash(seed), get1D_PCGHash(seed), get1D_PCGHash(seed));
 };

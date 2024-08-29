@@ -118,6 +118,10 @@
     <ClInclude Include="include\CelestiumPT.hpp" />
     <ClInclude Include="src\ErrorCheck.cuh" />
     <ClInclude Include="src\Integrator.cuh" />
+    <ClInclude Include="src\maths\maths_LinearAlgebra.cuh" />
+    <ClInclude Include="src\maths\matrix.cuh" />
+    <ClInclude Include="src\maths\vector_maths.cuh" />
+    <ClInclude Include="src\maths\vector_types_extension.cuh" />
     <ClInclude Include="src\Renderer.hpp" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
     <ClInclude Include="thirdparty\glad\include\KHR\khrplatform.h" />
