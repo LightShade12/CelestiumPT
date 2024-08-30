@@ -44,12 +44,38 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 {
 	uint32_t seed = ppixel.x + ppixel.y * globals.FrameBuffer.resolution.x;
 	seed *= globals.frameidx;
-	//int2 frameres = globals.FrameBuffer.resolution;
-	//float2 screen_uv = { (ppixel.x / frameres.x),(ppixel.y / frameres.y) };
+	int2 frameres = globals.FrameBuffer.resolution;
+	float2 screen_uv = { (ppixel.x / frameres.x),(ppixel.y / frameres.y) };
+	screen_uv = screen_uv * 2 - 1;
+	Ray primary_ray = globals.SceneDescriptor.dev_camera->generateRay(frameres.x, frameres.y, screen_uv);
 
-	//Ray primary_ray = globals.SceneDescriptor.dev_camera->generateRay(frameres.x, frameres.y, screen_uv);
+	float3 L = IntegratorPipeline::Li(globals, primary_ray);
 
-	
+	//return make_float3(screen_uv);
+	//return make_float3(get2D_PCGHash(seed), get1D_PCGHash(seed));
+	return L;
+}
 
-	return make_float3(get2D_PCGHash(seed), get1D_PCGHash(seed));
+__device__ bool hitsphere(const Ray& ray) {
+	float3 center = { 0,0,20.5 };
+	float radius = 5;
+	float3 oc = center - ray.getOrigin();
+	float a = dot(ray.getDirection(), ray.getDirection());
+	float b = -2.0 * dot(ray.getDirection(), oc);
+	float c = dot(oc, oc) - radius * radius;
+	float discriminant = b * b - 4 * a * c;
+	return (discriminant >= 0);
+}
+
+__device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray)
+{
+	float3 unit_direction = normalize(ray.getDirection());
+	float a = 0.5f * (unit_direction.y + 1.0);
+
+	if (hitsphere(ray))return make_float3(1, 0, 0);
+
+	//return make_float3(0, unit_direction.y, 0);
+	//return (1.0f - a) * make_float3(0, 0, 1) + a * make_float3(1, 0, 0);
+	//return unit_direction;
+	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
 };

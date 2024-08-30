@@ -17,6 +17,7 @@ static void glfw_error_callback(int error, const char* description)
 Application::Application()
 {
 	initialize();
+	m_EditorData.m_selected_camera = m_Renderer.getCurrentCamera();
 }
 
 Application::~Application()
@@ -54,6 +55,15 @@ void Application::run()
 
 			ImGui::Begin("Hello World");
 			ImGui::Text("This is a window");
+			bool updateCam = false;
+
+			updateCam |= ImGui::InputFloat3("Camera translation", m_EditorData.m_selected_camera->getTranslationPtr());
+			if (ImGui::SliderAngle("camera X axis rot", &m_EditorData.camera_x_rot_rad))
+			{
+				updateCam |= true; m_EditorData.m_selected_camera->rotate({ 1,0,0 }, 0.5);
+			};
+
+			if (updateCam)m_EditorData.m_selected_camera->updateDevice();
 			ImGui::End();
 
 			ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);

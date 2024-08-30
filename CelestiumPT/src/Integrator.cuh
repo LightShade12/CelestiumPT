@@ -66,6 +66,6 @@ namespace IntegratorPipeline {
 	__device__ void Intersect();
 	__device__ bool IntersectP();
 	__device__ bool Unoccluded();
-	__device__ float3 Li();
+	__device__ float3 Li(const IntegratorGlobals& globals, const Ray& ray);
 	__device__ float3 LiRandomWalk();
 }

@@ -7,8 +7,8 @@ class DeviceCamera;
 //source must be compiled by nvcc
 class HostCamera {
 public:
+	HostCamera() = default;
 	explicit HostCamera(DeviceCamera* dev_camera);
-
 	//apply/construct matrix and send off to device
 	void updateDevice();
 

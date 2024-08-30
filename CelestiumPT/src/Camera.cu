@@ -26,11 +26,21 @@ void HostCamera::updateDevice()
 	}
 }
 
+__host__ __device__ float deg2rad(float degree)
+{
+	float const PI = 3.14159265359f;
+	return (degree * (PI / 180.f));
+}
+
 __device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, float2 screen_uv)
 {
 	float3 pos = make_float3(viewMatrix[3]);
 
-	float film_plane_height = 2.0f;
+	float vertical_fov_radians = deg2rad(60);
+	float theta = vertical_fov_radians / 2;
+	float fov_factor = tan(theta / 2.0f);
+
+	float film_plane_height = 2.0f * fov_factor;
 	float film_plane_width = film_plane_height * ((float)frame_width / frame_height);
 	float film_plane_distance = 1;
 
@@ -39,10 +49,12 @@ __device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, floa
 	float3 forward = make_float3(viewMatrix[2]);
 
 	//doing it like this intead of matmul circumvents the issue of translated raydir
-	float3 sample_pt = (right * film_plane_width * screen_uv.x) +
+	float3 sample_pt =
+		(right * film_plane_width * screen_uv.x) +
 		(up * film_plane_height * screen_uv.y) +
 		(forward * film_plane_distance);
 
 	float3 raydir = normalize(sample_pt);
+
 	return Ray(pos, raydir);
 };

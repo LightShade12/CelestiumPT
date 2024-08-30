@@ -1,5 +1,5 @@
 #include "Renderer.hpp"
-#include "HostCamera.hpp"
+//#include "HostCamera.hpp"
 #include "ErrorCheck.cuh"
 #include <cuda_gl_interop.h>
 #include "Integrator.cuh"
@@ -29,16 +29,18 @@ Renderer::Renderer()
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
 	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera, sizeof(DeviceCamera));
-	HostCamera camera(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera);
-	camera.setTransform(
+	m_CurrentCamera = HostCamera(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera);
+
+	//TODO: temporary; make this part of initing a camera
+	m_CurrentCamera.setTransform(
 		glm::mat4(
 			glm::vec4(1, 0, 0, 0),
 			glm::vec4(0, 1, 0, 0),
 			glm::vec4(0, 0, -1, 0),
-			glm::vec4(0)
+			glm::vec4(0, 0, 0, 0)
 		)
 	);
-	camera.updateDevice();
+	m_CurrentCamera.updateDevice();
 }
 
 void Renderer::resizeResolution(int width, int height)
