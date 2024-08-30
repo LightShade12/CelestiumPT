@@ -1,9 +1,12 @@
 #include "Renderer.hpp"
+#include "HostCamera.hpp"
 #include "ErrorCheck.cuh"
 #include <cuda_gl_interop.h>
-//#include "kernel.hpp"
 #include "Integrator.cuh"
 #include <iostream>
+/*
+* Mostly adapter and inter conversion work
+*/
 
 struct CudaAPI
 {
@@ -24,6 +27,18 @@ Renderer::Renderer()
 	//TODO: redundant
 	m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
+
+	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera, sizeof(DeviceCamera));
+	HostCamera camera(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera);
+	camera.setTransform(
+		glm::mat4(
+			glm::vec4(1, 0, 0, 0),
+			glm::vec4(0, 1, 0, 0),
+			glm::vec4(0, 0, -1, 0),
+			glm::vec4(0)
+		)
+	);
+	camera.updateDevice();
 }
 
 void Renderer::resizeResolution(int width, int height)
@@ -91,7 +106,7 @@ void Renderer::renderFrame()
 	//prepare globals--------------------
 	cudaCreateSurfaceObject(&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object), &render_target_texture_resource_descriptor);
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.frameidx = g_frameIndex;
-	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.resolution = make_float2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.resolution = make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
 		m_CudaResourceAPI->m_BlockGridDimensions, m_CudaResourceAPI->m_ThreadBlockDimensions);
@@ -110,6 +125,7 @@ void Renderer::renderFrame()
 
 Renderer::~Renderer()
 {
+	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera);
 	delete m_CudaResourceAPI;
 	delete m_CelestiumPTResourceAPI;
 	glDeleteTextures(1, &m_CompositeRenderTargetTextureName);

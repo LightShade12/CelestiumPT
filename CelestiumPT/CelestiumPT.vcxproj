@@ -111,17 +111,22 @@
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="src\Camera.cu" />
     <CudaCompile Include="src\ErrorCheck.cu" />
     <CudaCompile Include="src\Integrator.cu" />
+    <CudaCompile Include="src\maths\vector_maths.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\CelestiumPT.hpp" />
+    <ClInclude Include="src\Camera.cuh" />
     <ClInclude Include="src\ErrorCheck.cuh" />
+    <ClInclude Include="src\HostCamera.hpp" />
     <ClInclude Include="src\Integrator.cuh" />
-    <ClInclude Include="src\maths\maths_LinearAlgebra.cuh" />
+    <ClInclude Include="src\maths\maths_linear_algebra.cuh" />
     <ClInclude Include="src\maths\matrix.cuh" />
     <ClInclude Include="src\maths\vector_maths.cuh" />
     <ClInclude Include="src\maths\vector_types_extension.cuh" />
+    <ClInclude Include="src\Ray.cuh" />
     <ClInclude Include="src\Renderer.hpp" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
     <ClInclude Include="thirdparty\glad\include\KHR\khrplatform.h" />

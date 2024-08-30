@@ -29,7 +29,7 @@ __global__ void renderKernel(IntegratorGlobals globals)
 {
 	int thread_pixel_coord_x = threadIdx.x + blockIdx.x * blockDim.x;
 	int thread_pixel_coord_y = threadIdx.y + blockIdx.y * blockDim.y;
-	float2 frameres = globals.FrameBuffer.resolution;
+	int2 frameres = globals.FrameBuffer.resolution;
 
 	if ((thread_pixel_coord_x >= frameres.x) || (thread_pixel_coord_y >= frameres.y)) return;
 
@@ -44,5 +44,12 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 {
 	uint32_t seed = ppixel.x + ppixel.y * globals.FrameBuffer.resolution.x;
 	seed *= globals.frameidx;
-	return make_float3(get1D_PCGHash(seed), get1D_PCGHash(seed), get1D_PCGHash(seed));
+	//int2 frameres = globals.FrameBuffer.resolution;
+	//float2 screen_uv = { (ppixel.x / frameres.x),(ppixel.y / frameres.y) };
+
+	//Ray primary_ray = globals.SceneDescriptor.dev_camera->generateRay(frameres.x, frameres.y, screen_uv);
+
+	
+
+	return make_float3(get2D_PCGHash(seed), get1D_PCGHash(seed));
 };
