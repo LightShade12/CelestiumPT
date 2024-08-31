@@ -7,6 +7,12 @@
 #include <glad/include/glad/glad.h>
 #define GLFW_INCLUDE_NONE
 #include <glfw/include/GLFW/glfw3.h>
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
+
 #include <iostream>
 
 static void glfw_error_callback(int error, const char* description)
@@ -14,16 +20,30 @@ static void glfw_error_callback(int error, const char* description)
 	fprintf(stderr, "Error: %s\n", description);
 }
 
-Application::Application()
+static void print_matrix(const glm::mat4& mat) {
+	printf("| %.3f %.3f %.3f %.3f |\n", mat[0].x, mat[1].x, mat[2].x, mat[3].x);
+	printf("| %.3f %.3f %.3f %.3f |\n", mat[0].y, mat[1].y, mat[2].y, mat[3].y);
+	printf("| %.3f %.3f %.3f %.3f |\n", mat[0].z, mat[1].z, mat[2].z, mat[3].z);
+	printf("| %.3f %.3f %.3f %.3f |\n\n\n", mat[0].w, mat[1].w, mat[2].w, mat[3].w);
+}
+
+bool processInput(GLFWwindow* window, Camera* camera, float delta);
+bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts);
+
+Application::Application() : m_Camera()
 {
 	initialize();
-	m_EditorData.m_selected_camera = m_Renderer.getCurrentCamera();
+
+	m_Camera = Camera(m_Renderer.getCurrentCamera());
 }
 
 Application::~Application()
 {
 	close();
 }
+
+float deltaTime = 0.0f;	// Time between current frame and last frame
+float lastFrame = 0.0f; // Time of last frame
 
 void Application::run()
 {
@@ -57,13 +77,21 @@ void Application::run()
 			ImGui::Text("This is a window");
 			bool updateCam = false;
 
-			updateCam |= ImGui::InputFloat3("Camera translation", m_EditorData.m_selected_camera->getTranslationPtr());
-			if (ImGui::SliderAngle("camera X axis rot", &m_EditorData.camera_x_rot_rad))
-			{
-				updateCam |= true; m_EditorData.m_selected_camera->rotate({ 1,0,0 }, 0.5);
-			};
+			updateCam |= ImGui::DragFloat3("Camera translation", &m_Camera.position.x);
 
-			if (updateCam)m_EditorData.m_selected_camera->updateDevice();
+			updateCam |= processMouse(m_MainWindow, &m_Camera, deltaTime);
+			if (updateCam)
+			{
+				glm::mat4 view = glm::mat4(
+					glm::vec4(m_Camera.right, 0),
+					glm::vec4(m_Camera.up, 0),
+					glm::vec4(m_Camera.forward, 0),
+					glm::vec4(m_Camera.position, 1)
+				);
+
+				m_Camera.host_camera_handle->setTransform(view);
+				m_Camera.host_camera_handle->updateDevice();
+			};
 			ImGui::End();
 
 			ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);
@@ -89,6 +117,10 @@ void Application::run()
 			ImGui::RenderPlatformWindowsDefault();
 			glfwMakeContextCurrent(backup_current_context);
 		}
+
+		float currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
 
 		glfwSwapBuffers(m_MainWindow);
 	}
@@ -144,4 +176,66 @@ void Application::close()
 	glfwDestroyWindow(m_MainWindow);
 	glfwTerminate();
 	exit(EXIT_SUCCESS);
+}
+
+glm::vec2 lastmousepos = { 0,0 };
+
+bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts)
+{
+	double xpos, ypos;
+	glfwGetCursorPos(window, &xpos, &ypos);
+
+	glm::vec2 mousePos = { xpos,ypos };
+	glm::vec2 delta = (mousePos - lastmousepos) * 0.002f;
+	lastmousepos = mousePos;
+
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != GLFW_PRESS) {
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		return false;
+	}
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	bool moved = false;
+
+	constexpr glm::vec3 up(0, 1, 0);
+	camera->right = glm::cross(camera->forward, up);
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	{
+		camera->position += camera->speed * delta_ts * camera->forward; moved |= true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	{
+		camera->position -= camera->speed * delta_ts * camera->forward; moved |= true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	{
+		camera->position -= camera->speed * delta_ts * camera->right; moved |= true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	{
+		camera->position += camera->speed * delta_ts * camera->right; moved |= true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+	{
+		camera->position += camera->speed * delta_ts * camera->up; moved |= true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	{
+		camera->position -= camera->speed * delta_ts * camera->up; moved |= true;
+	}
+
+	if (delta.x != 0.0f || delta.y != 0.0f)
+	{
+		float pitchDelta = delta.y * camera->rot_speed;
+		float yawDelta = delta.x * camera->rot_speed;
+
+		glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, camera->right),
+			glm::angleAxis(-yawDelta, up)));
+		camera->forward = glm::rotate(q, camera->forward);
+
+		moved = true;
+	}
+
+	return moved;
 }

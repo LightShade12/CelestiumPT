@@ -56,26 +56,45 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 	return L;
 }
 
-__device__ bool hitsphere(const Ray& ray) {
-	float3 center = { 0,0,20.5 };
+struct Hitpayload {
+	float dist = -1;
+	float3 w_pos{};
+	float3 w_norm{};
+};
+
+__device__ Hitpayload hitsphere(const Ray& ray) {
+	float3 center = { 0,0,-20 };
 	float radius = 5;
 	float3 oc = center - ray.getOrigin();
 	float a = dot(ray.getDirection(), ray.getDirection());
 	float b = -2.0 * dot(ray.getDirection(), oc);
 	float c = dot(oc, oc) - radius * radius;
 	float discriminant = b * b - 4 * a * c;
-	return (discriminant >= 0);
+
+	Hitpayload payload;
+	if (discriminant < 0) {
+		payload.dist = -1;
+	}
+	else {
+		payload.dist = (-b - sqrtf(discriminant)) / (2.0 * a);
+		payload.w_pos = ray.getOrigin() + (ray.getDirection() * payload.dist);
+		payload.w_norm = normalize(payload.w_pos - center);
+	}
+	return payload;
 }
 
 __device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray)
 {
-	float3 unit_direction = normalize(ray.getDirection());
-	float a = 0.5f * (unit_direction.y + 1.0);
+	Hitpayload hitpayload = hitsphere(ray);
 
-	if (hitsphere(ray))return make_float3(1, 0, 0);
+	if (hitpayload.dist < 0) {
+		//miss
+		float3 unit_direction = normalize(ray.getDirection());
+		float a = 0.5f * (unit_direction.y + 1.0);
+		return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
+	}
+	//hit
+	return hitpayload.w_norm;
 
-	//return make_float3(0, unit_direction.y, 0);
-	//return (1.0f - a) * make_float3(0, 0, 1) + a * make_float3(1, 0, 0);
-	//return unit_direction;
-	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
+	return make_float3(1, 0, 0);
 };

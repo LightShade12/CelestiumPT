@@ -37,7 +37,7 @@ Renderer::Renderer()
 			glm::vec4(1, 0, 0, 0),
 			glm::vec4(0, 1, 0, 0),
 			glm::vec4(0, 0, -1, 0),
-			glm::vec4(0, 0, 0, 0)
+			glm::vec4(2, 2, -10, 0)
 		)
 	);
 	m_CurrentCamera.updateDevice();
