@@ -63,7 +63,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib</AdditionalDependencies>
+      <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib;cudadevrt.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)thirdparty\glfw\lib-vc2022;$(SolutionDir)CelestiumPT\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -85,7 +85,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)thirdparty\glfw\lib-vc2022;$(SolutionDir)CelestiumPT\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib</AdditionalDependencies>
+      <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib;cudadevrt.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

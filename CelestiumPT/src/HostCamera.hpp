@@ -20,17 +20,6 @@ public:
 		m_transform = mat;
 	}
 
-	float* getTranslationPtr() {
-		return &(m_transform[3][0]);
-	}
-
-	void rotate(glm::vec3 axis, float radians) {
-		m_transform = glm::rotate(m_transform, radians, axis);
-	}
-	void translate(glm::vec3 pos) {
-		m_transform = glm::translate(m_transform, pos);
-	}
-
 public:
 	glm::mat4 m_transform;
 	DeviceCamera* m_device_camera = nullptr;//non-owning link

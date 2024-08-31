@@ -74,9 +74,9 @@
       </Include>
     </CudaCompile>
     <CudaLink>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
+      <AdditionalDependencies>cudadevrt.lib;</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(CudaToolkitBinDir)/crt;</AdditionalLibraryDirectories>
+      <AdditionalOptions>-lcudadevrt %(AdditionalOptions)</AdditionalOptions>
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -108,6 +108,8 @@
     </CudaCompile>
     <CudaLink>
       <AdditionalLibraryDirectories>$(CudaToolkitBinDir)/crt;</AdditionalLibraryDirectories>
+      <AdditionalOptions>-lcudadevrt %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>cudadevrt.lib;</AdditionalDependencies>
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -115,12 +117,15 @@
     <CudaCompile Include="src\ErrorCheck.cu" />
     <CudaCompile Include="src\Integrator.cu" />
     <CudaCompile Include="src\maths\vector_maths.cu" />
+    <CudaCompile Include="src\Scene.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\CelestiumPT.hpp" />
     <ClInclude Include="src\Camera.cuh" />
+    <ClInclude Include="src\DeviceScene.cuh" />
     <ClInclude Include="src\ErrorCheck.cuh" />
     <ClInclude Include="src\HostCamera.hpp" />
+    <ClInclude Include="src\HostScene.hpp" />
     <ClInclude Include="src\Integrator.cuh" />
     <ClInclude Include="src\maths\maths_linear_algebra.cuh" />
     <ClInclude Include="src\maths\matrix.cuh" />
@@ -128,13 +133,16 @@
     <ClInclude Include="src\maths\vector_types_extension.cuh" />
     <ClInclude Include="src\Ray.cuh" />
     <ClInclude Include="src\Renderer.hpp" />
+    <ClInclude Include="src\SceneGeometry.cuh" />
+    <ClInclude Include="src\ShapeIntersection.cuh" />
+    <ClInclude Include="src\Triangle.cuh" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
     <ClInclude Include="thirdparty\glad\include\KHR\khrplatform.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Renderer.cpp">
+    <CudaCompile Include="src\Renderer.cu">
       <FileType>Document</FileType>
-    </ClCompile>
+    </CudaCompile>
     <ClCompile Include="thirdparty\glad\src\glad.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

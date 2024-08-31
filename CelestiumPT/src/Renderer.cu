@@ -3,6 +3,11 @@
 #include "ErrorCheck.cuh"
 #include <cuda_gl_interop.h>
 #include "Integrator.cuh"
+
+#include "SceneGeometry.cuh"
+#include "DeviceScene.cuh"
+#include "Triangle.cuh"
+
 #include <iostream>
 /*
 * Mostly adapter and inter conversion work
@@ -17,6 +22,7 @@ struct CudaAPI
 
 struct CelestiumPT_API
 {
+	DeviceScene DeviceScene;
 	IntegratorGlobals m_IntegratorGlobals;
 };
 
@@ -29,7 +35,21 @@ Renderer::Renderer()
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
 	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera, sizeof(DeviceCamera));
+	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_aggregate, sizeof(SceneGeometry));
+
 	m_CurrentCamera = HostCamera(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera);
+	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_aggregate);
+	m_CurrentScene = HostScene(&(m_CelestiumPTResourceAPI->DeviceScene));
+
+	Triangle tri;
+	tri.vertex0 = { {0,3.75,-10},{0,0,1} };
+	tri.vertex1 = { {3,-1.0,-10},{0,0,1} };
+	tri.vertex2 = { {-3,-1.0,-10},{0,0,1} };
+	tri.face_normal = { 0,0,1 };
+
+
+
+	m_CurrentScene.AddTriangle(tri);
 
 	//TODO: temporary; make this part of initing a camera
 	m_CurrentCamera.setTransform(
@@ -37,7 +57,7 @@ Renderer::Renderer()
 			glm::vec4(1, 0, 0, 0),
 			glm::vec4(0, 1, 0, 0),
 			glm::vec4(0, 0, -1, 0),
-			glm::vec4(2, 2, -10, 0)
+			glm::vec4(0, 0, 10, 0)
 		)
 	);
 	m_CurrentCamera.updateDevice();
@@ -128,6 +148,7 @@ void Renderer::renderFrame()
 Renderer::~Renderer()
 {
 	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera);
+	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_aggregate);
 	delete m_CudaResourceAPI;
 	delete m_CelestiumPTResourceAPI;
 	glDeleteTextures(1, &m_CompositeRenderTargetTextureName);

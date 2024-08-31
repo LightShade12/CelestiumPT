@@ -1,26 +1,16 @@
 #pragma once
 #include "maths/maths_linear_algebra.cuh"
+#include "SceneGeometry.cuh"
 #include "Camera.cuh"
 #include <cuda_runtime.h>
 #include <vector_types.h>
 #include <glad/include/glad/glad.h>
 #include <cuda_gl_interop.h>
-
 #include <cstdint>
 
-struct ShapeIntersection {
-};
+struct Triangle;
+struct ShapeIntersection;
 
-class Mesh {
-	__device__ ShapeIntersection intersect(const Ray& ray);
-	__device__ bool intersectP(const Ray& ray);
-	Mat4 modelMatrix;
-};
-
-class Primitive {
-	ShapeIntersection intersect(const Ray& ray);
-	bool intersectP(const Ray& ray);
-};
 class Light {};
 
 struct FrameBufferStorage {
@@ -31,6 +21,14 @@ public:
 	cudaSurfaceObject_t albedo_render_surface_object;
 };
 
+class Mesh {
+	__device__ ShapeIntersection intersect(const Ray& ray);
+	__device__ bool intersectP(const Ray& ray);
+	int tri_idx = -1;
+	size_t tri_count = 0;
+	Mat4 modelMatrix;
+};
+
 struct DeviceSceneDescriptor {
 	template<typename T>
 	struct DeviceBuffer {
@@ -38,7 +36,7 @@ struct DeviceSceneDescriptor {
 		size_t size = 0;
 	};
 
-	Primitive* dev_aggregate = nullptr;
+	SceneGeometry* dev_aggregate = nullptr;
 	DeviceBuffer<Light>dev_lights;
 	DeviceBuffer<Light>dev_inf_lights;
 	DeviceCamera* dev_camera = nullptr;
@@ -63,9 +61,10 @@ namespace IntegratorPipeline {
 
 	__device__ float3 evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel);
 
-	__device__ void Intersect();
-	__device__ bool IntersectP();
-	__device__ bool Unoccluded();
+	//TraceRay function
+	__device__ ShapeIntersection Intersect(const IntegratorGlobals& globals, const Ray& ray);
+	__device__ bool IntersectP(const IntegratorGlobals& globals, const Ray& ray);
+	__device__ bool Unoccluded(const IntegratorGlobals& globals, const Ray& ray);
 	__device__ float3 Li(const IntegratorGlobals& globals, const Ray& ray);
-	__device__ float3 LiRandomWalk();
+	__device__ float3 LiRandomWalk(const IntegratorGlobals& globals, const Ray& ray);
 }
