@@ -4,6 +4,7 @@ class Mesh;
 class Ray;
 struct Triangle;
 
+//Raw Buffer Data
 struct SceneGeometry {
 	__device__ ShapeIntersection intersect(const Ray& ray) { return ShapeIntersection(); };
 	__device__ bool intersectP(const Ray& ray) { return false; };

@@ -6,7 +6,7 @@
 
 #include "SceneGeometry.cuh"
 #include "DeviceScene.cuh"
-#include "Triangle.cuh"
+//#include "Triangle.cuh"
 
 #include <iostream>
 /*
@@ -41,15 +41,17 @@ Renderer::Renderer()
 	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_aggregate);
 	m_CurrentScene = HostScene(&(m_CelestiumPTResourceAPI->DeviceScene));
 
-	Triangle tri;
-	tri.vertex0 = { {0,3.75,-10},{0,0,1} };
-	tri.vertex1 = { {3,-1.0,-10},{0,0,1} };
-	tri.vertex2 = { {-3,-1.0,-10},{0,0,1} };
-	tri.face_normal = { 0,0,1 };
-
-
-
-	m_CurrentScene.AddTriangle(tri);
+	//m_CurrentScene.AddTriangle(
+	//	{ 0,3.75,-10 }, { 0,0,1 },
+	//	{ 3,-1.0,-10 }, { 0,0,1 },
+	//	{ -3,-1.0,-10 }, { 0,0,1 },
+	//	{ 0,0,1 });
+	//
+	//m_CurrentScene.AddTriangle(
+	//	{ 0,-1.75,-7 }, { 0,0,1 },
+	//	{ 3,-8.0,-7 }, { 0,0,1 },
+	//	{ -3,-8.0,-7 }, { 0,0,1 },
+	//	{ 0,0,1 });
 
 	//TODO: temporary; make this part of initing a camera
 	m_CurrentCamera.setTransform(
@@ -57,7 +59,7 @@ Renderer::Renderer()
 			glm::vec4(1, 0, 0, 0),
 			glm::vec4(0, 1, 0, 0),
 			glm::vec4(0, 0, -1, 0),
-			glm::vec4(0, 0, 10, 0)
+			glm::vec4(0, 0.5, 1.5, 0)
 		)
 	);
 	m_CurrentCamera.updateDevice();

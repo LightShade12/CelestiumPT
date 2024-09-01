@@ -121,7 +121,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\CelestiumPT.hpp" />
-    <ClInclude Include="src\Camera.cuh" />
+    <ClInclude Include="src\DeviceCamera.cuh" />
     <ClInclude Include="src\DeviceScene.cuh" />
     <ClInclude Include="src\ErrorCheck.cuh" />
     <ClInclude Include="src\HostCamera.hpp" />

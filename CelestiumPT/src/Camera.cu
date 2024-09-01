@@ -1,5 +1,5 @@
 #include "HostCamera.hpp"
-#include "Camera.cuh"
+#include "DeviceCamera.cuh"
 
 HostCamera::HostCamera(DeviceCamera* dev_camera)
 {
@@ -36,7 +36,7 @@ __device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, floa
 {
 	float3 pos = make_float3(viewMatrix[3]);
 
-	float vertical_fov_radians = deg2rad(60);
+	float vertical_fov_radians = deg2rad(90);
 	float theta = vertical_fov_radians / 2;
 	float fov_factor = tan(theta / 2.0f);
 

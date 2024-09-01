@@ -1,7 +1,7 @@
 #pragma once
 #include "maths/maths_linear_algebra.cuh"
 #include "SceneGeometry.cuh"
-#include "Camera.cuh"
+#include "DeviceCamera.cuh"
 #include <cuda_runtime.h>
 #include <vector_types.h>
 #include <glad/include/glad/glad.h>

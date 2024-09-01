@@ -1,4 +1,5 @@
 #include "Application.hpp"
+#include "ModelImporter.hpp"
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -27,12 +28,16 @@ static void print_matrix(const glm::mat4& mat) {
 	printf("| %.3f %.3f %.3f %.3f |\n\n\n", mat[0].w, mat[1].w, mat[2].w, mat[3].w);
 }
 
-bool processInput(GLFWwindow* window, Camera* camera, float delta);
 bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts);
 
 Application::Application() : m_Camera()
 {
 	initialize();
+
+	HostScene* hostscenehandle = m_Renderer.getCurrentScene();//non owning
+	ModelImporter importer;
+	importer.loadGLTF("../models/test_scene.glb", hostscenehandle);
+	hostscenehandle->syncDeviceGeometry();
 
 	m_Camera = Camera(m_Renderer.getCurrentCamera());
 }

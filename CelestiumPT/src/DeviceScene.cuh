@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Triangle.cuh"
 #include "SceneGeometry.cuh"
 #include <thrust/device_vector.h>
 

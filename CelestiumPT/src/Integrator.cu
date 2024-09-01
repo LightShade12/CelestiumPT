@@ -133,7 +133,7 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 	{
 		const Triangle& tri = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[triangle_idx];
 		ShapeIntersection eval_payload = Intersection(ray, tri, triangle_idx);
-		if (eval_payload.hit_distance < payload.hit_distance) {
+		if (eval_payload.hit_distance < payload.hit_distance && eval_payload.triangle_idx>-1) {
 			payload = eval_payload;
 		}
 	}
@@ -172,8 +172,6 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 //	return payload;
 //}
 
-__device__ float3 ImageInfiniteLight() {};
-
 __device__ float3 SkyShading(const Ray& ray) {
 	float3 unit_direction = normalize(ray.getDirection());
 	float a = 0.5f * (unit_direction.y + 1.0);
@@ -187,14 +185,7 @@ __device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const
 
 __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& ray)
 {
-	//Triangle tri;
-	//tri.vertex0 = { {0,3.75,-10},{0,0,1} };
-	//tri.vertex1 = { {3,-1.0,-10},{0,0,1} };
-	//tri.vertex2 = { {-3,-1.0,-10},{0,0,1} };
-
-	//Hitpayload hitpayload = hitsphere(ray);
 	ShapeIntersection payload = Intersect(globals, ray);
-	//payload.w_norm = { tri.vertex0.normal * payload.bary.x + tri.vertex1.normal * payload.bary.y + tri.vertex2.normal * payload.bary.z };
 
 	//if (hitpayload.dist < 0)
 	if (payload.hit_distance < 0)
@@ -206,5 +197,4 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 	return payload.w_norm;
 
 	return make_float3(1, 0, 0);
-}
-;
+};

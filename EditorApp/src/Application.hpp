@@ -29,7 +29,7 @@ struct Camera {
 	}
 
 	HostCamera* host_camera_handle = nullptr;//non-owning
-	float speed = 15;
+	float speed = 8;
 	float rot_speed = 0.8;
 	glm::vec3 position;
 	glm::vec3 right;
