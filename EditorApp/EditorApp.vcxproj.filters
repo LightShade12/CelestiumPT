@@ -98,5 +98,8 @@
     <ClInclude Include="thirdparty\tinygltf\tiny_gltf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Camera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

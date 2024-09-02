@@ -108,6 +108,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Camera.hpp" />
     <ClInclude Include="src\Application.hpp" />
     <ClInclude Include="src\ModelImporter.hpp" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />

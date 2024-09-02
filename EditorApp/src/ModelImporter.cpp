@@ -15,7 +15,7 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 	status = loadGLTFModel(filepath);
 	if (!status)return false;
 
-	//load textures
+	//load textures	
 	//load materials
 
 	for (std::string extensionname : m_SceneModel.extensionsUsed) {
@@ -39,28 +39,6 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 		}
 
 		if (gltf_node.camera >= 0) {
-			/*tinygltf::Camera gltf_camera = m_SceneModel.cameras[gltf_node.camera];
-			printf("\nfound a camera: %s\n", gltf_camera.name.c_str());
-			glm::vec3 cpos = { gltf_node.translation[0] ,gltf_node.translation[1] ,gltf_node.translation[2] };
-			DustRayTracer::HostCamera drt_camera;
-			setName(drt_camera.getNamePtr(), gltf_camera.name.c_str());
-
-			drt_camera.setPosition(glm::vec3(cpos.x, cpos.y, cpos.z));
-			drt_camera.setVerticalFOV(gltf_camera.perspective.yfov);
-
-			if (gltf_node.rotation.size() > 0) {
-				float qx = gltf_node.rotation[0];
-				float qy = gltf_node.rotation[1];
-				float qz = gltf_node.rotation[2];
-				float qw = gltf_node.rotation[3];
-				glm::quat quaternion(qw, qx, qy, qz);
-				glm::mat4 rotationMatrix = glm::toMat4(quaternion);
-				glm::vec3 forwardDir = -glm::vec3(rotationMatrix[2]);
-				glm::vec3 lookDir = glm::vec3(forwardDir.x, forwardDir.y, forwardDir.z);
-				drt_camera.setLookDir(glm::vec3(lookDir.x, lookDir.y, lookDir.z));
-			}
-
-			m_WorkingScene->addCamera(drt_camera);*/
 			parseCamera(gltf_node);
 		}
 
@@ -236,6 +214,28 @@ bool ModelImporter::loadMaterials(const tinygltf::Model& model)
 
 bool ModelImporter::parseCamera(tinygltf::Node camera_node)
 {
+	/*tinygltf::Camera gltf_camera = m_SceneModel.cameras[gltf_node.camera];
+		printf("\nfound a camera: %s\n", gltf_camera.name.c_str());
+		glm::vec3 cpos = { gltf_node.translation[0] ,gltf_node.translation[1] ,gltf_node.translation[2] };
+		DustRayTracer::HostCamera drt_camera;
+		setName(drt_camera.getNamePtr(), gltf_camera.name.c_str());
+
+		drt_camera.setPosition(glm::vec3(cpos.x, cpos.y, cpos.z));
+		drt_camera.setVerticalFOV(gltf_camera.perspective.yfov);
+
+		if (gltf_node.rotation.size() > 0) {
+			float qx = gltf_node.rotation[0];
+			float qy = gltf_node.rotation[1];
+			float qz = gltf_node.rotation[2];
+			float qw = gltf_node.rotation[3];
+			glm::quat quaternion(qw, qx, qy, qz);
+			glm::mat4 rotationMatrix = glm::toMat4(quaternion);
+			glm::vec3 forwardDir = -glm::vec3(rotationMatrix[2]);
+			glm::vec3 lookDir = glm::vec3(forwardDir.x, forwardDir.y, forwardDir.z);
+			drt_camera.setLookDir(glm::vec3(lookDir.x, lookDir.y, lookDir.z));
+		}
+
+		m_WorkingScene->addCamera(drt_camera);*/
 	return false;
 }
 

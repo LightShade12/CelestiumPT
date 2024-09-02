@@ -93,7 +93,12 @@ void Application::run()
 					glm::vec4(m_Camera.forward, 0),
 					glm::vec4(m_Camera.position, 1)
 				);
-
+				m_Camera.host_camera_handle->setVectors(
+					m_Camera.position,
+					m_Camera.forward,
+					m_Camera.up,
+					m_Camera.right
+				);
 				m_Camera.host_camera_handle->setTransform(view);
 				m_Camera.host_camera_handle->updateDevice();
 			};
@@ -207,27 +212,27 @@ bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts)
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		camera->position += camera->speed * delta_ts * camera->forward; moved |= true;
+		camera->position += camera->movement_speed * delta_ts * camera->forward; moved |= true;
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
-		camera->position -= camera->speed * delta_ts * camera->forward; moved |= true;
+		camera->position -= camera->movement_speed * delta_ts * camera->forward; moved |= true;
 	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
-		camera->position -= camera->speed * delta_ts * camera->right; moved |= true;
+		camera->position -= camera->movement_speed * delta_ts * camera->right; moved |= true;
 	}
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
-		camera->position += camera->speed * delta_ts * camera->right; moved |= true;
+		camera->position += camera->movement_speed * delta_ts * camera->right; moved |= true;
 	}
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 	{
-		camera->position += camera->speed * delta_ts * camera->up; moved |= true;
+		camera->position += camera->movement_speed * delta_ts * camera->up; moved |= true;
 	}
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 	{
-		camera->position -= camera->speed * delta_ts * camera->up; moved |= true;
+		camera->position -= camera->movement_speed * delta_ts * camera->up; moved |= true;
 	}
 
 	if (delta.x != 0.0f || delta.y != 0.0f)

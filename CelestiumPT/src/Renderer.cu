@@ -62,6 +62,12 @@ Renderer::Renderer()
 			glm::vec4(0, 0.5, 1.5, 0)
 		)
 	);
+	m_CurrentCamera.setVectors(
+		glm::vec4(0, 0.5, 1.5, 0),
+		glm::vec4(0, 0, -1, 0),
+		glm::vec4(0, 1, 0, 0),
+		glm::vec4(1, 0, 0, 0)
+	);
 	m_CurrentCamera.updateDevice();
 }
 

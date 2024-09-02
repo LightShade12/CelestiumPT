@@ -50,7 +50,7 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 	seed *= globals.frameidx;
 	int2 frameres = globals.FrameBuffer.resolution;
 	float2 screen_uv = { (ppixel.x / frameres.x),(ppixel.y / frameres.y) };
-	screen_uv = screen_uv * 2 - 1;
+	screen_uv = screen_uv * 2 - 1;//-1->1
 	Ray primary_ray = globals.SceneDescriptor.dev_camera->generateRay(frameres.x, frameres.y, screen_uv);
 
 	float3 L = IntegratorPipeline::Li(globals, primary_ray);
@@ -194,7 +194,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 		return SkyShading(ray);
 	}
 	//hit
-	return payload.w_norm;
+	return payload.bary;
 
 	return make_float3(1, 0, 0);
 };

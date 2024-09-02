@@ -11,6 +11,10 @@ HostCamera::HostCamera(DeviceCamera* dev_camera)
 		mat[2].x, mat[2].y, mat[2].z, mat[2].w,
 		mat[3].x, mat[3].y, mat[3].z, mat[3].w
 	);
+	position = { m_device_camera->position.x,m_device_camera->position.y,m_device_camera->position.z };
+	forward = { m_device_camera->forward.x,m_device_camera->forward.y,m_device_camera->forward.z };
+	up = { m_device_camera->up.x,m_device_camera->up.y,m_device_camera->up.z };
+	right = { m_device_camera->right.x,m_device_camera->right.y,m_device_camera->right.z };
 }
 
 void HostCamera::updateDevice()
@@ -23,6 +27,11 @@ void HostCamera::updateDevice()
 			m_transform[3][0], m_transform[3][1], m_transform[3][2], m_transform[3][3]   // Fourth column
 		);
 		m_device_camera->viewMatrix = mat;
+
+		m_device_camera->position = make_float3(position.x, position.y, position.z);
+		m_device_camera->forward = make_float3(forward.x, forward.y, forward.z);
+		m_device_camera->up = make_float3(up.x, up.y, up.z);
+		m_device_camera->right = make_float3(right.x, right.y, right.z);
 	}
 }
 
@@ -34,27 +43,35 @@ __host__ __device__ float deg2rad(float degree)
 
 __device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, float2 screen_uv)
 {
-	float3 pos = make_float3(viewMatrix[3]);
+	//float3 pos = make_float3(viewMatrix[3]);
 
-	float vertical_fov_radians = deg2rad(90);
+	float vertical_fov_radians = deg2rad(60);
+
 	float theta = vertical_fov_radians / 2;
-	float fov_factor = tan(theta / 2.0f);
+
+	float fov_factor = tanf(theta / 2.0f);
+
+	float aspect_ratio = (float)frame_width / frame_height;
 
 	float film_plane_height = 2.0f * fov_factor;
-	float film_plane_width = film_plane_height * ((float)frame_width / frame_height);
+	float film_plane_width = film_plane_height * aspect_ratio;
 	float film_plane_distance = 1;
 
-	float3 right = make_float3(viewMatrix[0]);
-	float3 up = make_float3(viewMatrix[1]);
-	float3 forward = make_float3(viewMatrix[2]);
+	float3 forward_dir = normalize(forward);
+	float3 right_dir = normalize(cross(forward_dir, make_float3(0, 1, 0)));
+	float3 up_dir = cross(right_dir, forward_dir);
+
+	//float3 forward = make_float3(viewMatrix[2]);
+	//float3 right = make_float3(viewMatrix[0]);
+	//float3 up = make_float3(viewMatrix[1]);
 
 	//doing it like this intead of matmul circumvents the issue of translated raydir
 	float3 sample_pt =
-		(right * film_plane_width * screen_uv.x) +
-		(up * film_plane_height * screen_uv.y) +
-		(forward * film_plane_distance);
+		(right_dir * film_plane_width * screen_uv.x) +
+		(up_dir * film_plane_height * screen_uv.y) +
+		(forward_dir * film_plane_distance);
 
 	float3 raydir = normalize(sample_pt);
 
-	return Ray(pos, raydir);
+	return Ray(position, raydir);
 };
