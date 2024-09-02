@@ -19,6 +19,8 @@ public:
 
 	void renderFrame();
 
+	void clearAccumulation();
+
 	GLuint getCompositeRenderTargetTextureName() const { return m_CompositeRenderTargetTextureName; }
 	
 	HostCamera* getCurrentCamera() { return &m_CurrentCamera; };

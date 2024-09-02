@@ -101,6 +101,7 @@ void Application::run()
 				//);
 				m_Camera.host_camera_handle->setTransform(view);
 				m_Camera.host_camera_handle->updateDevice();
+				m_Renderer.clearAccumulation();
 			};
 			ImGui::End();
 

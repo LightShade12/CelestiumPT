@@ -1,8 +1,8 @@
 #pragma once
-#include <vector_types.h>
 #include "Ray.cuh"
-
-__constant__ const float HIT_EPSILON = 0.001;
+#include "BSDF.cuh"
+#include "maths/constants.cuh"
+#include <vector_types.h>
 
 struct ShapeIntersection {
 	float hit_distance = -1;
@@ -12,11 +12,8 @@ struct ShapeIntersection {
 	float3 w_norm{};
 	bool front_face = true;
 
-	Ray spawnRay(float3 wi);
-};
+	__device__ BSDF getBSDF();
+	__device__ float3 Le();
 
-Ray ShapeIntersection::spawnRay(float3 wi)
-{
-	float3 orig = w_pos + w_norm * HIT_EPSILON;
-	return Ray(orig, wi);
-}
+	__device__ Ray spawnRay(const float3& wi);
+};

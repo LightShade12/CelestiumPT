@@ -1,3 +1,4 @@
+#pragma once
 #include <cuda_runtime.h>
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )

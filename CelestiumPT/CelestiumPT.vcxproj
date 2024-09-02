@@ -118,9 +118,11 @@
     <CudaCompile Include="src\Integrator.cu" />
     <CudaCompile Include="src\maths\vector_maths.cu" />
     <CudaCompile Include="src\Scene.cu" />
+    <CudaCompile Include="src\ShapeIntersection.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\CelestiumPT.hpp" />
+    <ClInclude Include="src\BSDF.cuh" />
     <ClInclude Include="src\DeviceCamera.cuh" />
     <ClInclude Include="src\DeviceScene.cuh" />
     <ClInclude Include="src\ErrorCheck.cuh" />

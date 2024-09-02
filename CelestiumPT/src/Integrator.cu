@@ -1,6 +1,9 @@
 #include "Integrator.cuh"
 #include "Triangle.cuh"
 #include "ShapeIntersection.cuh"
+#include "BSDF.cuh"
+
+#include "maths/constants.cuh"
 
 #include "device_launch_parameters.h"
 #define __CUDACC__
@@ -39,7 +42,17 @@ __global__ void renderKernel(IntegratorGlobals globals)
 
 	float3 sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, { (float)thread_pixel_coord_x,(float)thread_pixel_coord_y });
 
+	if (globals.IntegratorCFG.accumulate) {
+		globals.FrameBuffer.accumulation_framebuffer
+			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] += sampled_radiance;
+		sampled_radiance = globals.FrameBuffer.accumulation_framebuffer
+			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] / (globals.frameidx);
+	}
+
 	float4 fragcolor = { sampled_radiance.x,sampled_radiance.y,sampled_radiance.z, 1 };
+
+	//EOTF
+	fragcolor = make_float4(sqrtf(sampled_radiance.x), sqrtf(sampled_radiance.y), sqrtf(sampled_radiance.z), 1);
 
 	surf2Dwrite(fragcolor, globals.FrameBuffer.composite_render_surface_object, thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
 }
@@ -62,9 +75,8 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 	//return make_float3(get2D_PCGHash(seed), get1D_PCGHash(seed));
 	return L;
 }
-__constant__ const float TRIANGLE_EPSILON = 0.000001;//TODO: place proper
 
-__device__ ShapeIntersection Intersection(const Ray& ray, const Triangle& triangle, int triangle_idx)
+__device__ ShapeIntersection IntersectionStage(const Ray& ray, const Triangle& triangle, int triangle_idx)
 {
 	ShapeIntersection payload;
 
@@ -135,7 +147,7 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 	for (size_t triangle_idx = 0; triangle_idx < globals.SceneDescriptor.dev_aggregate->DeviceTrianglesCount; triangle_idx++)
 	{
 		const Triangle& tri = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[triangle_idx];
-		ShapeIntersection eval_payload = Intersection(ray, tri, triangle_idx);
+		ShapeIntersection eval_payload = IntersectionStage(ray, tri, triangle_idx);
 		if (eval_payload.hit_distance < payload.hit_distance && eval_payload.triangle_idx>-1) {
 			payload = eval_payload;
 		}
@@ -186,6 +198,27 @@ __device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const
 	return IntegratorPipeline::LiRandomWalk(globals, ray, seed);
 }
 
+//TODO: replace with tangent space version
+__device__ float3 sampleCosineWeightedHemisphere(const float3& normal, float2 xi) {
+	// Generate a cosine-weighted direction in the local frame
+	float phi = 2.0f * PI * xi.x;
+	float cosTheta = sqrtf(xi.y);//TODO: might have to switch with sinTheta
+	float sinTheta = sqrtf(1.0f - xi.y);
+
+	float3 H;
+	H.x = sinTheta * cosf(phi);
+	H.y = sinTheta * sinf(phi);
+	H.z = cosTheta;
+
+	// Create an orthonormal basis (tangent, bitangent, normal)
+	float3 up = fabs(normal.z) < 0.999f ? make_float3(0.0f, 0.0f, 1.0f) : make_float3(1.0f, 0.0f, 0.0f);
+	float3 tangent = normalize(cross(up, normal));
+	float3 bitangent = cross(normal, tangent);
+
+	// Transform the sample direction from local space to world space
+	return normalize(tangent * H.x + bitangent * H.y + normal * H.z);
+}
+
 __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed)
 {
 	Ray ray = in_ray;
@@ -203,24 +236,28 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 		if (payload.hit_distance < 0)
 		{
 			light += SkyShading(ray) * throughtput;
+			break;
 		}
 		//hit--
 
 		float3 wo = -ray.getDirection();
-		//evaluate emission<-
+		light += payload.Le() * throughtput;
 
 		//get BSDF
+		BSDF bsdf = payload.getBSDF();
 
 		//sample random dir
-		float3 wp;
+		float3 wi = sampleCosineWeightedHemisphere(payload.w_norm, get2D_PCGHash(seed));
 
-		//compute BSDF and cos = fcos
-		float3 fcos;
-		float pdf = 1;
+		float3 fcos = bsdf.f(wo, wi) * AbsDot(wi, payload.w_norm);
+		//if (!fcos)break;
+
+		float pdf = 1 / (2 * PI);
+		pdf = AbsDot(payload.w_norm, wi) / PI;
 
 		throughtput *= fcos / pdf;
 
-		ray = payload.spawnRay(wp);
+		ray = payload.spawnRay(wi);
 	}
 
 	return light;

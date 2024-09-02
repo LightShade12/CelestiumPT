@@ -24,6 +24,7 @@ struct CelestiumPT_API
 {
 	DeviceScene DeviceScene;
 	IntegratorGlobals m_IntegratorGlobals;
+	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
 
 Renderer::Renderer()
@@ -41,18 +42,6 @@ Renderer::Renderer()
 	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_aggregate);
 	m_CurrentScene = HostScene(&(m_CelestiumPTResourceAPI->DeviceScene));
 
-	//m_CurrentScene.AddTriangle(
-	//	{ 0,3.75,-10 }, { 0,0,1 },
-	//	{ 3,-1.0,-10 }, { 0,0,1 },
-	//	{ -3,-1.0,-10 }, { 0,0,1 },
-	//	{ 0,0,1 });
-	//
-	//m_CurrentScene.AddTriangle(
-	//	{ 0,-1.75,-7 }, { 0,0,1 },
-	//	{ 3,-8.0,-7 }, { 0,0,1 },
-	//	{ -3,-8.0,-7 }, { 0,0,1 },
-	//	{ 0,0,1 });
-
 	//TODO: temporary; make this part of initing a camera
 	m_CurrentCamera.setTransform(
 		glm::mat4(
@@ -62,12 +51,7 @@ Renderer::Renderer()
 			glm::vec4(0, 0.5, 1.5, 0)
 		)
 	);
-	//m_CurrentCamera.setVectors(
-	//	glm::vec4(0, 0.5, 1.5, 0),
-	//	glm::vec4(0, 0, -1, 0),
-	//	glm::vec4(0, 1, 0, 0),
-	//	glm::vec4(1, 0, 0, 0)
-	//);
+
 	m_CurrentCamera.updateDevice();
 }
 
@@ -81,7 +65,7 @@ void Renderer::resizeResolution(int width, int height)
 	{
 		m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
 		m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
-		//m_AccumulationFrameBuffer->ColorDataBuffer.resize(m_NativeRenderResolutionHeight * m_NativeRenderResolutionWidth);
+		m_CelestiumPTResourceAPI->AccumulationFrameBuffer.resize(m_NativeRenderResolutionHeight * m_NativeRenderResolutionWidth);
 
 		//GL texture configure
 		glGenTextures(1, &m_CompositeRenderTargetTextureName);
@@ -104,7 +88,7 @@ void Renderer::resizeResolution(int width, int height)
 		m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
 		m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
-		//m_AccumulationFrameBuffer->ColorDataBuffer.resize(m_NativeRenderResolutionHeight * m_NativeRenderResolutionWidth);
+		m_CelestiumPTResourceAPI->AccumulationFrameBuffer.resize(m_NativeRenderResolutionHeight * m_NativeRenderResolutionWidth);
 
 		// unregister
 		cudaGraphicsUnregisterResource(m_CudaResourceAPI->m_CompositeRenderTargetTextureCudaResource);
@@ -119,7 +103,7 @@ void Renderer::resizeResolution(int width, int height)
 	}
 }
 
-static uint32_t g_frameIndex = 0;
+static uint32_t g_frameIndex = 1;
 
 void Renderer::renderFrame()
 {
@@ -137,6 +121,8 @@ void Renderer::renderFrame()
 	cudaCreateSurfaceObject(&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object), &render_target_texture_resource_descriptor);
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.frameidx = g_frameIndex;
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.resolution = make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.accumulation_framebuffer =
+		thrust::raw_pointer_cast(m_CelestiumPTResourceAPI->AccumulationFrameBuffer.data());
 
 	IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
 		m_CudaResourceAPI->m_BlockGridDimensions, m_CudaResourceAPI->m_ThreadBlockDimensions);
@@ -150,7 +136,13 @@ void Renderer::renderFrame()
 	cudaDestroySurfaceObject(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object);
 	cudaGraphicsUnmapResources(1, &(m_CudaResourceAPI->m_CompositeRenderTargetTextureCudaResource));
 	cudaStreamSynchronize(0);
-	//m_FrameIndex++;
+}
+
+void Renderer::clearAccumulation()
+{
+	thrust::fill(m_CelestiumPTResourceAPI->AccumulationFrameBuffer.begin(),
+		m_CelestiumPTResourceAPI->AccumulationFrameBuffer.end(), make_float3(0, 0, 0));
+	g_frameIndex = 1;
 }
 
 Renderer::~Renderer()
