@@ -190,6 +190,7 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 __device__ float3 SkyShading(const Ray& ray) {
 	float3 unit_direction = normalize(ray.getDirection());
 	float a = 0.5f * (unit_direction.y + 1.0);
+	//return make_float3(0.2f, 0.3f, 0.4f);
 	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
 };
 
@@ -246,7 +247,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 		//get BSDF
 		BSDF bsdf = payload.getBSDF();
 
-		//sample random dir
+		//sample dir
 		float3 wi = sampleCosineWeightedHemisphere(payload.w_norm, get2D_PCGHash(seed));
 
 		float3 fcos = bsdf.f(wo, wi) * AbsDot(wi, payload.w_norm);
