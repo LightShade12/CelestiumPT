@@ -48,12 +48,15 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 {
 	uint32_t seed = ppixel.x + ppixel.y * globals.FrameBuffer.resolution.x;
 	seed *= globals.frameidx;
+
 	int2 frameres = globals.FrameBuffer.resolution;
+
 	float2 screen_uv = { (ppixel.x / frameres.x),(ppixel.y / frameres.y) };
 	screen_uv = screen_uv * 2 - 1;//-1->1
+
 	Ray primary_ray = globals.SceneDescriptor.dev_camera->generateRay(frameres.x, frameres.y, screen_uv);
 
-	float3 L = IntegratorPipeline::Li(globals, primary_ray);
+	float3 L = IntegratorPipeline::Li(globals, primary_ray, seed);
 
 	//return make_float3(screen_uv);
 	//return make_float3(get2D_PCGHash(seed), get1D_PCGHash(seed));
@@ -178,23 +181,47 @@ __device__ float3 SkyShading(const Ray& ray) {
 	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
 };
 
-__device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray)
+__device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed)
 {
-	return IntegratorPipeline::LiRandomWalk(globals, ray);
+	return IntegratorPipeline::LiRandomWalk(globals, ray, seed);
 }
 
-__device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& ray)
+__device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed)
 {
-	ShapeIntersection payload = Intersect(globals, ray);
+	Ray ray = in_ray;
 
-	//if (hitpayload.dist < 0)
-	if (payload.hit_distance < 0)
-	{
-		//miss
-		return SkyShading(ray);
+	float3 throughtput = make_float3(1);
+	float3 light = make_float3(0);
+
+	ShapeIntersection payload;
+
+	for (int bounce_depth = 0; bounce_depth < globals.IntegratorCFG.bounces; bounce_depth++) {
+		seed += bounce_depth;
+		payload = Intersect(globals, ray);
+
+		//miss--
+		if (payload.hit_distance < 0)
+		{
+			light += SkyShading(ray) * throughtput;
+		}
+		//hit--
+
+		float3 wo = -ray.getDirection();
+		//evaluate emission<-
+
+		//get BSDF
+
+		//sample random dir
+		float3 wp;
+
+		//compute BSDF and cos = fcos
+		float3 fcos;
+		float pdf = 1;
+
+		throughtput *= fcos / pdf;
+
+		ray = payload.spawnRay(wp);
 	}
-	//hit
-	return payload.bary;
 
-	return make_float3(1, 0, 0);
+	return light;
 };

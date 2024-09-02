@@ -93,12 +93,12 @@ void Application::run()
 					glm::vec4(m_Camera.forward, 0),
 					glm::vec4(m_Camera.position, 1)
 				);
-				m_Camera.host_camera_handle->setVectors(
-					m_Camera.position,
-					m_Camera.forward,
-					m_Camera.up,
-					m_Camera.right
-				);
+				//m_Camera.host_camera_handle->setVectors(
+				//	m_Camera.position,
+				//	m_Camera.forward,
+				//	m_Camera.up,
+				//	m_Camera.right
+				//);
 				m_Camera.host_camera_handle->setTransform(view);
 				m_Camera.host_camera_handle->updateDevice();
 			};
@@ -207,8 +207,7 @@ bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts)
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	bool moved = false;
 
-	constexpr glm::vec3 up(0, 1, 0);
-	camera->right = glm::cross(camera->forward, up);
+	constexpr glm::vec3 global_up(0, 1, 0);
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
@@ -228,11 +227,11 @@ bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts)
 	}
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 	{
-		camera->position += camera->movement_speed * delta_ts * camera->up; moved |= true;
+		camera->position += camera->movement_speed * delta_ts * global_up; moved |= true;
 	}
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 	{
-		camera->position -= camera->movement_speed * delta_ts * camera->up; moved |= true;
+		camera->position -= camera->movement_speed * delta_ts * global_up; moved |= true;
 	}
 
 	if (delta.x != 0.0f || delta.y != 0.0f)
@@ -241,8 +240,11 @@ bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts)
 		float yawDelta = delta.x * camera->rot_speed;
 
 		glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, camera->right),
-			glm::angleAxis(-yawDelta, up)));
-		camera->forward = glm::rotate(q, camera->forward);
+			glm::angleAxis(-yawDelta, global_up)));
+
+		camera->forward = glm::normalize(glm::rotate(q, camera->forward));
+		camera->right = normalize(glm::cross(camera->forward, global_up));
+		camera->up = normalize(glm::cross(camera->right, camera->forward));
 
 		moved = true;
 	}
