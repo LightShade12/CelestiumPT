@@ -1,5 +1,6 @@
 #include "Integrator.cuh"
 #include "Triangle.cuh"
+#include "Mesh.cuh"
 #include "ShapeIntersection.cuh"
 #include "BSDF.cuh"
 
@@ -144,12 +145,17 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 	ShapeIntersection payload;
 	payload.hit_distance = FLT_MAX;
 
-	for (size_t triangle_idx = 0; triangle_idx < globals.SceneDescriptor.dev_aggregate->DeviceTrianglesCount; triangle_idx++)
-	{
-		const Triangle& tri = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[triangle_idx];
-		ShapeIntersection eval_payload = IntersectionStage(ray, tri, triangle_idx);
-		if (eval_payload.hit_distance < payload.hit_distance && eval_payload.triangle_idx>-1) {
-			payload = eval_payload;
+	for (int meshidx = 0; meshidx < globals.SceneDescriptor.dev_aggregate->DeviceMeshesCount; meshidx++) {
+		Mesh mesh = globals.SceneDescriptor.dev_aggregate->DeviceMeshesBuffer[meshidx];
+		Mat4 modelMatrix = mesh.modelMatrix;//TODO: figure oyt how to transform rays
+
+		for (size_t triangle_idx = mesh.triangle_offset_idx; triangle_idx < mesh.triangle_offset_idx + mesh.tri_count; triangle_idx++)
+		{
+			const Triangle& tri = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[triangle_idx];
+			ShapeIntersection eval_payload = IntersectionStage(ray, tri, triangle_idx);
+			if (eval_payload.hit_distance < payload.hit_distance && eval_payload.triangle_idx>-1) {
+				payload = eval_payload;
+			}
 		}
 	}
 
@@ -159,33 +165,6 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 
 	return ClosestHitStage(globals, ray, payload);
 }
-
-//struct Hitpayload {
-//	float dist = -1;
-//	float3 w_pos{};
-//	float3 w_norm{};
-//};
-//
-//__device__ Hitpayload hitsphere(const Ray& ray) {
-//	float3 center = { 0,0,-20 };
-//	float radius = 5;
-//	float3 oc = center - ray.getOrigin();
-//	float a = dot(ray.getDirection(), ray.getDirection());
-//	float b = -2.0 * dot(ray.getDirection(), oc);
-//	float c = dot(oc, oc) - radius * radius;
-//	float discriminant = b * b - 4 * a * c;
-//
-//	Hitpayload payload;
-//	if (discriminant < 0) {
-//		payload.dist = -1;
-//	}
-//	else {
-//		payload.dist = (-b - sqrtf(discriminant)) / (2.0 * a);
-//		payload.w_pos = ray.getOrigin() + (ray.getDirection() * payload.dist);
-//		payload.w_norm = normalize(payload.w_pos - center);
-//	}
-//	return payload;
-//}
 
 __device__ float3 SkyShading(const Ray& ray) {
 	float3 unit_direction = normalize(ray.getDirection());
@@ -251,7 +230,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 		float3 wi = sampleCosineWeightedHemisphere(payload.w_norm, get2D_PCGHash(seed));
 
 		float3 fcos = bsdf.f(wo, wi) * AbsDot(wi, payload.w_norm);
-		//if (!fcos)break;
+		if (!fcos)break;
 
 		float pdf = 1 / (2 * PI);
 		pdf = AbsDot(payload.w_norm, wi) / PI;

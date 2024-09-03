@@ -80,6 +80,8 @@ void Application::run()
 
 			ImGui::Begin("Hello World");
 			ImGui::Text("This is a window");
+			ImGui::Text("Loaded meshes: %zu", m_Renderer.getCurrentScene()->getMeshesCount());
+			ImGui::Text("Loaded triangles: %zu", m_Renderer.getCurrentScene()->getTrianglesCount());
 			bool updateCam = false;
 
 			updateCam |= ImGui::DragFloat3("Camera translation", &m_Camera.position.x);
@@ -93,12 +95,6 @@ void Application::run()
 					glm::vec4(m_Camera.forward, 0),
 					glm::vec4(m_Camera.position, 1)
 				);
-				//m_Camera.host_camera_handle->setVectors(
-				//	m_Camera.position,
-				//	m_Camera.forward,
-				//	m_Camera.up,
-				//	m_Camera.right
-				//);
 				m_Camera.host_camera_handle->setTransform(view);
 				m_Camera.host_camera_handle->updateDevice();
 				m_Renderer.clearAccumulation();

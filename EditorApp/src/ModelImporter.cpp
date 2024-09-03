@@ -15,7 +15,7 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 	status = loadGLTFModel(filepath);
 	if (!status)return false;
 
-	//load textures	
+	//load textures
 	//load materials
 
 	for (std::string extensionname : m_SceneModel.extensionsUsed) {
@@ -100,9 +100,24 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 	//printf("\nprocessing mesh:%s\n", gltf_mesh.name.c_str());
 
 	//drt_mesh.m_primitives_offset = m_WorkingScene->getTrianglesCount();
-
+	HostMesh mesh;
+	mesh.triangle_offset_idx = m_WorkingScene->getTrianglesCount();
 	extractVertices(gltf_mesh, loadedMeshPositions,
 		loadedMeshNormals, loadedMeshUVs, loadedMeshPrimitiveMatIdx);
+	mesh.tri_count = loadedMeshPositions.size() / 3;
+	if (mesh_node.matrix.size() > 0) {
+		mesh.setTransform(glm::mat4(
+			mesh_node.matrix[0], mesh_node.matrix[1], mesh_node.matrix[2], mesh_node.matrix[3],
+			mesh_node.matrix[4], mesh_node.matrix[5], mesh_node.matrix[6], mesh_node.matrix[7],
+			mesh_node.matrix[8], mesh_node.matrix[9], mesh_node.matrix[10], mesh_node.matrix[11],
+			mesh_node.matrix[12], mesh_node.matrix[13], mesh_node.matrix[14], mesh_node.matrix[15]
+		));
+	}
+	else {
+		mesh.setTransform(glm::mat4(1));
+	}
+
+	m_WorkingScene->AddMesh(mesh);
 
 	printf("mesh positions: %zu\nmesh normals: %zu\n", loadedMeshPositions.size(), loadedMeshNormals.size());
 	//Contruct and push Triangles
@@ -136,8 +151,6 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 		//	m_WorkingScene->addTriangleLightidx(m_WorkingScene->getTrianglesBufferSize() - 1);
 		//}
 	}
-
-	//drt_mesh.m_trisCount = m_WorkingScene->getTrianglesBufferSize() - drt_mesh.m_primitives_offset;
 
 	//m_WorkingScene->addMesh(drt_mesh);
 	//printf("\rloaded mesh:%zu/%zu", nodeIdx + 1, m_SceneModel.nodes.size());

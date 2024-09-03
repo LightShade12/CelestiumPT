@@ -22,13 +22,7 @@ public:
 	float3* accumulation_framebuffer = nullptr;
 };
 
-class Mesh {
-	__device__ ShapeIntersection intersect(const Ray& ray);
-	__device__ bool intersectP(const Ray& ray);
-	int tri_idx = -1;
-	size_t tri_count = 0;
-	Mat4 modelMatrix;
-};
+
 
 struct DeviceSceneDescriptor {
 	template<typename T>
@@ -46,6 +40,7 @@ struct DeviceSceneDescriptor {
 struct IntegratorSettings {
 	bool accumulate = true;
 	int bounces = 2;
+	bool MIS = false;
 };
 
 struct IntegratorGlobals {

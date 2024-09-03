@@ -117,6 +117,7 @@
     <CudaCompile Include="src\ErrorCheck.cu" />
     <CudaCompile Include="src\Integrator.cu" />
     <CudaCompile Include="src\maths\vector_maths.cu" />
+    <CudaCompile Include="src\Mesh.cu" />
     <CudaCompile Include="src\Scene.cu" />
     <CudaCompile Include="src\ShapeIntersection.cu" />
   </ItemGroup>
@@ -127,6 +128,7 @@
     <ClInclude Include="src\DeviceScene.cuh" />
     <ClInclude Include="src\ErrorCheck.cuh" />
     <ClInclude Include="src\HostCamera.hpp" />
+    <ClInclude Include="src\HostMesh.hpp" />
     <ClInclude Include="src\HostScene.hpp" />
     <ClInclude Include="src\Integrator.cuh" />
     <ClInclude Include="src\maths\constants.cuh" />
@@ -134,6 +136,7 @@
     <ClInclude Include="src\maths\matrix.cuh" />
     <ClInclude Include="src\maths\vector_maths.cuh" />
     <ClInclude Include="src\maths\vector_types_extension.cuh" />
+    <ClInclude Include="src\Mesh.cuh" />
     <ClInclude Include="src\Ray.cuh" />
     <ClInclude Include="src\Renderer.hpp" />
     <ClInclude Include="src\SceneGeometry.cuh" />

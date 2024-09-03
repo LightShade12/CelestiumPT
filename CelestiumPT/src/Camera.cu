@@ -11,10 +11,6 @@ HostCamera::HostCamera(DeviceCamera* dev_camera)
 		mat[2].x, mat[2].y, mat[2].z, mat[2].w,
 		mat[3].x, mat[3].y, mat[3].z, mat[3].w
 	);
-	//position = { m_device_camera->position.x,m_device_camera->position.y,m_device_camera->position.z };
-	//forward = { m_device_camera->forward.x,m_device_camera->forward.y,m_device_camera->forward.z };
-	//up = { m_device_camera->up.x,m_device_camera->up.y,m_device_camera->up.z };
-	//right = { m_device_camera->right.x,m_device_camera->right.y,m_device_camera->right.z };
 }
 
 void HostCamera::updateDevice()
@@ -27,11 +23,6 @@ void HostCamera::updateDevice()
 			m_transform[3][0], m_transform[3][1], m_transform[3][2], m_transform[3][3]   // Fourth column
 		);
 		m_device_camera->viewMatrix = mat;
-
-		//m_device_camera->position = make_float3(position.x, position.y, position.z);
-		//m_device_camera->forward = make_float3(forward.x, forward.y, forward.z);
-		//m_device_camera->up = make_float3(up.x, up.y, up.z);
-		//m_device_camera->right = make_float3(right.x, right.y, right.z);
 	}
 }
 
