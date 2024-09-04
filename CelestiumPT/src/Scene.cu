@@ -29,7 +29,7 @@ void HostScene::AddTriangle(
 	glm::vec3 v0p, glm::vec3 v0n,
 	glm::vec3 v1p, glm::vec3 v1n,
 	glm::vec3 v2p, glm::vec3 v2n,
-	glm::vec3 f_nrm)
+	glm::vec3 f_nrm, bool skip_sync)
 {
 	Triangle tri(
 		Vertex(v0p, v0n),
@@ -38,7 +38,9 @@ void HostScene::AddTriangle(
 		f_nrm
 	);
 	m_DeviceScene->DeviceTriangles.push_back(tri);
-	m_DeviceScene->syncDeviceGeometry();
+
+	if (!skip_sync)
+		m_DeviceScene->syncDeviceGeometry();
 }
 
 void HostScene::AddMesh(HostMesh hmesh)
@@ -55,4 +57,12 @@ void HostScene::AddMesh(HostMesh hmesh)
 	dmesh.modelMatrix = mat;
 	m_DeviceScene->DeviceMeshes.push_back(dmesh);
 	m_DeviceScene->syncDeviceGeometry();
+}
+
+HostMesh HostScene::getMesh(size_t mesh_idx)
+{
+	assert(mesh_idx < m_DeviceScene->DeviceMeshes.size(), "Mesh access Out Of Bounds");
+	Mesh* dmeshptr = thrust::raw_pointer_cast(&m_DeviceScene->DeviceMeshes[mesh_idx]);
+	HostMesh hmesh(dmeshptr);
+	return hmesh;
 }

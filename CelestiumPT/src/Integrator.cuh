@@ -22,8 +22,6 @@ public:
 	float3* accumulation_framebuffer = nullptr;
 };
 
-
-
 struct DeviceSceneDescriptor {
 	template<typename T>
 	struct DeviceBuffer {

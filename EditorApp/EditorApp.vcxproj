@@ -125,6 +125,9 @@
     <ClInclude Include="thirdparty\imgui\imstb_truetype.h" />
     <ClInclude Include="thirdparty\tinygltf\tiny_gltf.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Mesh.hpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>

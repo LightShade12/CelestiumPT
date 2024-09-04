@@ -84,7 +84,7 @@ __device__ ShapeIntersection MissStage(const IntegratorGlobals& globals, const R
 	return ShapeIntersection();
 }
 
-__device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& in_payload) {
+__device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, const Ray& ray, const Mat4& model_matrix, const ShapeIntersection& in_payload) {
 	const Triangle& triangle = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[in_payload.triangle_idx];
 
 	ShapeIntersection out_payload;
@@ -93,15 +93,16 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 	out_payload.triangle_idx = in_payload.triangle_idx;
 	out_payload.hit_distance = in_payload.hit_distance;
 
-	out_payload.w_pos = ray.getOrigin() + ray.getDirection() * in_payload.hit_distance;
+	out_payload.w_pos = model_matrix.transpose() * make_float4(ray.getOrigin() + ray.getDirection() * in_payload.hit_distance, 0);
 
+	//TODO: implement smooth shading here
 	if (dot(triangle.face_normal, -1 * ray.getDirection()) < 0.f)
 	{
 		out_payload.front_face = false;
-		out_payload.w_norm = -1.f * triangle.face_normal;
+		out_payload.w_norm = model_matrix.transpose() * (-1.f * triangle.face_normal);
 	}
 	else {
-		out_payload.w_norm = triangle.face_normal;
+		out_payload.w_norm = model_matrix.transpose() * triangle.face_normal;
 		out_payload.front_face = true;
 	}
 
@@ -113,8 +114,16 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 	ShapeIntersection payload;
 	payload.hit_distance = FLT_MAX;
 
-	traverseBVH(ray, globals.SceneDescriptor.dev_aggregate->DeviceBVHNodesCount - 1, &payload,
+	Mat4 modelmat = globals.SceneDescriptor.dev_aggregate->DeviceMeshesBuffer[0].modelMatrix;
+
+	Ray transformedRay = ray;
+	transformedRay.setOrigin(modelmat * make_float4(transformedRay.getOrigin(), 1));
+	transformedRay.setDirection(normalize(modelmat * make_float4(transformedRay.getDirection(), 0)));
+	transformedRay.setInvDirection(1.f / transformedRay.getDirection());
+
+	traverseBVH(transformedRay, globals.SceneDescriptor.dev_aggregate->DeviceBVHNodesCount - 1, &payload,
 		globals.SceneDescriptor.dev_aggregate);
+
 	//for (int meshidx = 0; meshidx < globals.SceneDescriptor.dev_aggregate->DeviceMeshesCount; meshidx++) {
 	//	Mesh mesh = globals.SceneDescriptor.dev_aggregate->DeviceMeshesBuffer[meshidx];
 	//	Mat4 modelMatrix = mesh.modelMatrix;//TODO: figure oyt how to transform rays
@@ -133,7 +142,12 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 		return MissStage(globals, ray, payload);
 	}
 
-	return ClosestHitStage(globals, ray, payload);
+	return ClosestHitStage(globals, transformedRay, modelmat, payload);
+}
+
+__device__ bool IntegratorPipeline::IntersectP(const IntegratorGlobals& globals, const Ray& ray)
+{
+	return false;
 }
 
 __device__ float3 SkyShading(const Ray& ray) {
@@ -142,6 +156,11 @@ __device__ float3 SkyShading(const Ray& ray) {
 	//return make_float3(0.2f, 0.3f, 0.4f);
 	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
 };
+
+__device__ bool IntegratorPipeline::Unoccluded(const IntegratorGlobals& globals, const Ray& ray)
+{
+	return !(IntegratorPipeline::IntersectP(globals, ray));
+}
 
 __device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed)
 {
@@ -189,6 +208,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 			break;
 		}
 		//hit--
+		//light = (payload.w_pos); break;
 
 		float3 wo = -ray.getDirection();
 		light += payload.Le() * throughtput;

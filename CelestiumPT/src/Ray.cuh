@@ -8,6 +8,7 @@ public:
 
 	__device__ void setOrigin(float3 new_orig) { origin = new_orig; };
 	__device__ void setDirection(float3 new_dir) { direction = new_dir; invdirection = 1.f / direction; };
+	__device__ void setInvDirection(float3 new_inv_dir) { invdirection = new_inv_dir; };
 
 	__device__ float3 getOrigin() const { return origin; };
 	__device__ float3 getDirection() const { return direction; };

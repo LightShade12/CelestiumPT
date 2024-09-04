@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Mesh.hpp"
 #include "Camera.hpp"
 #include "CelestiumPT.hpp"
 
@@ -34,4 +35,5 @@ private:
 	GLFWwindow* m_MainWindow = nullptr;
 	uint32_t m_width, m_height = 0;
 	Renderer m_Renderer;
+	Mesh m_selected_mesh;
 };

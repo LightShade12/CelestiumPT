@@ -42,5 +42,5 @@ public:
 	thrust::universal_vector<Triangle>DeviceTriangles;
 	thrust::device_vector<BVHNode>DeviceBVHNodes;
 	thrust::device_vector<int>DeviceBVHTriangleIndices;
-	thrust::device_vector<Mesh>DeviceMeshes;
+	thrust::universal_vector<Mesh>DeviceMeshes;
 };

@@ -37,10 +37,15 @@ Application::Application() : m_Camera()
 	HostScene* hostscenehandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 	ModelImporter importer;
 	importer.loadGLTF("../models/monkey_mesh.glb", hostscenehandle);//uses host API to add scene geo
-	hostscenehandle->syncDeviceGeometry();//updates raw buffer data
+	//TODO: make loading automatically sync geometry
+	hostscenehandle->syncDeviceGeometry();//updates raw buffer data; not needed at this point
+
 	BVHBuilder builder;
 	builder.BuildIterative(hostscenehandle);
 	hostscenehandle->syncDeviceGeometry();
+
+	if (hostscenehandle->getMeshesCount() > 0)
+		m_selected_mesh = Mesh(hostscenehandle->getMesh(0));
 
 	m_Camera = Camera(m_Renderer.getCurrentCamera());
 }
@@ -85,10 +90,32 @@ void Application::run()
 			ImGui::Text("This is a window");
 			ImGui::Text("Loaded meshes: %zu", m_Renderer.getCurrentScene()->getMeshesCount());
 			ImGui::Text("Loaded triangles: %zu", m_Renderer.getCurrentScene()->getTrianglesCount());
+			ImGui::Separator();
+
+			//-----------------------
+			ImGui::Text("Mesh transformations");
+			bool updateMesh = false;
+			updateMesh |= ImGui::DragFloat3("Translation", &m_selected_mesh.translation.x, 0.2);
+			updateMesh |= ImGui::DragFloat3("Scale", &m_selected_mesh.scale.x, 0.05);
+			updateMesh |= ImGui::DragFloat3("Rotation(degrees)", &m_selected_mesh.rotation.x, 0.2);
+
+			if (updateMesh) {
+				glm::mat4 trans = glm::translate(glm::mat4(1), m_selected_mesh.translation);
+				glm::mat4 scale = glm::scale(glm::mat4(1), m_selected_mesh.scale);
+				glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.x), glm::vec3(1, 0, 0));
+				glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.y), glm::vec3(0, 1, 0));
+				glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.z), glm::vec3(0, 0, 1));
+				m_selected_mesh.host_mesh_handle.setTransform(scale * rot_x * rot_y * rot_z * trans * m_selected_mesh.original_tranform);
+				m_selected_mesh.host_mesh_handle.updateDevice();
+				m_Renderer.clearAccumulation();
+			}
+
+			//-----------------------
+			ImGui::Separator();
+
+			ImGui::Text("Camera transformations");
 			bool updateCam = false;
-
 			updateCam |= ImGui::DragFloat3("Camera translation", &m_Camera.position.x);
-
 			updateCam |= processMouse(m_MainWindow, &m_Camera, deltaTime);
 			if (updateCam)
 			{

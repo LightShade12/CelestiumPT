@@ -1,6 +1,5 @@
 #include "ShapeIntersection.cuh"
 
-
 __device__ BSDF ShapeIntersection::getBSDF()
 {
 	return BSDF();

@@ -105,6 +105,7 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 	extractVertices(gltf_mesh, loadedMeshPositions,
 		loadedMeshNormals, loadedMeshUVs, loadedMeshPrimitiveMatIdx);
 	mesh.tri_count = loadedMeshPositions.size() / 3;
+
 	if (mesh_node.matrix.size() > 0) {
 		mesh.setTransform(glm::mat4(
 			mesh_node.matrix[0], mesh_node.matrix[1], mesh_node.matrix[2], mesh_node.matrix[3],
