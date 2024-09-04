@@ -113,6 +113,8 @@
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="src\acceleration_structure\BVHBuilder.cu" />
+    <CudaCompile Include="src\Bounds.cu" />
     <CudaCompile Include="src\Camera.cu" />
     <CudaCompile Include="src\ErrorCheck.cu" />
     <CudaCompile Include="src\Integrator.cu" />
@@ -123,6 +125,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\CelestiumPT.hpp" />
+    <ClInclude Include="src\acceleration_structure\BVHBuilder.hpp" />
+    <ClInclude Include="src\acceleration_structure\BVHNode.cuh" />
+    <ClInclude Include="src\acceleration_structure\BVHTraversal.cuh" />
+    <ClInclude Include="src\Bounds.cuh" />
     <ClInclude Include="src\BSDF.cuh" />
     <ClInclude Include="src\DeviceCamera.cuh" />
     <ClInclude Include="src\DeviceScene.cuh" />
@@ -131,6 +137,7 @@
     <ClInclude Include="src\HostMesh.hpp" />
     <ClInclude Include="src\HostScene.hpp" />
     <ClInclude Include="src\Integrator.cuh" />
+    <ClInclude Include="src\IntersectionStage.cuh" />
     <ClInclude Include="src\maths\constants.cuh" />
     <ClInclude Include="src\maths\maths_linear_algebra.cuh" />
     <ClInclude Include="src\maths\matrix.cuh" />

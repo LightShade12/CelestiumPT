@@ -34,9 +34,12 @@ Application::Application() : m_Camera()
 {
 	initialize();
 
-	HostScene* hostscenehandle = m_Renderer.getCurrentScene();//non owning
+	HostScene* hostscenehandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 	ModelImporter importer;
-	importer.loadGLTF("../models/test_scene.glb", hostscenehandle);
+	importer.loadGLTF("../models/monkey_mesh.glb", hostscenehandle);//uses host API to add scene geo
+	hostscenehandle->syncDeviceGeometry();//updates raw buffer data
+	BVHBuilder builder;
+	builder.BuildIterative(hostscenehandle);
 	hostscenehandle->syncDeviceGeometry();
 
 	m_Camera = Camera(m_Renderer.getCurrentCamera());

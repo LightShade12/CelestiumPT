@@ -2,8 +2,10 @@
 
 #include "Triangle.cuh"
 #include "Mesh.cuh"
+#include "acceleration_structure/BVHNode.cuh"
 #include "SceneGeometry.cuh"
 #include <thrust/device_vector.h>
+#include <thrust/universal_vector.h>
 
 class DeviceScene {
 public:
@@ -24,6 +26,12 @@ public:
 		DeviceSceneGeometry->DeviceTrianglesBuffer = thrust::raw_pointer_cast(DeviceTriangles.data());
 		DeviceSceneGeometry->DeviceTrianglesCount = DeviceTriangles.size();
 
+		DeviceSceneGeometry->DeviceBVHTriangleIndicesBuffer = thrust::raw_pointer_cast(DeviceBVHTriangleIndices.data());
+		DeviceSceneGeometry->DeviceBVHTriangleIndicesCount = DeviceBVHTriangleIndices.size();
+
+		DeviceSceneGeometry->DeviceBVHNodesBuffer = thrust::raw_pointer_cast(DeviceBVHNodes.data());
+		DeviceSceneGeometry->DeviceBVHNodesCount = DeviceBVHNodes.size();
+
 		DeviceSceneGeometry->DeviceMeshesBuffer = thrust::raw_pointer_cast(DeviceMeshes.data());
 		DeviceSceneGeometry->DeviceMeshesCount = DeviceMeshes.size();
 	};
@@ -31,6 +39,8 @@ public:
 public:
 
 	SceneGeometry* DeviceSceneGeometry = nullptr;
-	thrust::device_vector<Triangle>DeviceTriangles;
+	thrust::universal_vector<Triangle>DeviceTriangles;
+	thrust::device_vector<BVHNode>DeviceBVHNodes;
+	thrust::device_vector<int>DeviceBVHTriangleIndices;
 	thrust::device_vector<Mesh>DeviceMeshes;
 };

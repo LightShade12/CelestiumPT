@@ -3,6 +3,8 @@
 #include "Mesh.cuh"
 #include "ShapeIntersection.cuh"
 #include "BSDF.cuh"
+#include "IntersectionStage.cuh"
+#include "acceleration_structure/BVHTraversal.cuh"
 
 #include "maths/constants.cuh"
 
@@ -77,40 +79,6 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 	return L;
 }
 
-__device__ ShapeIntersection IntersectionStage(const Ray& ray, const Triangle& triangle, int triangle_idx)
-{
-	ShapeIntersection payload;
-
-	float3 v0v1 = triangle.vertex1.position - triangle.vertex0.position;
-	float3 v0v2 = triangle.vertex2.position - triangle.vertex0.position;
-
-	float3 pvec = cross(ray.getDirection(), v0v2);
-	float det = dot(v0v1, pvec);
-	if (det > -TRIANGLE_EPSILON && det < TRIANGLE_EPSILON)
-		return payload; // This ray is parallel to this triangle
-
-	float invDet = 1.0f / det;
-	float3 tvec = ray.getOrigin() - triangle.vertex0.position;
-	float u = invDet * dot(tvec, pvec);
-	if (u < 0.0f || u > 1.0f)
-		return payload;
-
-	float3 qvec = cross(tvec, v0v1);
-	float v = invDet * dot(ray.getDirection(), qvec);
-	if (v < 0.0f || u + v > 1.0f)
-		return payload;
-
-	float t = invDet * dot(v0v2, qvec);
-	if (t > TRIANGLE_EPSILON) { // ray intersection
-		payload.hit_distance = t;
-		payload.triangle_idx = triangle_idx;
-		payload.bary = { 1.0f - u - v, u, v };
-		return payload;
-	}
-
-	return payload;
-};
-
 //return -1 hit_dist
 __device__ ShapeIntersection MissStage(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& in_payload) {
 	return ShapeIntersection();
@@ -145,19 +113,21 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 	ShapeIntersection payload;
 	payload.hit_distance = FLT_MAX;
 
-	for (int meshidx = 0; meshidx < globals.SceneDescriptor.dev_aggregate->DeviceMeshesCount; meshidx++) {
-		Mesh mesh = globals.SceneDescriptor.dev_aggregate->DeviceMeshesBuffer[meshidx];
-		Mat4 modelMatrix = mesh.modelMatrix;//TODO: figure oyt how to transform rays
-
-		for (size_t triangle_idx = mesh.triangle_offset_idx; triangle_idx < mesh.triangle_offset_idx + mesh.tri_count; triangle_idx++)
-		{
-			const Triangle& tri = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[triangle_idx];
-			ShapeIntersection eval_payload = IntersectionStage(ray, tri, triangle_idx);
-			if (eval_payload.hit_distance < payload.hit_distance && eval_payload.triangle_idx>-1) {
-				payload = eval_payload;
-			}
-		}
-	}
+	traverseBVH(ray, globals.SceneDescriptor.dev_aggregate->DeviceBVHNodesCount - 1, &payload,
+		globals.SceneDescriptor.dev_aggregate);
+	//for (int meshidx = 0; meshidx < globals.SceneDescriptor.dev_aggregate->DeviceMeshesCount; meshidx++) {
+	//	Mesh mesh = globals.SceneDescriptor.dev_aggregate->DeviceMeshesBuffer[meshidx];
+	//	Mat4 modelMatrix = mesh.modelMatrix;//TODO: figure oyt how to transform rays
+	//
+	//	for (size_t triangle_idx = mesh.triangle_offset_idx; triangle_idx < mesh.triangle_offset_idx + mesh.tri_count; triangle_idx++)
+	//	{
+	//		const Triangle& tri = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[triangle_idx];
+	//		ShapeIntersection eval_payload = IntersectionStage(ray, tri, triangle_idx);
+	//		if (eval_payload.hit_distance < payload.hit_distance && eval_payload.triangle_idx>-1) {
+	//			payload = eval_payload;
+	//		}
+	//	}
+	//}
 
 	if (payload.triangle_idx == -1) {
 		return MissStage(globals, ray, payload);

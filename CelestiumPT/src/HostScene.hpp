@@ -20,6 +20,5 @@ public:
 
 	void AddMesh(HostMesh hmesh);
 
-private:
 	DeviceScene* m_DeviceScene = nullptr;//non-owning; provided initially by renderer
 };
