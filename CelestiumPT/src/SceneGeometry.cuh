@@ -4,6 +4,7 @@ class Mesh;
 class Ray;
 struct Triangle;
 struct BVHNode;
+class BLAS;
 
 //Raw Buffer Data
 struct SceneGeometry {
@@ -15,6 +16,9 @@ struct SceneGeometry {
 
 	BVHNode* DeviceBVHNodesBuffer = nullptr;
 	size_t DeviceBVHNodesCount = 0;
+
+	BLAS* DeviceBLASesBuffer = nullptr;
+	size_t DeviceBLASesCount = 0;
 
 	Mesh* DeviceMeshesBuffer = nullptr;
 	size_t DeviceMeshesCount = 0;

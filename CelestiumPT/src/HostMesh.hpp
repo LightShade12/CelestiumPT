@@ -14,7 +14,7 @@ public:
 	};
 
 	void setTransform(glm::mat4 transform) {
-		modelMatrix = transform;
+		modelMatrix = (transform);
 	};
 public:
 	Mesh* m_deviceMesh = nullptr;

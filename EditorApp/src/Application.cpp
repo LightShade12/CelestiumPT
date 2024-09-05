@@ -40,8 +40,8 @@ Application::Application() : m_Camera()
 	//TODO: make loading automatically sync geometry
 	hostscenehandle->syncDeviceGeometry();//updates raw buffer data; not needed at this point
 
-	BVHBuilder builder;
-	builder.BuildIterative(hostscenehandle);
+	BLASBuilder builder;
+	builder.build(hostscenehandle);
 	hostscenehandle->syncDeviceGeometry();
 
 	if (hostscenehandle->getMeshesCount() > 0)
@@ -100,8 +100,8 @@ void Application::run()
 			updateMesh |= ImGui::DragFloat3("Rotation(degrees)", &m_selected_mesh.rotation.x, 0.2);
 
 			if (updateMesh) {
-				glm::mat4 trans = glm::translate(glm::mat4(1), m_selected_mesh.translation);
-				glm::mat4 scale = glm::scale(glm::mat4(1), m_selected_mesh.scale);
+				glm::mat4 trans = (glm::translate(glm::mat4(1), m_selected_mesh.translation));
+				glm::mat4 scale = (glm::scale(glm::mat4(1), m_selected_mesh.scale));
 				glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.x), glm::vec3(1, 0, 0));
 				glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.y), glm::vec3(0, 1, 0));
 				glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.z), glm::vec3(0, 0, 1));

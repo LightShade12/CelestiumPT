@@ -4,7 +4,7 @@
 #include "ShapeIntersection.cuh"
 #include "BSDF.cuh"
 #include "IntersectionStage.cuh"
-#include "acceleration_structure/BVHTraversal.cuh"
+#include "acceleration_structure/BLAS.cuh"
 
 #include "maths/constants.cuh"
 
@@ -93,16 +93,16 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 	out_payload.triangle_idx = in_payload.triangle_idx;
 	out_payload.hit_distance = in_payload.hit_distance;
 
-	out_payload.w_pos = model_matrix.transpose() * make_float4(ray.getOrigin() + ray.getDirection() * in_payload.hit_distance, 0);
+	out_payload.w_pos = model_matrix.transpose() * (make_float4(ray.getOrigin() + ray.getDirection() * in_payload.hit_distance, 1));//TODO:problem part
 
 	//TODO: implement smooth shading here
 	if (dot(triangle.face_normal, -1 * ray.getDirection()) < 0.f)
 	{
 		out_payload.front_face = false;
-		out_payload.w_norm = model_matrix.transpose() * (-1.f * triangle.face_normal);
+		out_payload.w_norm = normalize(model_matrix.transpose() * (-1.f * triangle.face_normal));
 	}
 	else {
-		out_payload.w_norm = model_matrix.transpose() * triangle.face_normal;
+		out_payload.w_norm = normalize(model_matrix.transpose() * triangle.face_normal);
 		out_payload.front_face = true;
 	}
 
@@ -121,22 +121,9 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 	transformedRay.setDirection(normalize(modelmat * make_float4(transformedRay.getDirection(), 0)));
 	transformedRay.setInvDirection(1.f / transformedRay.getDirection());
 
-	traverseBVH(transformedRay, globals.SceneDescriptor.dev_aggregate->DeviceBVHNodesCount - 1, &payload,
-		globals.SceneDescriptor.dev_aggregate);
-
-	//for (int meshidx = 0; meshidx < globals.SceneDescriptor.dev_aggregate->DeviceMeshesCount; meshidx++) {
-	//	Mesh mesh = globals.SceneDescriptor.dev_aggregate->DeviceMeshesBuffer[meshidx];
-	//	Mat4 modelMatrix = mesh.modelMatrix;//TODO: figure oyt how to transform rays
-	//
-	//	for (size_t triangle_idx = mesh.triangle_offset_idx; triangle_idx < mesh.triangle_offset_idx + mesh.tri_count; triangle_idx++)
-	//	{
-	//		const Triangle& tri = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[triangle_idx];
-	//		ShapeIntersection eval_payload = IntersectionStage(ray, tri, triangle_idx);
-	//		if (eval_payload.hit_distance < payload.hit_distance && eval_payload.triangle_idx>-1) {
-	//			payload = eval_payload;
-	//		}
-	//	}
-	//}
+	//traverseBVH(transformedRay, globals.SceneDescriptor.dev_aggregate->DeviceBVHNodesCount - 1, &payload,
+	//	globals.SceneDescriptor.dev_aggregate);
+	globals.SceneDescriptor.dev_aggregate->DeviceBLASesBuffer[0].intersect(globals, ray, &payload);
 
 	if (payload.triangle_idx == -1) {
 		return MissStage(globals, ray, payload);
@@ -208,7 +195,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 			break;
 		}
 		//hit--
-		//light = (payload.w_pos); break;
+		light = (payload.w_pos); break;
 
 		float3 wo = -ray.getDirection();
 		light += payload.Le() * throughtput;

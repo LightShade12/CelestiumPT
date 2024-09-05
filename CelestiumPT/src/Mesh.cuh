@@ -1,3 +1,4 @@
+#pragma once
 #include "maths/maths_linear_algebra.cuh"
 
 class Mesh {
