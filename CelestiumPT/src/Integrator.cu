@@ -1,10 +1,12 @@
 #include "Integrator.cuh"
+#include "Storage.cuh"
+#include "RayStages.cuh"
 #include "Triangle.cuh"
 #include "Mesh.cuh"
 #include "ShapeIntersection.cuh"
 #include "BSDF.cuh"
-#include "IntersectionStage.cuh"
 #include "acceleration_structure/BLAS.cuh"
+#include "Samplers.cuh"
 
 #include "maths/constants.cuh"
 
@@ -12,23 +14,6 @@
 #define __CUDACC__
 #include <surface_indirect_functions.h>
 #include <float.h>
-
-__device__ uint32_t pcg_hash(uint32_t input)
-{
-	uint32_t state = input * 747796405u + 2891336453u;
-	uint32_t word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-	return (word >> 22u) ^ word;
-}
-//0-1
-__device__ float randF_PCGHash(uint32_t& seed)
-{
-	seed = pcg_hash(seed);
-	return (float)seed / (float)UINT32_MAX;
-}
-
-__device__ float get1D_PCGHash(uint32_t& seed) { return randF_PCGHash(seed); };
-__device__ float2 get2D_PCGHash(uint32_t& seed) { return make_float2(get1D_PCGHash(seed), get1D_PCGHash(seed)); };
-__device__ float2 getPixel2D_PCGHash(uint32_t& seed) { return get2D_PCGHash(seed); };
 
 void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& globals, dim3 block_grid_dims, dim3 thread_block_dims)
 {
@@ -79,36 +64,6 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 	return L;
 }
 
-//return -1 hit_dist
-__device__ ShapeIntersection MissStage(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& in_payload) {
-	return ShapeIntersection();
-}
-
-__device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, const Ray& ray, const Mat4& model_matrix, const ShapeIntersection& in_payload) {
-	const Triangle& triangle = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[in_payload.triangle_idx];
-
-	ShapeIntersection out_payload;
-
-	out_payload.bary = in_payload.bary;
-	out_payload.triangle_idx = in_payload.triangle_idx;
-	out_payload.hit_distance = in_payload.hit_distance;
-
-	out_payload.w_pos = model_matrix.transpose() * (make_float4(ray.getOrigin() + ray.getDirection() * in_payload.hit_distance, 1));//TODO:problem part
-
-	//TODO: implement smooth shading here
-	if (dot(triangle.face_normal, -1 * ray.getDirection()) < 0.f)
-	{
-		out_payload.front_face = false;
-		out_payload.w_norm = normalize(model_matrix.transpose() * (-1.f * triangle.face_normal));
-	}
-	else {
-		out_payload.w_norm = normalize(model_matrix.transpose() * triangle.face_normal);
-		out_payload.front_face = true;
-	}
-
-	return out_payload;
-}
-
 __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGlobals& globals, const Ray& ray)
 {
 	ShapeIntersection payload;
@@ -123,7 +78,7 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 
 	//traverseBVH(transformedRay, globals.SceneDescriptor.dev_aggregate->DeviceBVHNodesCount - 1, &payload,
 	//	globals.SceneDescriptor.dev_aggregate);
-	globals.SceneDescriptor.dev_aggregate->DeviceBLASesBuffer[0].intersect(globals, ray, &payload);
+	globals.SceneDescriptor.dev_aggregate->DeviceBLASesBuffer[0].intersect(globals, transformedRay, &payload);
 
 	if (payload.triangle_idx == -1) {
 		return MissStage(globals, ray, payload);
@@ -137,13 +92,6 @@ __device__ bool IntegratorPipeline::IntersectP(const IntegratorGlobals& globals,
 	return false;
 }
 
-__device__ float3 SkyShading(const Ray& ray) {
-	float3 unit_direction = normalize(ray.getDirection());
-	float a = 0.5f * (unit_direction.y + 1.0);
-	//return make_float3(0.2f, 0.3f, 0.4f);
-	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
-};
-
 __device__ bool IntegratorPipeline::Unoccluded(const IntegratorGlobals& globals, const Ray& ray)
 {
 	return !(IntegratorPipeline::IntersectP(globals, ray));
@@ -154,26 +102,12 @@ __device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const
 	return IntegratorPipeline::LiRandomWalk(globals, ray, seed);
 }
 
-//TODO: replace with tangent space version
-__device__ float3 sampleCosineWeightedHemisphere(const float3& normal, float2 xi) {
-	// Generate a cosine-weighted direction in the local frame
-	float phi = 2.0f * PI * xi.x;
-	float cosTheta = sqrtf(xi.y);//TODO: might have to switch with sinTheta
-	float sinTheta = sqrtf(1.0f - xi.y);
-
-	float3 H;
-	H.x = sinTheta * cosf(phi);
-	H.y = sinTheta * sinf(phi);
-	H.z = cosTheta;
-
-	// Create an orthonormal basis (tangent, bitangent, normal)
-	float3 up = fabs(normal.z) < 0.999f ? make_float3(0.0f, 0.0f, 1.0f) : make_float3(1.0f, 0.0f, 0.0f);
-	float3 tangent = normalize(cross(up, normal));
-	float3 bitangent = cross(normal, tangent);
-
-	// Transform the sample direction from local space to world space
-	return normalize(tangent * H.x + bitangent * H.y + normal * H.z);
-}
+__device__ float3 SkyShading(const Ray& ray) {
+	float3 unit_direction = normalize(ray.getDirection());
+	float a = 0.5f * (unit_direction.y + 1.0);
+	//return make_float3(0.2f, 0.3f, 0.4f);
+	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
+};
 
 __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed)
 {
@@ -195,7 +129,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 			break;
 		}
 		//hit--
-		light = (payload.w_pos); break;
+		//light = (payload.w_norm); break;
 
 		float3 wo = -ray.getDirection();
 		light += payload.Le() * throughtput;
@@ -204,7 +138,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 		BSDF bsdf = payload.getBSDF();
 
 		//sample dir
-		float3 wi = sampleCosineWeightedHemisphere(payload.w_norm, get2D_PCGHash(seed));
+		float3 wi = Samplers::sampleCosineWeightedHemisphere(payload.w_norm, Samplers::get2D_PCGHash(seed));
 
 		float3 fcos = bsdf.f(wo, wi) * AbsDot(wi, payload.w_norm);
 		if (!fcos)break;

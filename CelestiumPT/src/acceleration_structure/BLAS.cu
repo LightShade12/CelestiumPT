@@ -1,5 +1,6 @@
 #include "BLAS.cuh"
-#include "IntersectionStage.cuh"
+#include "Storage.cuh"
+#include "RayStages.cuh"
 #include "Integrator.cuh"
 #include "ShapeIntersection.cuh"
 #include "DeviceScene.cuh"

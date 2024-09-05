@@ -2,6 +2,7 @@
 //#include "HostCamera.hpp"
 #include "ErrorCheck.cuh"
 #include <cuda_gl_interop.h>
+#include "Storage.cuh"
 #include "Integrator.cuh"
 
 #include "SceneGeometry.cuh"
