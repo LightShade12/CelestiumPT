@@ -59,8 +59,6 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 
 	float3 L = IntegratorPipeline::Li(globals, primary_ray, seed);
 
-	//return make_float3(screen_uv);
-	//return make_float3(get2D_PCGHash(seed), get1D_PCGHash(seed));
 	return L;
 }
 
@@ -68,23 +66,32 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 {
 	ShapeIntersection payload;
 	payload.hit_distance = FLT_MAX;
+	Mat4 closest_hit_model_transform(1);
+	Ray valid_transformed_ray = ray;
 
-	Mat4 modelmat = globals.SceneDescriptor.dev_aggregate->DeviceMeshesBuffer[0].modelMatrix;
+	for (int blasidx = 0; blasidx < globals.SceneDescriptor.dev_aggregate->DeviceBLASesCount; blasidx++) {
+		BLAS* blas = &(globals.SceneDescriptor.dev_aggregate->DeviceBLASesBuffer[blasidx]);
+		Mat4 modelmat = blas->MeshLink->modelMatrix;
+		Ray transformedRay = ray;
+		transformedRay.setOrigin(modelmat * make_float4(transformedRay.getOrigin(), 1));
+		transformedRay.setDirection(normalize(modelmat * make_float4(transformedRay.getDirection(), 0)));
+		ShapeIntersection eval_payload;
+		eval_payload.hit_distance = FLT_MAX;
 
-	Ray transformedRay = ray;
-	transformedRay.setOrigin(modelmat * make_float4(transformedRay.getOrigin(), 1));
-	transformedRay.setDirection(normalize(modelmat * make_float4(transformedRay.getDirection(), 0)));
-	transformedRay.setInvDirection(1.f / transformedRay.getDirection());
+		blas->intersect(globals, transformedRay, &eval_payload);
 
-	//traverseBVH(transformedRay, globals.SceneDescriptor.dev_aggregate->DeviceBVHNodesCount - 1, &payload,
-	//	globals.SceneDescriptor.dev_aggregate);
-	globals.SceneDescriptor.dev_aggregate->DeviceBLASesBuffer[0].intersect(globals, transformedRay, &payload);
+		if (eval_payload.hit_distance < payload.hit_distance && eval_payload.triangle_idx != -1) {
+			payload = eval_payload;
+			closest_hit_model_transform = modelmat;
+			valid_transformed_ray = transformedRay;
+		}
+	};
 
 	if (payload.triangle_idx == -1) {
 		return MissStage(globals, ray, payload);
 	}
 
-	return ClosestHitStage(globals, transformedRay, modelmat, payload);
+	return ClosestHitStage(globals, valid_transformed_ray, closest_hit_model_transform, payload);
 }
 
 __device__ bool IntegratorPipeline::IntersectP(const IntegratorGlobals& globals, const Ray& ray)

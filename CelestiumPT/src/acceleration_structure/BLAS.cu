@@ -61,16 +61,9 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 		minextent);
 
 	hostBVHroot->m_BoundingBox = Bounds3f(minextent, minextent + extent);
-	hostBVHroot->left_child_or_triangle_indices_start_idx = 0;//as leaf
+	hostBVHroot->left_child_or_triangle_indices_start_idx = 0;//if leaf; will be valid
 	hostBVHroot->triangle_indices_count = fresh_primindices.size();
 	printf("root prim count:%d \n", hostBVHroot->triangle_indices_count);
-
-	const int MAX_STACK_SIZE = 512; // Adjust this value as needed as per expected depth
-	BVHNode* nodesToBeBuilt[MAX_STACK_SIZE]{};//max postponed nodes //TODO:make this node indices to avoid host_bvh_nodes preallocation limitation
-	int stackPtr = 0;
-
-	size_t nodecount = 1024 * 100;
-	fresh_bvhnodes.reserve(nodecount);
 
 	// If root leaf candidate
 	if (hostBVHroot->triangle_indices_count <= cfg.m_TargetLeafPrimitivesCount)
@@ -81,6 +74,13 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 
 		return;
 	}
+
+	const int MAX_STACK_SIZE = 512; // Adjust this value as needed as per expected depth
+	BVHNode* nodesToBeBuilt[MAX_STACK_SIZE]{};//max postponed nodes //TODO:make this node indices to avoid host_bvh_nodes preallocation limitation
+	int stackPtr = 0;
+
+	size_t nodecount = 1024 * 100;
+	fresh_bvhnodes.reserve(nodecount);
 
 	// Static stack for iterative BVH construction
 	nodesToBeBuilt[stackPtr++] = hostBVHroot;
