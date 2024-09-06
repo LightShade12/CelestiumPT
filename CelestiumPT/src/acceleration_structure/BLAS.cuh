@@ -33,7 +33,7 @@ public:
 	BLAS(Mesh* mesh, DeviceScene* dscene, BVHBuilderSettings buildercfg);
 
 	void build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx, size_t prim_end_idx,
-		std::vector<BVHNode>& fresh_bvhnodes, std::vector<uint32_t>& fresh_primindices, BVHBuilderSettings cfg);
+		thrust::universal_vector<BVHNode>& bvhnodes, std::vector<uint32_t>& fresh_primindices, size_t actual_indices_offset, BVHBuilderSettings cfg);
 
 	int costHeursitic(const BVHNode& left_node, const BVHNode& right_node, const Bounds3f& parent_bbox, BVHBuilderSettings bvhcfg);
 
@@ -44,6 +44,7 @@ public:
 	//reads prim_indices from pos=start_idx to end_idx to access and compute triangles bound
 	float3 get_Absolute_Extent(const std::vector<const Triangle*>& primitives, size_t start_idx, size_t end_idx, float3& min_extent);
 
+	//retval nodes always have triangle indices assigned
 	void makePartition(const thrust::universal_vector<Triangle>& read_tris, std::vector<uint32_t>& primitives_indices,
 		size_t start_idx, size_t end_idx, BVHNode& leftnode, BVHNode& rightnode, BVHBuilderSettings cfg);
 

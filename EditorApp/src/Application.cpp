@@ -36,7 +36,7 @@ Application::Application() : m_Camera()
 
 	HostScene* hostscenehandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 	ModelImporter importer;
-	importer.loadGLTF("../models/monkey_mesh.glb", hostscenehandle);//uses host API to add scene geo
+	importer.loadGLTF("../models/multi_mesh.glb", hostscenehandle);//uses host API to add scene geo
 	//TODO: make loading automatically sync geometry
 	hostscenehandle->syncDeviceGeometry();//updates raw buffer data; not needed at this point
 

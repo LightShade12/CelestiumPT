@@ -20,25 +20,25 @@ BLAS::BLAS(Mesh* mesh, DeviceScene* dscene, BVHBuilderSettings buildercfg)
 	std::vector<BVHNode> bvhnodes;
 	std::vector<uint32_t>bvhprim_indices;
 
+	bvhnodesStartIdx = dscene->DeviceBVHNodes.size();
 	build(dscene->DeviceTriangles,
 		prim_start_idx,
 		prim_end_idx,
-		bvhnodes,
+		dscene->DeviceBVHNodes,
 		bvhprim_indices,
+		dscene->DeviceBVHTriangleIndices.size(),
 		buildercfg);
-
-	bvhnodesStartIdx = dscene->DeviceBVHNodes.size();
-	bvhnodesCount = bvhnodes.size();
+	bvhnodesCount = dscene->DeviceBVHNodes.size() - bvhnodesStartIdx;
 	bvhrootIdx = bvhnodesCount - 1;
 
-	thrust::universal_vector<BVHNode>nodes = bvhnodes;
+	//thrust::universal_vector<BVHNode>nodes = bvhnodes;
 	thrust::universal_vector<uint32_t>indices = bvhprim_indices;
-	dscene->DeviceBVHNodes.insert(dscene->DeviceBVHNodes.end(), nodes.begin(), nodes.end());//insert
+	//dscene->DeviceBVHNodes.insert(dscene->DeviceBVHNodes.end(), nodes.begin(), nodes.end());//insert
 	dscene->DeviceBVHTriangleIndices.insert(dscene->DeviceBVHTriangleIndices.end(), indices.begin(), indices.end());//insert
 };
 
-void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx, size_t prim_end_idx,
-	std::vector<BVHNode>& fresh_bvhnodes, std::vector<uint32_t>& fresh_primindices, BVHBuilderSettings cfg)
+void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx,
+	size_t prim_end_idx, thrust::universal_vector<BVHNode>& bvhnodes, std::vector<uint32_t>& fresh_primindices, size_t actual_indices_offset, BVHBuilderSettings cfg)
 {
 	BVHNode* hostBVHroot = new BVHNode();
 	//empty scene
@@ -46,7 +46,7 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 		hostBVHroot->triangle_indices_count = 0;
 		hostBVHroot->m_BoundingBox = Bounds3f(make_float3(0, 0, 0), make_float3(0, 0, 0));
 		hostBVHroot->left_child_or_triangle_indices_start_idx = -1;
-		//scene->m_DeviceScene->DeviceBVHNodes.push_back(*hostBVHroot); //optional
+		bvhnodes.push_back(*hostBVHroot); //optional?
 		delete hostBVHroot;
 		return;
 	}
@@ -68,7 +68,7 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 	// If root leaf candidate
 	if (hostBVHroot->triangle_indices_count <= cfg.m_TargetLeafPrimitivesCount)
 	{
-		fresh_bvhnodes.push_back(*hostBVHroot);
+		bvhnodes.push_back(*hostBVHroot);
 		delete hostBVHroot;
 		printf("<<!! -- made ROOT leaf with %d prims -- !!>>\n", hostBVHroot->triangle_indices_count);
 
@@ -80,7 +80,7 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 	int stackPtr = 0;
 
 	size_t nodecount = 1024 * 100;
-	fresh_bvhnodes.reserve(nodecount);
+	bvhnodes.reserve(nodecount);
 
 	// Static stack for iterative BVH construction
 	nodesToBeBuilt[stackPtr++] = hostBVHroot;
@@ -94,7 +94,7 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 		if (currentNode->triangle_indices_count <= cfg.m_TargetLeafPrimitivesCount)
 		{
 			printf(">>> made a leaf node with %d prims --------------->\n", currentNode->triangle_indices_count);
-			//currentNode->m_IsLeaf = true;
+			currentNode->left_child_or_triangle_indices_start_idx += actual_indices_offset;
 			continue;
 		}
 
@@ -102,30 +102,30 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 		BVHNode* leftNode = new BVHNode();
 		BVHNode* rightNode = new BVHNode();
 
+		//retval nodes always have triangle indices
 		makePartition(read_tris, fresh_primindices,
 			currentNode->left_child_or_triangle_indices_start_idx, currentNode->left_child_or_triangle_indices_start_idx + currentNode->triangle_indices_count,//as leaf
 			*leftNode, *rightNode, cfg);
 		currentNode->triangle_indices_count = 0;//mark as not leaf
 
-		printf("size before child1pushback: %zu\n", fresh_bvhnodes.size());
-		fresh_bvhnodes.push_back(*leftNode); delete leftNode;
-		currentNode->left_child_or_triangle_indices_start_idx = fresh_bvhnodes.size() - 1;//as node
-		printf("size after child1pushback: %zu\n", fresh_bvhnodes.size());
+		printf("size before child1pushback: %zu\n", bvhnodes.size());
+		bvhnodes.push_back(*leftNode); delete leftNode;
+		currentNode->left_child_or_triangle_indices_start_idx = bvhnodes.size() - 1;//as interior node
+		printf("size after child1pushback: %zu\n", bvhnodes.size());
 
-		fresh_bvhnodes.push_back(*rightNode); delete rightNode;
-		//currentNode->dev_child2_idx = fresh_bvhnodes.size() - 1;
-		printf("size after child2pushback: %zu\n", fresh_bvhnodes.size());
+		bvhnodes.push_back(*rightNode); delete rightNode;
+		printf("size after child2pushback: %zu\n", bvhnodes.size());
 
 		printf("child1 idx %d\n", currentNode->left_child_or_triangle_indices_start_idx);
 		printf("child2 idx %d\n", currentNode->left_child_or_triangle_indices_start_idx + 1);
 
 		// Push the child nodes onto the stack
-		nodesToBeBuilt[stackPtr++] = &fresh_bvhnodes[currentNode->left_child_or_triangle_indices_start_idx];
-		nodesToBeBuilt[stackPtr++] = &fresh_bvhnodes[currentNode->left_child_or_triangle_indices_start_idx + 1];
+		nodesToBeBuilt[stackPtr++] = &bvhnodes[currentNode->left_child_or_triangle_indices_start_idx];
+		nodesToBeBuilt[stackPtr++] = &bvhnodes[currentNode->left_child_or_triangle_indices_start_idx + 1];
 	}
 
-	fresh_bvhnodes.push_back(*hostBVHroot); delete hostBVHroot;
-	fresh_bvhnodes.shrink_to_fit();
+	bvhnodes.push_back(*hostBVHroot); delete hostBVHroot;
+	bvhnodes.shrink_to_fit();
 
 	return;
 }
