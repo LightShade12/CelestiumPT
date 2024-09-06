@@ -6,13 +6,6 @@
 
 #include <cstdint>
 
-struct EditorData {
-	HostCamera* host_camera_handle = nullptr;//non-owning
-	float camera_x_rot_rad = 0;
-	float camera_y_rot_rad = 0;
-	glm::vec3 camera_translation = { 0,0,0 };
-};
-
 struct GLFWwindow;
 //TODO: add spdlog; app spec?; Unit tests
 class Application
@@ -31,6 +24,12 @@ private:
 	void close();
 
 private:
+	enum class RenderView {
+		COMPOSITE = 0,
+		NORMALS = 1,
+		POSITIONS = 2
+	};
+	RenderView curent_renderview = RenderView::COMPOSITE;
 	Camera m_Camera;
 	GLFWwindow* m_MainWindow = nullptr;
 	uint32_t m_width, m_height = 0;

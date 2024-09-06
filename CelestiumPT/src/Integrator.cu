@@ -57,7 +57,7 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 
 	Ray primary_ray = globals.SceneDescriptor.dev_camera->generateRay(frameres.x, frameres.y, screen_uv);
 
-	float3 L = IntegratorPipeline::Li(globals, primary_ray, seed);
+	float3 L = IntegratorPipeline::Li(globals, primary_ray, seed, ppixel);
 
 	return L;
 }
@@ -104,9 +104,9 @@ __device__ bool IntegratorPipeline::Unoccluded(const IntegratorGlobals& globals,
 	return !(IntegratorPipeline::IntersectP(globals, ray));
 }
 
-__device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed)
+__device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel)
 {
-	return IntegratorPipeline::LiRandomWalk(globals, ray, seed);
+	return IntegratorPipeline::LiRandomWalk(globals, ray, seed, ppixel);
 }
 
 __device__ float3 SkyShading(const Ray& ray) {
@@ -116,7 +116,7 @@ __device__ float3 SkyShading(const Ray& ray) {
 	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
 };
 
-__device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed)
+__device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
 {
 	Ray ray = in_ray;
 
@@ -132,10 +132,27 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 		//miss--
 		if (payload.hit_distance < 0)
 		{
+			if (bounce_depth == 0) {
+				surf2Dwrite(make_float4(0, 0, 0, 1),
+					globals.FrameBuffer.normals_render_surface_object,
+					ppixel.x * (int)sizeof(float4), ppixel.y);
+				surf2Dwrite(make_float4(0, 0, 0.5, 1),
+					globals.FrameBuffer.positions_render_surface_object,
+					ppixel.x * (int)sizeof(float4), ppixel.y);
+			}
 			light += SkyShading(ray) * throughtput;
 			break;
 		}
 		//hit--
+		if (bounce_depth == 0) {
+			//primary hit
+			surf2Dwrite(make_float4(payload.w_norm, 1),
+				globals.FrameBuffer.normals_render_surface_object,
+				ppixel.x * (int)sizeof(float4), ppixel.y);
+			surf2Dwrite(make_float4(payload.w_pos, 1),
+				globals.FrameBuffer.positions_render_surface_object,
+				ppixel.x * (int)sizeof(float4), ppixel.y);
+		}
 		//light = (payload.w_norm); break;
 
 		float3 wo = -ray.getDirection();

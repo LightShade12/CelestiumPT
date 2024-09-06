@@ -20,6 +20,6 @@ namespace IntegratorPipeline {
 	__device__ bool IntersectP(const IntegratorGlobals& globals, const Ray& ray);
 	__device__ bool Unoccluded(const IntegratorGlobals& globals, const Ray& ray);
 
-	__device__ float3 Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed);
-	__device__ float3 LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed);
+	__device__ float3 Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel);
+	__device__ float3 LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel);
 }

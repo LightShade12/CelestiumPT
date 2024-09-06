@@ -14,6 +14,7 @@ public:
 	int2 resolution;
 	cudaSurfaceObject_t composite_render_surface_object;
 	cudaSurfaceObject_t normals_render_surface_object;
+	cudaSurfaceObject_t positions_render_surface_object;
 	cudaSurfaceObject_t albedo_render_surface_object;
 	float3* accumulation_framebuffer = nullptr;
 };

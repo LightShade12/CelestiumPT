@@ -21,7 +21,9 @@ public:
 
 	void clearAccumulation();
 
-	GLuint getCompositeRenderTargetTextureName() const { return m_CompositeRenderTargetTextureName; }
+	GLuint getCompositeRenderTargetTextureName() const;
+	GLuint getNormalsTargetTextureName() const;
+	GLuint getPositionsTargetTextureName() const;
 
 	HostCamera* getCurrentCamera() { return &m_CurrentCamera; };
 	HostScene* getCurrentScene() { return &m_CurrentScene; };
@@ -32,7 +34,7 @@ public:
 	~Renderer();
 
 private:
-	GLuint m_CompositeRenderTargetTextureName = NULL;
+	//GLuint m_CompositeRenderTargetTextureName = NULL;
 	uint32_t m_NativeRenderResolutionWidth = NULL;
 	uint32_t m_NativeRenderResolutionHeight = NULL;
 	HostCamera m_CurrentCamera;

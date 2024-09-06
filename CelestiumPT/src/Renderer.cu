@@ -16,15 +16,88 @@
 
 struct CudaAPI
 {
-	cudaGraphicsResource_t m_CompositeRenderTargetTextureCudaResource;
+	//cudaGraphicsResource_t m_CompositeRenderTargetTextureCudaResource;
 	dim3 m_BlockGridDimensions;
 	dim3 m_ThreadBlockDimensions;
+};
+
+class FrameBuffer {
+public:
+
+	FrameBuffer() = default;
+
+	void initialize(int width, int height)
+	{
+		//GL texture configure
+		glGenTextures(1, &m_RenderTargetTextureName);
+		glBindTexture(GL_TEXTURE_2D, m_RenderTargetTextureName);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		//TODO: make a switchable frame filtering mode
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		cudaGraphicsGLRegisterImage(&m_RenderTargetTextureCudaResource, m_RenderTargetTextureName, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+	};
+
+	~FrameBuffer() {
+		glDeleteTextures(1, &m_RenderTargetTextureName);
+	}
+
+	void resizeResolution(int width, int height) {
+		if (m_RenderTargetTextureName == NULL) {
+			initialize(width, height); return;
+		}
+		// unregister
+		cudaGraphicsUnregisterResource(m_RenderTargetTextureCudaResource);
+		// resize
+		glBindTexture(GL_TEXTURE_2D, m_RenderTargetTextureName);
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+		}
+		glBindTexture(GL_TEXTURE_2D, 0);
+		// register back
+		cudaGraphicsGLRegisterImage(&m_RenderTargetTextureCudaResource, m_RenderTargetTextureName, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+	};
+
+	void beginRender(cudaSurfaceObject_t* surf_obj) {
+		cudaGraphicsMapResources(1, &m_RenderTargetTextureCudaResource);
+
+		cudaArray_t render_target_texture_sub_resource_array;
+		cudaGraphicsSubResourceGetMappedArray(&render_target_texture_sub_resource_array, m_RenderTargetTextureCudaResource, 0, 0);
+		cudaResourceDesc render_target_texture_resource_descriptor;
+		{
+			render_target_texture_resource_descriptor.resType = cudaResourceTypeArray;
+			render_target_texture_resource_descriptor.res.array.array = render_target_texture_sub_resource_array;
+		}
+
+		//prepare globals--------------------
+		cudaCreateSurfaceObject(surf_obj, &render_target_texture_resource_descriptor);
+	}
+
+	void endRender(cudaSurfaceObject_t* surf_obj)
+	{
+		cudaDestroySurfaceObject(*surf_obj);
+		cudaGraphicsUnmapResources(1, &m_RenderTargetTextureCudaResource);
+		cudaStreamSynchronize(0);
+	}
+
+	GLuint m_RenderTargetTextureName = NULL;
+	cudaGraphicsResource_t m_RenderTargetTextureCudaResource;
 };
 
 struct CelestiumPT_API
 {
 	DeviceScene DeviceScene;
 	IntegratorGlobals m_IntegratorGlobals;
+	FrameBuffer CompositeRenderBuffer;
+	FrameBuffer NormalsRenderBuffer;
+	FrameBuffer PositionsRenderBuffer;
 	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
 
@@ -62,66 +135,33 @@ void Renderer::resizeResolution(int width, int height)
 	m_NativeRenderResolutionHeight = height;
 	m_NativeRenderResolutionWidth = width;
 
-	if (m_CompositeRenderTargetTextureName == NULL)//Texture Creation
-	{
-		m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
-		m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
-		m_CelestiumPTResourceAPI->AccumulationFrameBuffer.resize(m_NativeRenderResolutionHeight * m_NativeRenderResolutionWidth);
+	m_CelestiumPTResourceAPI->CompositeRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->NormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->PositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
-		//GL texture configure
-		glGenTextures(1, &m_CompositeRenderTargetTextureName);
-		glBindTexture(GL_TEXTURE_2D, m_CompositeRenderTargetTextureName);
+	m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
+	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		//TODO: make a switchable frame filtering mode
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight, 0, GL_RGBA, GL_FLOAT, NULL);
-
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		cudaGraphicsGLRegisterImage(&(m_CudaResourceAPI->m_CompositeRenderTargetTextureCudaResource), m_CompositeRenderTargetTextureName, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
-	}
-	else
-	{
-		m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
-		m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
-
-		m_CelestiumPTResourceAPI->AccumulationFrameBuffer.resize(m_NativeRenderResolutionHeight * m_NativeRenderResolutionWidth);
-
-		// unregister
-		cudaGraphicsUnregisterResource(m_CudaResourceAPI->m_CompositeRenderTargetTextureCudaResource);
-		// resize
-		glBindTexture(GL_TEXTURE_2D, m_CompositeRenderTargetTextureName);
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight, 0, GL_RGBA, GL_FLOAT, NULL);
-		}
-		glBindTexture(GL_TEXTURE_2D, 0);
-		// register back
-		cudaGraphicsGLRegisterImage(&(m_CudaResourceAPI->m_CompositeRenderTargetTextureCudaResource), m_CompositeRenderTargetTextureName, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
-	}
+	m_CelestiumPTResourceAPI->AccumulationFrameBuffer.resize(m_NativeRenderResolutionHeight * m_NativeRenderResolutionWidth);
 }
 
 static uint32_t g_frameIndex = 1;
 
 void Renderer::renderFrame()
 {
-	cudaGraphicsMapResources(1, &(m_CudaResourceAPI->m_CompositeRenderTargetTextureCudaResource));
+	//pre render-------------------------------------------------------------
 
-	cudaArray_t render_target_texture_sub_resource_array;
-	cudaGraphicsSubResourceGetMappedArray(&render_target_texture_sub_resource_array, m_CudaResourceAPI->m_CompositeRenderTargetTextureCudaResource, 0, 0);
-	cudaResourceDesc render_target_texture_resource_descriptor;
-	{
-		render_target_texture_resource_descriptor.resType = cudaResourceTypeArray;
-		render_target_texture_resource_descriptor.res.array.array = render_target_texture_sub_resource_array;
-	}
+	m_CelestiumPTResourceAPI->CompositeRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object));
+	m_CelestiumPTResourceAPI->NormalsRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.normals_render_surface_object));
+	m_CelestiumPTResourceAPI->PositionsRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
 
 	//prepare globals--------------------
-	cudaCreateSurfaceObject(&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object), &render_target_texture_resource_descriptor);
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.frameidx = g_frameIndex;
-	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.resolution = make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.resolution =
+		make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.accumulation_framebuffer =
 		thrust::raw_pointer_cast(m_CelestiumPTResourceAPI->AccumulationFrameBuffer.data());
 
@@ -134,9 +174,12 @@ void Renderer::renderFrame()
 	//----
 
 	//post render cuda---------------------------------------------------------------------------------
-	cudaDestroySurfaceObject(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object);
-	cudaGraphicsUnmapResources(1, &(m_CudaResourceAPI->m_CompositeRenderTargetTextureCudaResource));
-	cudaStreamSynchronize(0);
+	m_CelestiumPTResourceAPI->CompositeRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object));
+	m_CelestiumPTResourceAPI->NormalsRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.normals_render_surface_object));
+	m_CelestiumPTResourceAPI->PositionsRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
 }
 
 void Renderer::clearAccumulation()
@@ -146,11 +189,25 @@ void Renderer::clearAccumulation()
 	g_frameIndex = 1;
 }
 
+GLuint Renderer::getCompositeRenderTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->CompositeRenderBuffer.m_RenderTargetTextureName;
+}
+
+GLuint Renderer::getNormalsTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->NormalsRenderBuffer.m_RenderTargetTextureName;
+}
+
+GLuint Renderer::getPositionsTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->PositionsRenderBuffer.m_RenderTargetTextureName;
+}
+
 Renderer::~Renderer()
 {
 	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_camera);
 	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.dev_aggregate);
 	delete m_CudaResourceAPI;
 	delete m_CelestiumPTResourceAPI;
-	glDeleteTextures(1, &m_CompositeRenderTargetTextureName);
 }
