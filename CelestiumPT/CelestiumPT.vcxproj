@@ -148,7 +148,7 @@
     <ClInclude Include="src\maths\matrix.cuh" />
     <ClInclude Include="src\maths\vector_maths.cuh" />
     <ClInclude Include="src\maths\vector_types_extension.cuh" />
-    <ClInclude Include="src\Mesh.cuh" />
+    <ClInclude Include="src\DeviceMesh.cuh" />
     <ClInclude Include="src\Ray.cuh" />
     <ClInclude Include="src\RayStages.cuh" />
     <ClInclude Include="src\Renderer.hpp" />

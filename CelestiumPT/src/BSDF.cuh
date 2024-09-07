@@ -15,9 +15,11 @@ public:
 	}
 
 	__device__ float pdf() {
+		return 0.f;
 	}
 
 	__device__ BSDFSample sampleBSDF(float3 wo) {
+		BSDFSample();
 	}
 
 	__device__ float3 fOpaqueDielectric() {

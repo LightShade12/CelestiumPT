@@ -1,6 +1,6 @@
 #pragma once
 #include "ShapeIntersection.cuh"
-class Mesh;
+class DeviceMesh;
 class Ray;
 struct Triangle;
 struct BVHNode;
@@ -20,7 +20,7 @@ struct SceneGeometry {
 	BLAS* DeviceBLASesBuffer = nullptr;
 	size_t DeviceBLASesCount = 0;
 
-	Mesh* DeviceMeshesBuffer = nullptr;
+	DeviceMesh* DeviceMeshesBuffer = nullptr;
 	size_t DeviceMeshesCount = 0;
 
 	Triangle* DeviceTrianglesBuffer = nullptr;

@@ -1,5 +1,8 @@
 #include "ModelImporter.hpp"
-#include "glm/glm.hpp"
+#include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
+
 #include <iostream>
 
 static std::string GetFilePathExtension(const std::string& FileName) {
@@ -113,6 +116,24 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 			mesh_node.matrix[8], mesh_node.matrix[9], mesh_node.matrix[10], mesh_node.matrix[11],
 			mesh_node.matrix[12], mesh_node.matrix[13], mesh_node.matrix[14], mesh_node.matrix[15]
 		));
+	}
+	else if (mesh_node.translation.size() > 0) {
+		glm::mat4 mat(1);
+		mat[3] = glm::vec4(mesh_node.translation[0], mesh_node.translation[1], mesh_node.translation[2], 1);
+		if (mesh_node.scale.size() > 0) {
+			mat[0][0] = mesh_node.scale[0];
+			mat[1][1] = mesh_node.scale[1];
+			mat[2][2] = mesh_node.scale[2];
+		}
+		if (mesh_node.rotation.size() > 0) {
+			float costheta_half = mesh_node.rotation[3];
+			glm::vec3 axis = glm::vec3(mesh_node.rotation[0], mesh_node.rotation[1], mesh_node.rotation[2]);
+			glm::quat quaternion = glm::quat(costheta_half, axis);
+			glm::mat rotmat = glm::toMat4(quaternion);
+			mat *= rotmat;
+		}
+
+		mesh.setTransform(mat);
 	}
 	else {
 		mesh.setTransform(glm::mat4(1));

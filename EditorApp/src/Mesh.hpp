@@ -10,7 +10,7 @@ public:
 	};
 
 	glm::vec3 translation{};
-	glm::vec3 scale;
+	glm::vec3 scale{};
 	glm::vec3 rotation{};
 
 	glm::mat4 original_tranform{};

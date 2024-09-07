@@ -7,7 +7,7 @@
 class DeviceScene;
 struct Bounds3f;
 struct IntegratorGlobals;
-class Mesh;
+class DeviceMesh;
 struct BVHNode;
 class Ray;
 struct ShapeIntersection;
@@ -30,7 +30,7 @@ public:
 	};
 
 	BLAS() = default;
-	BLAS(Mesh* mesh, DeviceScene* dscene, BVHBuilderSettings buildercfg);
+	BLAS(DeviceMesh* mesh, DeviceScene* dscene, BVHBuilderSettings buildercfg);
 
 	void build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx, size_t prim_end_idx,
 		thrust::universal_vector<BVHNode>& bvhnodes, std::vector<uint32_t>& fresh_primindices, size_t actual_indices_offset, BVHBuilderSettings cfg);
@@ -60,5 +60,5 @@ public:
 	uint32_t bvhnodesCount = 0;
 	int bvhnodesStartIdx = -1;
 	int bvhrootIdx = -1;//Ideally should be startidx too
-	Mesh* MeshLink = nullptr;
+	DeviceMesh* MeshLink = nullptr;
 };

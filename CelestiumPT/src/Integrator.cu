@@ -2,7 +2,7 @@
 #include "Storage.cuh"
 #include "RayStages.cuh"
 #include "Triangle.cuh"
-#include "Mesh.cuh"
+#include "DeviceMesh.cuh"
 #include "ShapeIntersection.cuh"
 #include "BSDF.cuh"
 #include "acceleration_structure/BLAS.cuh"

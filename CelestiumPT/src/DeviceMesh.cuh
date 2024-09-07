@@ -1,7 +1,7 @@
 #pragma once
 #include "maths/maths_linear_algebra.cuh"
 
-class Mesh {
+class DeviceMesh {
 public:
 	//__device__ ShapeIntersection intersect(const Ray& ray);
 	//__device__ bool intersectP(const Ray& ray);

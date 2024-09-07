@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Triangle.cuh"
-#include "Mesh.cuh"
+#include "DeviceMesh.cuh"
 #include "acceleration_structure/BVHNode.cuh"
 #include "acceleration_structure/BLAS.cuh"
 #include "SceneGeometry.cuh"
@@ -47,5 +47,5 @@ public:
 	thrust::universal_vector<BVHNode>DeviceBVHNodes;
 	thrust::device_vector<BLAS>DeviceBLASes;
 	thrust::device_vector<int>DeviceBVHTriangleIndices;
-	thrust::universal_vector<Mesh>DeviceMeshes;
+	thrust::universal_vector<DeviceMesh>DeviceMeshes;
 };

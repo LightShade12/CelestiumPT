@@ -39,13 +39,14 @@ void HostScene::AddTriangle(
 	);
 	m_DeviceScene->DeviceTriangles.push_back(tri);
 
-	if (!skip_sync)
+	if (!skip_sync) {
 		m_DeviceScene->syncDeviceGeometry();
+	}
 }
 
 void HostScene::AddMesh(HostMesh hmesh)
 {
-	Mesh dmesh;
+	DeviceMesh dmesh;
 	dmesh.triangle_offset_idx = hmesh.triangle_offset_idx;
 	dmesh.tri_count = hmesh.tri_count;
 	Mat4 mat(
@@ -61,8 +62,8 @@ void HostScene::AddMesh(HostMesh hmesh)
 
 HostMesh HostScene::getMesh(size_t mesh_idx)
 {
-	assert(mesh_idx < m_DeviceScene->DeviceMeshes.size(), "Mesh access Out Of Bounds");
-	Mesh* dmeshptr = thrust::raw_pointer_cast(&m_DeviceScene->DeviceMeshes[mesh_idx]);
+	assert(mesh_idx < m_DeviceScene->DeviceMeshes.size(), "DeviceMesh access Out Of Bounds");
+	DeviceMesh* dmeshptr = thrust::raw_pointer_cast(&m_DeviceScene->DeviceMeshes[mesh_idx]);
 	HostMesh hmesh(dmeshptr);
 	return hmesh;
 }

@@ -5,14 +5,14 @@
 #include "ShapeIntersection.cuh"
 #include "DeviceScene.cuh"
 #include "Ray.cuh"
-#include "Mesh.cuh"
+#include "DeviceMesh.cuh"
 #include "BVHNode.cuh"
 
 #include <float.h>
 #include <algorithm>
 #include <numeric>
 
-BLAS::BLAS(Mesh* mesh, DeviceScene* dscene, BVHBuilderSettings buildercfg)
+BLAS::BLAS(DeviceMesh* mesh, DeviceScene* dscene, BVHBuilderSettings buildercfg)
 {
 	MeshLink = mesh;
 	uint32_t prim_start_idx = mesh->triangle_offset_idx;

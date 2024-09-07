@@ -1,11 +1,11 @@
 #include <glm/glm.hpp>
 
-class Mesh;
+class DeviceMesh;
 
 class HostMesh {
 public:
 	HostMesh() = default;
-	explicit HostMesh(Mesh* device_mesh);
+	explicit HostMesh(DeviceMesh* device_mesh);
 
 	void updateDevice();
 
@@ -17,7 +17,7 @@ public:
 		modelMatrix = (transform);
 	};
 public:
-	Mesh* m_deviceMesh = nullptr;
+	DeviceMesh* m_deviceMesh = nullptr;
 	//TODO: guarded access to sensitive data modification
 	int triangle_offset_idx = 1;
 	size_t tri_count = 0;

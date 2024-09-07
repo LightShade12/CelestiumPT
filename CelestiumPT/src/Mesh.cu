@@ -1,8 +1,8 @@
 #include "HostMesh.hpp"
-#include "Mesh.cuh"
+#include "DeviceMesh.cuh"
 #include "maths/maths_linear_algebra.cuh"
 
-HostMesh::HostMesh(Mesh* device_mesh)
+HostMesh::HostMesh(DeviceMesh* device_mesh)
 {
 	m_deviceMesh = device_mesh;
 	Mat4 mat = m_deviceMesh->modelMatrix;
