@@ -102,7 +102,6 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 	//setName(drt_mesh.Name, gltf_mesh.name.c_str());
 	//printf("\nprocessing mesh:%s\n", gltf_mesh.name.c_str());
 
-	//drt_mesh.m_primitives_offset = m_WorkingScene->getTrianglesCount();
 	HostMesh mesh;
 	mesh.triangle_offset_idx = m_WorkingScene->getTrianglesCount();
 	extractVertices(gltf_mesh, loadedMeshPositions,
@@ -174,7 +173,6 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 		//}
 	}
 
-	//m_WorkingScene->addMesh(drt_mesh);
 	//printf("\rloaded mesh:%zu/%zu", nodeIdx + 1, m_SceneModel.nodes.size());
 	return false;
 }

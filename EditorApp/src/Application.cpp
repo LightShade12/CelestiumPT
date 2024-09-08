@@ -55,6 +55,7 @@ Application::~Application()
 	close();
 }
 
+//TODO:proper placement of application timings
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 
@@ -94,15 +95,24 @@ void Application::run()
 			ImGui::Combo("Renderer mode", (int*)&curent_renderview, "Composite\0Normals\0Positions");
 			ImGui::Separator();
 			//-----------------------
+
 			ImGui::Text("Mesh transformations");
+
 			bool updateMesh = false;
 			updateMesh |= ImGui::DragFloat3("Translation", &m_selected_mesh.translation.x, 0.2);
 			updateMesh |= ImGui::DragFloat3("Scale", &m_selected_mesh.scale.x, 0.05);
 			updateMesh |= ImGui::DragFloat3("Rotation(degrees)", &m_selected_mesh.rotation.x, 0.2);
-
+			{
+				static int sel_idx = 0;
+				if (ImGui::InputInt("selected mesh idx", &sel_idx)) {
+					sel_idx = (sel_idx < 0) ? 0 :
+						(sel_idx == m_Renderer.getCurrentScene()->getMeshesCount()) ? (m_Renderer.getCurrentScene()->getMeshesCount() - 1) : sel_idx;
+					m_selected_mesh = Mesh(m_Renderer.getCurrentScene()->getMesh(sel_idx));
+				}
+			}
 			if (updateMesh) {
-				glm::mat4 trans = (glm::translate(glm::mat4(1), m_selected_mesh.translation));
-				glm::mat4 scale = (glm::scale(glm::mat4(1), m_selected_mesh.scale));
+				glm::mat4 trans = (glm::translate(glm::mat4(1), -m_selected_mesh.translation));
+				glm::mat4 scale = (glm::scale(glm::mat4(1), 1.f/m_selected_mesh.scale));
 				glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.x), glm::vec3(1, 0, 0));
 				glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.y), glm::vec3(0, 1, 0));
 				glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.z), glm::vec3(0, 0, 1));

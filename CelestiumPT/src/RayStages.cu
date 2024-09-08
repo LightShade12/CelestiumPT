@@ -18,7 +18,8 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 	out_payload.triangle_idx = in_payload.triangle_idx;
 	out_payload.hit_distance = in_payload.hit_distance;
 
-	out_payload.w_pos = model_matrix * (make_float4(ray.getOrigin() + ray.getDirection() * in_payload.hit_distance, -1));//TODO:problem part
+	out_payload.w_pos = model_matrix.transpose() * (ray.getOrigin() + ray.getDirection() * in_payload.hit_distance);//TODO:problem part
+	out_payload.w_pos -= model_matrix.transpose() * model_matrix[3];
 
 	//TODO: implement smooth shading here
 	if (dot(triangle.face_normal, -1 * ray.getDirection()) < 0.f)
