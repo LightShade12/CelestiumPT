@@ -45,7 +45,7 @@ public:
 	SceneGeometry* DeviceSceneGeometry = nullptr;
 	thrust::universal_vector<Triangle>DeviceTriangles;
 	thrust::universal_vector<BVHNode>DeviceBVHNodes;
-	thrust::device_vector<BLAS>DeviceBLASes;
-	thrust::device_vector<int>DeviceBVHTriangleIndices;
+	thrust::universal_vector<BLAS>DeviceBLASes;
+	thrust::universal_vector<int>DeviceBVHTriangleIndices;
 	thrust::universal_vector<DeviceMesh>DeviceMeshes;
 };

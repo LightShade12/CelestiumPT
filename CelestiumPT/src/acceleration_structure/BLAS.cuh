@@ -30,30 +30,31 @@ public:
 	};
 
 	BLAS() = default;
-	BLAS(DeviceMesh* mesh, DeviceScene* dscene, BVHBuilderSettings buildercfg);
+	BLAS(DeviceMesh* mesh, const thrust::universal_vector<Triangle>& prims, std::vector<BVHNode>& nodes,
+		std::vector<int>& prim_indices, BVHBuilderSettings buildercfg);
 
 	void build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx, size_t prim_end_idx,
-		thrust::universal_vector<BVHNode>& bvhnodes, std::vector<uint32_t>& fresh_primindices, size_t actual_indices_offset, BVHBuilderSettings cfg);
+		std::vector<BVHNode>& bvhnodes, std::vector<int>& prim_indices, BVHBuilderSettings cfg);
 
 	int costHeursitic(const BVHNode& left_node, const BVHNode& right_node, const Bounds3f& parent_bbox, BVHBuilderSettings bvhcfg);
 
 	//reads prim_indices from pos=start_idx to end_idx to access and compute triangles bound
-	float3 get_Absolute_Extent(const thrust::universal_vector<Triangle>& primitives_, const std::vector<unsigned int>& primitive_indices,
+	float3 get_Absolute_Extent(const thrust::universal_vector<Triangle>& primitives_, const std::vector<int>& primitive_indices,
 		size_t start_idx_, size_t end_idx_, float3& min_extent_);
 
-	//reads prim_indices from pos=start_idx to end_idx to access and compute triangles bound
-	float3 get_Absolute_Extent(const std::vector<const Triangle*>& primitives, size_t start_idx, size_t end_idx, float3& min_extent);
-
 	//retval nodes always have triangle indices assigned
-	void makePartition(const thrust::universal_vector<Triangle>& read_tris, std::vector<uint32_t>& primitives_indices,
-		size_t start_idx, size_t end_idx, BVHNode& leftnode, BVHNode& rightnode, BVHBuilderSettings cfg);
+	void makePartition(const thrust::universal_vector<Triangle>& read_tris, std::vector<int>& primitives_indices,
+		size_t start_idx, size_t end_idx, BVHNode* leftnode, BVHNode* rightnode, BVHBuilderSettings cfg);
+
+	//this overload is used for making temp shallow bin partition nodes
+	float3 get_Absolute_Extent(const std::vector<const Triangle*>& primitives, size_t start_idx, size_t end_idx, float3& min_extent);
 
 	//bin is in world space
 	void binToNodes(BVHNode& left, BVHNode& right, float bin, PartitionAxis axis,
-		const thrust::universal_vector<Triangle>& read_tris, std::vector<uint32_t>& primitives_indices, size_t start_idx, size_t end_idx);
+		const thrust::universal_vector<Triangle>& read_tris, std::vector<int>& primitives_indices, size_t start_idx, size_t end_idx);
 
 	void binToShallowNodes(BVHNode& left, BVHNode& right, float bin, PartitionAxis axis,
-		const thrust::universal_vector<Triangle>& read_tris, std::vector<uint32_t>& primitives_indices, size_t start_idx, size_t end_idx);
+		const thrust::universal_vector<Triangle>& read_tris, const std::vector<int>& primitives_indices, size_t start_idx, size_t end_idx);
 
 	__device__ void intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload);
 public:

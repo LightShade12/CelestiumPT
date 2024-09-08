@@ -8,11 +8,18 @@
 #include "DeviceMesh.cuh"
 #include "BVHNode.cuh"
 
-#include <float.h>
+//#include <thrust/partition.h>
+//#include <thrust/sequence.h>
+//#include <thrust/distance.h>
 #include <algorithm>
 #include <numeric>
 
-BLAS::BLAS(DeviceMesh* mesh, DeviceScene* dscene, BVHBuilderSettings buildercfg)
+#include <float.h>
+//#include <algorithm>
+//#include <numeric>
+
+BLAS::BLAS(DeviceMesh* mesh, const thrust::universal_vector<Triangle>& prims, std::vector<BVHNode>& nodes,
+	std::vector<int>& prim_indices, BVHBuilderSettings buildercfg)
 {
 	MeshLink = mesh;
 	uint32_t prim_start_idx = mesh->triangle_offset_idx;
@@ -20,57 +27,51 @@ BLAS::BLAS(DeviceMesh* mesh, DeviceScene* dscene, BVHBuilderSettings buildercfg)
 	std::vector<BVHNode> bvhnodes;
 	std::vector<uint32_t>bvhprim_indices;
 
-	bvhnodesStartIdx = dscene->DeviceBVHNodes.size();
-	build(dscene->DeviceTriangles,
+	bvhnodesStartIdx = nodes.size();
+	build(prims,
 		prim_start_idx,
 		prim_end_idx,
-		dscene->DeviceBVHNodes,
-		bvhprim_indices,
-		dscene->DeviceBVHTriangleIndices.size(),
+		nodes,
+		prim_indices,
 		buildercfg);
-	bvhnodesCount = dscene->DeviceBVHNodes.size() - bvhnodesStartIdx;
-	bvhrootIdx = bvhnodesCount - 1;
-
-	//thrust::universal_vector<BVHNode>nodes = bvhnodes;
-	thrust::universal_vector<uint32_t>indices = bvhprim_indices;
-	//dscene->DeviceBVHNodes.insert(dscene->DeviceBVHNodes.end(), nodes.begin(), nodes.end());//insert
-	dscene->DeviceBVHTriangleIndices.insert(dscene->DeviceBVHTriangleIndices.end(), indices.begin(), indices.end());//insert
+	bvhnodesCount = nodes.size() - bvhnodesStartIdx;
+	bvhrootIdx = nodes.size() - 1;
 };
 
-void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx,
-	size_t prim_end_idx, thrust::universal_vector<BVHNode>& bvhnodes, std::vector<uint32_t>& fresh_primindices, size_t actual_indices_offset, BVHBuilderSettings cfg)
+void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx, size_t prim_end_idx,
+	std::vector<BVHNode>& bvhnodes, std::vector<int>& prim_indices, BVHBuilderSettings cfg)
 {
-	BVHNode* hostBVHroot = new BVHNode();
+	BVHNode hostBVHroot;
 	//empty scene
 	if (read_tris.size() == 0) {
-		hostBVHroot->triangle_indices_count = 0;
-		hostBVHroot->m_BoundingBox = Bounds3f(make_float3(0, 0, 0), make_float3(0, 0, 0));
-		hostBVHroot->left_child_or_triangle_indices_start_idx = -1;
-		bvhnodes.push_back(*hostBVHroot); //optional?
-		delete hostBVHroot;
+		hostBVHroot.triangle_indices_count = 0;
+		hostBVHroot.m_BoundingBox = Bounds3f(make_float3(0, 0, 0), make_float3(0, 0, 0));
+		hostBVHroot.left_child_or_triangle_indices_start_idx = -1;
+		bvhnodes.push_back(hostBVHroot); //optional?
 		return;
 	}
 
-	fresh_primindices.resize(prim_end_idx - prim_start_idx, 0);
+	prim_indices.resize(prim_indices.size() + (prim_end_idx - prim_start_idx), 0);
 
-	std::iota(fresh_primindices.begin(), fresh_primindices.end(), prim_start_idx);
+	int prim_indices_start_idx = prim_indices.size() - (prim_end_idx - prim_start_idx);
+
+	std::iota(prim_indices.end() - (prim_end_idx - prim_start_idx), prim_indices.end(), prim_start_idx);
 
 	float3 minextent;
-	float3 extent = get_Absolute_Extent(read_tris, fresh_primindices,
-		0, fresh_primindices.size(),
+	float3 extent = get_Absolute_Extent(read_tris, prim_indices,
+		prim_indices_start_idx, prim_indices.size(),
 		minextent);
 
-	hostBVHroot->m_BoundingBox = Bounds3f(minextent, minextent + extent);
-	hostBVHroot->left_child_or_triangle_indices_start_idx = 0;//if leaf; will be valid
-	hostBVHroot->triangle_indices_count = fresh_primindices.size();
-	printf("root prim count:%d \n", hostBVHroot->triangle_indices_count);
+	hostBVHroot.m_BoundingBox = Bounds3f(minextent, minextent + extent);
+	hostBVHroot.left_child_or_triangle_indices_start_idx = prim_indices_start_idx;//if leaf; will be valid
+	hostBVHroot.triangle_indices_count = prim_indices.size() - prim_indices_start_idx;
+	printf("root prim count:%d \n", hostBVHroot.triangle_indices_count);
 
 	// If root leaf candidate
-	if (hostBVHroot->triangle_indices_count <= cfg.m_TargetLeafPrimitivesCount)
+	if (hostBVHroot.triangle_indices_count <= cfg.m_TargetLeafPrimitivesCount)
 	{
-		bvhnodes.push_back(*hostBVHroot);
-		delete hostBVHroot;
-		printf("<<!! -- made ROOT leaf with %d prims -- !!>>\n", hostBVHroot->triangle_indices_count);
+		bvhnodes.push_back(hostBVHroot);
+		printf("<<!! -- made ROOT leaf with %d prims -- !!>>\n", hostBVHroot.triangle_indices_count);
 
 		return;
 	}
@@ -80,10 +81,10 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 	int stackPtr = 0;
 
 	size_t nodecount = 1024 * 100;
-	bvhnodes.reserve(nodecount);
+	bvhnodes.reserve(nodecount);//Net nodes across all BLASes
 
 	// Static stack for iterative BVH construction
-	nodesToBeBuilt[stackPtr++] = hostBVHroot;
+	nodesToBeBuilt[stackPtr++] = &hostBVHroot;
 	BVHNode* currentNode = nullptr;
 
 	while (stackPtr > 0)
@@ -94,26 +95,24 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 		if (currentNode->triangle_indices_count <= cfg.m_TargetLeafPrimitivesCount)
 		{
 			printf(">>> made a leaf node with %d prims --------------->\n", currentNode->triangle_indices_count);
-			currentNode->left_child_or_triangle_indices_start_idx += actual_indices_offset;
 			continue;
 		}
 
 		// Partition the current node
-		BVHNode* leftNode = new BVHNode();
-		BVHNode* rightNode = new BVHNode();
+		BVHNode leftNode, rightNode;
 
 		//retval nodes always have triangle indices
-		makePartition(read_tris, fresh_primindices,
+		makePartition(read_tris, prim_indices,
 			currentNode->left_child_or_triangle_indices_start_idx, currentNode->left_child_or_triangle_indices_start_idx + currentNode->triangle_indices_count,//as leaf
-			*leftNode, *rightNode, cfg);
+			&leftNode, &rightNode, cfg);
 		currentNode->triangle_indices_count = 0;//mark as not leaf
 
 		printf("size before child1pushback: %zu\n", bvhnodes.size());
-		bvhnodes.push_back(*leftNode); delete leftNode;
+		bvhnodes.push_back(leftNode);
 		currentNode->left_child_or_triangle_indices_start_idx = bvhnodes.size() - 1;//as interior node
 		printf("size after child1pushback: %zu\n", bvhnodes.size());
 
-		bvhnodes.push_back(*rightNode); delete rightNode;
+		bvhnodes.push_back(rightNode);
 		printf("size after child2pushback: %zu\n", bvhnodes.size());
 
 		printf("child1 idx %d\n", currentNode->left_child_or_triangle_indices_start_idx);
@@ -124,7 +123,7 @@ void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t pri
 		nodesToBeBuilt[stackPtr++] = &bvhnodes[currentNode->left_child_or_triangle_indices_start_idx + 1];
 	}
 
-	bvhnodes.push_back(*hostBVHroot); delete hostBVHroot;
+	bvhnodes.push_back(hostBVHroot);
 	bvhnodes.shrink_to_fit();
 
 	return;
@@ -162,7 +161,7 @@ float3 BLAS::get_Absolute_Extent(const std::vector<const Triangle*>& primitives,
 	return extent;
 };
 
-float3 BLAS::get_Absolute_Extent(const thrust::universal_vector<Triangle>& primitives_, const std::vector<unsigned int>& primitive_indices,
+float3 BLAS::get_Absolute_Extent(const thrust::universal_vector<Triangle>& primitives_, const std::vector<int>& primitive_indices,
 	size_t start_idx_, size_t end_idx_, float3& min_extent_)
 {
 	float3 extent;
@@ -188,8 +187,8 @@ float3 BLAS::get_Absolute_Extent(const thrust::universal_vector<Triangle>& primi
 	return extent;
 };
 
-void BLAS::makePartition(const thrust::universal_vector<Triangle>& read_tris, std::vector<uint32_t>& primitives_indices,
-	size_t start_idx, size_t end_idx, BVHNode& leftnode, BVHNode& rightnode, BVHBuilderSettings cfg)
+void BLAS::makePartition(const thrust::universal_vector<Triangle>& read_tris, std::vector<int>& primitives_indices,
+	size_t start_idx, size_t end_idx, BVHNode* leftnode, BVHNode* rightnode, BVHBuilderSettings cfg)
 {
 	printf("---> making partition, input prim count:%zu <---\n", end_idx - start_idx);
 	float lowest_cost_partition_pt = 0;//best bin
@@ -272,17 +271,18 @@ void BLAS::makePartition(const thrust::universal_vector<Triangle>& read_tris, st
 	}
 
 	printf(">> made a partition, bin: %.3f, axis: %d, cost: %d <<---\n", lowest_cost_partition_pt, best_partition_axis, lowest_cost);
-	binToNodes(leftnode, rightnode, lowest_cost_partition_pt,
+	binToNodes(*leftnode, *rightnode, lowest_cost_partition_pt,
 		best_partition_axis, read_tris, primitives_indices, start_idx, end_idx);
-	printf("left node prim count:%d | right node prim count: %d\n", leftnode.triangle_indices_count, rightnode.triangle_indices_count);
+	printf("left node prim count:%d | right node prim count: %d\n", leftnode->triangle_indices_count, rightnode->triangle_indices_count);
 }
 
 void BLAS::binToNodes(BVHNode& left, BVHNode& right, float bin, PartitionAxis axis,
-	const thrust::universal_vector<Triangle>& read_tris, std::vector<uint32_t>& primitives_indices, size_t start_idx, size_t end_idx)
+	const thrust::universal_vector<Triangle>& read_tris, std::vector<int>& primitives_indices, size_t start_idx, size_t end_idx)
 {
 	//sorting
 
-	std::vector<unsigned int>::iterator partition_iterator;
+	std::vector<int>::iterator partition_iterator;
+
 	switch (axis)
 	{
 	case PartitionAxis::X_AXIS:
@@ -318,7 +318,7 @@ void BLAS::binToNodes(BVHNode& left, BVHNode& right, float bin, PartitionAxis ax
 }
 
 void BLAS::binToShallowNodes(BVHNode& left, BVHNode& right, float bin, PartitionAxis axis,
-	const thrust::universal_vector<Triangle>& read_tris, std::vector<uint32_t>& primitives_indices, size_t start_idx, size_t end_idx)
+	const thrust::universal_vector<Triangle>& read_tris, const std::vector<int>& primitives_indices, size_t start_idx, size_t end_idx)
 {
 	//can make a single vector and run partition
 	std::vector<const Triangle*>left_prim_ptrs;
