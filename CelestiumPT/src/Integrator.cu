@@ -1,16 +1,20 @@
 #include "Integrator.cuh"
+#include "SceneGeometry.cuh"
+#include "DeviceCamera.cuh"
 #include "Storage.cuh"
 #include "RayStages.cuh"
-#include "Triangle.cuh"
-#include "DeviceMesh.cuh"
+//#include "Triangle.cuh"
+#include "Ray.cuh"
+//#include "DeviceMesh.cuh"
 #include "ShapeIntersection.cuh"
 #include "BSDF.cuh"
-#include "acceleration_structure/BLAS.cuh"
+#include "acceleration_structure/GAS.cuh"
 #include "Samplers.cuh"
 
+#include "maths/maths_linear_algebra.cuh"
 #include "maths/constants.cuh"
 
-#include "device_launch_parameters.h"
+#include <device_launch_parameters.h>
 #define __CUDACC__
 #include <surface_indirect_functions.h>
 #include <float.h>
@@ -69,23 +73,25 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 	Mat4 closest_hit_model_transform(1);
 	Ray valid_transformed_ray = ray;
 
-	for (int blasidx = 0; blasidx < globals.SceneDescriptor.dev_aggregate->DeviceBLASesCount; blasidx++) {
+	/*for (int blasidx = 0; blasidx < globals.SceneDescriptor.dev_aggregate->DeviceBLASesCount; blasidx++) {
 		BLAS* blas = &(globals.SceneDescriptor.dev_aggregate->DeviceBLASesBuffer[blasidx]);
-		Mat4 modelmat = blas->MeshLink->modelMatrix;
+		Mat4 modelmat = blas->m_MeshLink->modelMatrix;
 		Ray transformedRay = ray;
 		transformedRay.setOrigin(modelmat * make_float4(transformedRay.getOrigin(), 1));
 		transformedRay.setDirection(normalize(modelmat * make_float4(transformedRay.getDirection(), 0)));
 		ShapeIntersection eval_payload;
 		eval_payload.hit_distance = FLT_MAX;
 
-		blas->intersect(globals, transformedRay, &eval_payload);
+		blas->intersect(globals, ray, &eval_payload);
 
 		if (eval_payload.hit_distance < payload.hit_distance && eval_payload.triangle_idx != -1) {
 			payload = eval_payload;
 			closest_hit_model_transform = modelmat;
 			valid_transformed_ray = transformedRay;
 		}
-	};
+	};*/
+
+	payload = globals.SceneDescriptor.dev_aggregate->GAS_structure.intersect(globals, ray);
 
 	if (payload.triangle_idx == -1) {
 		return MissStage(globals, ray, payload);
@@ -153,7 +159,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 				globals.FrameBuffer.positions_render_surface_object,
 				ppixel.x * (int)sizeof(float4), ppixel.y);
 		}
-		//light = (payload.w_norm); break;
+		light = (make_float3(1, 0, 1)); break;
 
 		float3 wo = -ray.getDirection();
 		light += payload.Le() * throughtput;

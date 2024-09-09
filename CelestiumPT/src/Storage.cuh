@@ -1,5 +1,7 @@
 #pragma once
-#include <glad/include/glad/glad.h>
+
+#include <vector_types.h>
+#include <glad/include/glad/glad.h>//for cudagl_interop
 #include <cuda_gl_interop.h>
 #include <cstdint>
 

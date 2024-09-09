@@ -1,5 +1,6 @@
 #include "HostCamera.hpp"
 #include "DeviceCamera.cuh"
+#include "Ray.cuh"
 
 HostCamera::HostCamera(DeviceCamera* dev_camera)
 {

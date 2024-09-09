@@ -40,7 +40,7 @@ Application::Application() : m_Camera()
 	//TODO: make loading automatically sync geometry
 	hostscenehandle->syncDeviceGeometry();//updates raw buffer data; not needed at this point
 
-	BLASBuilder builder;
+	GASBuilder builder;
 	builder.build(hostscenehandle);
 	hostscenehandle->syncDeviceGeometry();
 

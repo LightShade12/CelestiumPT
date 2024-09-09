@@ -1,11 +1,11 @@
 #pragma once
-#include "maths/maths_linear_algebra.cuh"
-#include "SceneGeometry.cuh"
-#include "DeviceCamera.cuh"
+
+#include "Storage.cuh"
 #include <cuda_runtime.h>
 #include <vector_types.h>
 
-struct IntegratorGlobals;
+//struct IntegratorGlobals;
+class Ray;
 
 __global__ void renderKernel(IntegratorGlobals globals);
 

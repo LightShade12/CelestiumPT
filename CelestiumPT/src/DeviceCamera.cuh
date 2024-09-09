@@ -1,5 +1,10 @@
 #pragma once
-#include "Ray.cuh"
+
+//#include "Ray.cuh"
+#include "maths/matrix.cuh"
+#include <cuda_runtime.h>
+
+class Ray;
 
 class DeviceCamera {
 public:

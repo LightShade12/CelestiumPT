@@ -1,11 +1,44 @@
 #include "HostScene.hpp"
 #include "DeviceScene.cuh"
+#include "DeviceMesh.cuh"
 
 #include "Triangle.cuh"
 
-#include "Ray.cuh"
-#include "ShapeIntersection.cuh"
+//#include "Ray.cuh"
+//#include "ShapeIntersection.cuh"
+#include "SceneGeometry.cuh"
 //#include "SceneGeometry.cuh"
+
+DeviceScene::DeviceScene(SceneGeometry* device_scene_geo) :DeviceSceneGeometry(device_scene_geo)
+{
+	if (DeviceSceneGeometry == nullptr) {
+		cudaMallocManaged(&DeviceSceneGeometry, sizeof(DeviceSceneGeometry));
+	}
+	syncDeviceGeometry();
+};
+
+void DeviceScene::syncDeviceGeometry()
+{
+	if (DeviceSceneGeometry == nullptr)return;
+
+	DeviceSceneGeometry->DeviceTrianglesBuffer = thrust::raw_pointer_cast(DeviceTriangles.data());
+	DeviceSceneGeometry->DeviceTrianglesCount = DeviceTriangles.size();
+
+	DeviceSceneGeometry->DeviceBVHTriangleIndicesBuffer = thrust::raw_pointer_cast(DeviceBVHTriangleIndices.data());
+	DeviceSceneGeometry->DeviceBVHTriangleIndicesCount = DeviceBVHTriangleIndices.size();
+
+	DeviceSceneGeometry->DeviceBVHNodesBuffer = thrust::raw_pointer_cast(DeviceBVHNodes.data());
+	DeviceSceneGeometry->DeviceBVHNodesCount = DeviceBVHNodes.size();
+
+	DeviceSceneGeometry->DeviceTLASNodesBuffer = thrust::raw_pointer_cast(DeviceTLASNodes.data());
+	DeviceSceneGeometry->DeviceTLASNodesCount = DeviceTLASNodes.size();
+
+	DeviceSceneGeometry->DeviceBLASesBuffer = thrust::raw_pointer_cast(DeviceBLASes.data());
+	DeviceSceneGeometry->DeviceBLASesCount = DeviceBLASes.size();
+
+	DeviceSceneGeometry->DeviceMeshesBuffer = thrust::raw_pointer_cast(DeviceMeshes.data());
+	DeviceSceneGeometry->DeviceMeshesCount = DeviceMeshes.size();
+};
 
 HostScene::HostScene(DeviceScene* device_scene)
 {

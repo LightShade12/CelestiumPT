@@ -1,11 +1,16 @@
 #pragma once
-#include "Triangle.cuh"
 
-#include <thrust/universal_vector.h>
+#include "Triangle.cuh"
+#include "Bounds.cuh"
+
+//#include <vector_types.h>
 #include <cuda_runtime.h>
+#include <thrust/universal_vector.h>
+
+#include <vector>
+#include <cstdint>
 
 class DeviceScene;
-struct Bounds3f;
 struct IntegratorGlobals;
 class DeviceMesh;
 struct BVHNode;
@@ -26,13 +31,16 @@ public:
 		int m_RayAABBIntersectionCost = 1;
 		int m_RayPrimitiveIntersectionCost = 2;
 		uint32_t m_TargetLeafPrimitivesCount = 8;
-		uint32_t binCount = 32;
+		uint32_t m_BinCount = 32;
 	};
 
 	BLAS() = default;
 	BLAS(DeviceMesh* mesh, const thrust::universal_vector<Triangle>& prims, std::vector<BVHNode>& nodes,
 		std::vector<int>& prim_indices, BVHBuilderSettings buildercfg);
 
+	__device__ void intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload);
+
+private:
 	void build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx, size_t prim_end_idx,
 		std::vector<BVHNode>& bvhnodes, std::vector<int>& prim_indices, BVHBuilderSettings cfg);
 
@@ -56,10 +64,11 @@ public:
 	void binToShallowNodes(BVHNode& left, BVHNode& right, float bin, PartitionAxis axis,
 		const thrust::universal_vector<Triangle>& read_tris, const std::vector<int>& primitives_indices, size_t start_idx, size_t end_idx);
 
-	__device__ void intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload);
 public:
-	uint32_t bvhnodesCount = 0;
-	int bvhnodesStartIdx = -1;
-	int bvhrootIdx = -1;//Ideally should be startidx too
-	DeviceMesh* MeshLink = nullptr;
+
+	Bounds3f m_BoundingBox;
+	uint32_t m_BVHNodesCount = 0;
+	int m_BVHNodesStartIdx = -1;
+	int m_BVHRootIdx = -1;//Ideally should be startidx too
+	DeviceMesh* m_MeshLink = nullptr;
 };

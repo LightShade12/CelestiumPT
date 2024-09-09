@@ -1,6 +1,8 @@
 #pragma once
+
 #include "Bounds.cuh"
 
+//BLAS Node
 struct BVHNode {
 	BVHNode() = default;
 

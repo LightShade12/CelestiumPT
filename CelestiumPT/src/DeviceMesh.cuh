@@ -1,4 +1,5 @@
 #pragma once
+
 #include "maths/maths_linear_algebra.cuh"
 
 class DeviceMesh {
@@ -8,5 +9,5 @@ public:
 
 	int triangle_offset_idx = -1;
 	size_t tri_count = 0;
-	Mat4 modelMatrix;
+	Mat4 modelMatrix;//TODO: store inv transform instead
 };

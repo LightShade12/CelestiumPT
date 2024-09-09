@@ -1,8 +1,13 @@
 #pragma once
-#include "Ray.cuh"
-#include "BSDF.cuh"
-#include "maths/constants.cuh"
+
+//#include "Ray.cuh"
+//#include "BSDF.cuh"
+//#include "maths/constants.cuh"
+#include <cuda_runtime.h>
 #include <vector_types.h>
+
+class BSDF;
+class Ray;
 
 struct ShapeIntersection {
 	float hit_distance = -1;

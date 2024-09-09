@@ -1,41 +1,37 @@
 #include "BLAS.cuh"
+
+#include "SceneGeometry.cuh"
 #include "Storage.cuh"
 #include "RayStages.cuh"
-#include "Integrator.cuh"
+//#include "Integrator.cuh"
 #include "ShapeIntersection.cuh"
-#include "DeviceScene.cuh"
+//#include "DeviceScene.cuh"
 #include "Ray.cuh"
 #include "DeviceMesh.cuh"
 #include "BVHNode.cuh"
 
-//#include <thrust/partition.h>
-//#include <thrust/sequence.h>
-//#include <thrust/distance.h>
 #include <algorithm>
 #include <numeric>
-
 #include <float.h>
-//#include <algorithm>
-//#include <numeric>
 
 BLAS::BLAS(DeviceMesh* mesh, const thrust::universal_vector<Triangle>& prims, std::vector<BVHNode>& nodes,
 	std::vector<int>& prim_indices, BVHBuilderSettings buildercfg)
 {
-	MeshLink = mesh;
+	m_MeshLink = mesh;
 	uint32_t prim_start_idx = mesh->triangle_offset_idx;
 	uint32_t prim_end_idx = prim_start_idx + mesh->tri_count;
 	std::vector<BVHNode> bvhnodes;
 	std::vector<uint32_t>bvhprim_indices;
 
-	bvhnodesStartIdx = nodes.size();
+	m_BVHNodesStartIdx = nodes.size();
 	build(prims,
 		prim_start_idx,
 		prim_end_idx,
 		nodes,
 		prim_indices,
 		buildercfg);
-	bvhnodesCount = nodes.size() - bvhnodesStartIdx;
-	bvhrootIdx = nodes.size() - 1;
+	m_BVHNodesCount = nodes.size() - m_BVHNodesStartIdx;
+	m_BVHRootIdx = nodes.size() - 1;
 };
 
 void BLAS::build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx, size_t prim_end_idx,
@@ -205,9 +201,9 @@ void BLAS::makePartition(const thrust::universal_vector<Triangle>& read_tris, st
 
 	//for x
 	std::vector<float>bins;//world space
-	bins.reserve(cfg.binCount);
-	float deltapartition = extent.x / cfg.binCount;
-	for (int i = 1; i < cfg.binCount; i++)
+	bins.reserve(cfg.m_BinCount);
+	float deltapartition = extent.x / cfg.m_BinCount;
+	for (int i = 1; i < cfg.m_BinCount; i++)
 	{
 		bins.push_back(minextent.x + (i * deltapartition));
 	}
@@ -230,8 +226,8 @@ void BLAS::makePartition(const thrust::universal_vector<Triangle>& read_tris, st
 
 	//for y
 	bins.clear();
-	deltapartition = extent.y / cfg.binCount;
-	for (int i = 1; i < cfg.binCount; i++)
+	deltapartition = extent.y / cfg.m_BinCount;
+	for (int i = 1; i < cfg.m_BinCount; i++)
 	{
 		bins.push_back(minextent.y + (i * deltapartition));
 	}
@@ -251,8 +247,8 @@ void BLAS::makePartition(const thrust::universal_vector<Triangle>& read_tris, st
 
 	//for z
 	bins.clear();
-	deltapartition = extent.z / cfg.binCount;
-	for (int i = 1; i < cfg.binCount; i++)
+	deltapartition = extent.z / cfg.m_BinCount;
+	for (int i = 1; i < cfg.m_BinCount; i++)
 	{
 		bins.push_back(minextent.z + (i * deltapartition));
 	}
@@ -361,8 +357,10 @@ void BLAS::binToShallowNodes(BVHNode& left, BVHNode& right, float bin, Partition
 //-----------------------------------------------------------------------------------------------------------------------
 __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
 {
+	if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
+	if (m_BVHNodesCount == 0) return;//empty BLAS
+
 	SceneGeometry* sceneGeo = globals.SceneDescriptor.dev_aggregate;
-	if (bvhnodesCount == 0) return;//empty scene
 
 	const uint8_t maxStackSize = 64;
 	int nodeIdxStack[maxStackSize];
@@ -371,11 +369,16 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 	float current_node_hitdist = FLT_MAX;
 
-	nodeIdxStack[stackPtr] = bvhrootIdx;
-	const BVHNode* stackTopNode = &(sceneGeo->DeviceBVHNodesBuffer[bvhrootIdx]);//is this in register?
-	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(ray);
+	Ray local_ray = ray;
+	Mat4 transform = m_MeshLink->modelMatrix;
+	local_ray.setOrigin(transform * make_float4(local_ray.getOrigin(), 1));
+	local_ray.setDirection(normalize(transform * make_float4(local_ray.getDirection(), 0)));
 
-	//TODO: make the shaprIntersetion shorter
+	nodeIdxStack[stackPtr] = m_BVHRootIdx;
+	const BVHNode* stackTopNode = &(sceneGeo->DeviceBVHNodesBuffer[m_BVHRootIdx]);//is this in register?
+	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(local_ray);
+
+	//TODO: make the shapeIntersetion shorter
 	ShapeIntersection workinghitpayload;//only to be written to by primitive proccessing
 	float child1_hitdist = -1;
 	float child2_hitdist = -1;
@@ -396,25 +399,35 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 		//if interior
 		if (stackTopNode->triangle_indices_count <= 0)
 		{
-			child1_hitdist = (sceneGeo->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(ray);
-			child2_hitdist = (sceneGeo->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(ray);
+			child1_hitdist = (sceneGeo->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray);
+			child2_hitdist = (sceneGeo->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray);
 			//TODO:implement early cull properly see discord for ref
 			if (child1_hitdist > child2_hitdist) {
-				if (child1_hitdist >= 0 && child1_hitdist < closest_hitpayload->hit_distance) { nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx; }
-				if (child2_hitdist >= 0 && child2_hitdist < closest_hitpayload->hit_distance) { nodeHitDistStack[stackPtr] = child2_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx + 1; }
+				if (child1_hitdist >= 0 && child1_hitdist < closest_hitpayload->hit_distance) {
+					nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx;
+				}
+				if (child2_hitdist >= 0 && child2_hitdist < closest_hitpayload->hit_distance) {
+					nodeHitDistStack[stackPtr] = child2_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx + 1;
+				}
 			}
 			else {
-				if (child2_hitdist >= 0 && child2_hitdist < closest_hitpayload->hit_distance) { nodeHitDistStack[stackPtr] = child2_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx + 1; }
-				if (child1_hitdist >= 0 && child1_hitdist < closest_hitpayload->hit_distance) { nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx; }
+				if (child2_hitdist >= 0 && child2_hitdist < closest_hitpayload->hit_distance) {
+					nodeHitDistStack[stackPtr] = child2_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx + 1;
+				}
+				if (child1_hitdist >= 0 && child1_hitdist < closest_hitpayload->hit_distance) {
+					nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx;
+				}
 			}
 		}
 		else
 		{
 			for (int primIndiceIdx = stackTopNode->left_child_or_triangle_indices_start_idx;
-				primIndiceIdx < stackTopNode->left_child_or_triangle_indices_start_idx + stackTopNode->triangle_indices_count; primIndiceIdx++) {
+				primIndiceIdx < stackTopNode->left_child_or_triangle_indices_start_idx + stackTopNode->triangle_indices_count;
+				primIndiceIdx++)
+			{
 				int primIdx = sceneGeo->DeviceBVHTriangleIndicesBuffer[primIndiceIdx];
 				primitive = &(sceneGeo->DeviceTrianglesBuffer[primIdx]);
-				workinghitpayload = IntersectionStage(ray, *primitive, primIdx);
+				workinghitpayload = IntersectionStage(local_ray, *primitive, primIdx);
 
 				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < closest_hitpayload->hit_distance) {
 					//if (!AnyHit(ray, sceneGeo, &workinghitpayload))continue;

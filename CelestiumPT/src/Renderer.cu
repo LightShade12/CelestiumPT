@@ -1,25 +1,18 @@
 #include "Renderer.hpp"
-//#include "HostCamera.hpp"
 #include "ErrorCheck.cuh"
-#include <cuda_gl_interop.h>
 #include "Storage.cuh"
 #include "Integrator.cuh"
 
 #include "SceneGeometry.cuh"
 #include "DeviceScene.cuh"
+#include "DeviceCamera.cuh"
 //#include "Triangle.cuh"
 
+#include <cuda_gl_interop.h>
 #include <iostream>
 /*
 * Mostly adapter and inter conversion work
 */
-
-struct CudaAPI
-{
-	//cudaGraphicsResource_t m_CompositeRenderTargetTextureCudaResource;
-	dim3 m_BlockGridDimensions;
-	dim3 m_ThreadBlockDimensions;
-};
 
 class FrameBuffer {
 public:
@@ -91,6 +84,13 @@ public:
 	cudaGraphicsResource_t m_RenderTargetTextureCudaResource;
 };
 
+struct CudaAPI
+{
+	//cudaGraphicsResource_t m_CompositeRenderTargetTextureCudaResource;
+	dim3 m_BlockGridDimensions;
+	dim3 m_ThreadBlockDimensions;
+};
+
 struct CelestiumPT_API
 {
 	DeviceScene DeviceScene;
@@ -122,7 +122,7 @@ Renderer::Renderer()
 			glm::vec4(1, 0, 0, 0),
 			glm::vec4(0, 1, 0, 0),
 			glm::vec4(0, 0, -1, 0),
-			glm::vec4(0, 0.5, 1.5, 0)
+			glm::vec4(0, 0.5, 5.5, 0)
 		)
 	);
 

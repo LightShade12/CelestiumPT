@@ -1,4 +1,5 @@
 #pragma once
+
 #include "maths/vector_maths.cuh"
 #include <glm/glm.hpp>
 

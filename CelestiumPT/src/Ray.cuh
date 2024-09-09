@@ -1,5 +1,6 @@
 #pragma once
-#include "maths/maths_linear_algebra.cuh"
+
+#include "maths/vector_maths.cuh"
 
 class Ray {
 public:

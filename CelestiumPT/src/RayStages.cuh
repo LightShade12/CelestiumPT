@@ -1,5 +1,6 @@
 #pragma once
-#include "maths/maths_linear_algebra.cuh"
+
+#include "maths/matrix.cuh"
 #include <cuda_runtime.h>
 
 struct ShapeIntersection;
