@@ -7,7 +7,9 @@
 #include "maths/constants.cuh"
 
 __device__ ShapeIntersection MissStage(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& in_payload) {
-	return ShapeIntersection();
+	ShapeIntersection out_payload;
+	out_payload.GAS_debug = in_payload.GAS_debug;
+	return out_payload;
 }
 
 __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, const Ray& ray, const Mat4& model_matrix, const ShapeIntersection& in_payload)
@@ -19,6 +21,7 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 	out_payload.bary = in_payload.bary;
 	out_payload.triangle_idx = in_payload.triangle_idx;
 	out_payload.hit_distance = in_payload.hit_distance;
+	out_payload.GAS_debug = in_payload.GAS_debug;
 
 	out_payload.w_pos = model_matrix.transpose() * (ray.getOrigin() + ray.getDirection() * in_payload.hit_distance);//TODO:problem part
 	out_payload.w_pos -= model_matrix.transpose() * model_matrix[3];

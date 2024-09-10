@@ -98,6 +98,7 @@ struct CelestiumPT_API
 	FrameBuffer CompositeRenderBuffer;
 	FrameBuffer NormalsRenderBuffer;
 	FrameBuffer PositionsRenderBuffer;
+	FrameBuffer GASDebugRenderBuffer;
 	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
 
@@ -122,7 +123,7 @@ Renderer::Renderer()
 			glm::vec4(1, 0, 0, 0),
 			glm::vec4(0, 1, 0, 0),
 			glm::vec4(0, 0, -1, 0),
-			glm::vec4(0, 0.5, 5.5, 0)
+			glm::vec4(0, 0.5, 12.5, 0)
 		)
 	);
 
@@ -138,6 +139,7 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->NormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
@@ -157,6 +159,8 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.normals_render_surface_object));
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
+	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.GAS_debug_render_surface_object));
 
 	//prepare globals--------------------
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.frameidx = g_frameIndex;
@@ -180,6 +184,8 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.normals_render_surface_object));
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
+	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.GAS_debug_render_surface_object));
 }
 
 void Renderer::clearAccumulation()
@@ -202,6 +208,11 @@ GLuint Renderer::getNormalsTargetTextureName() const
 GLuint Renderer::getPositionsTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->PositionsRenderBuffer.m_RenderTargetTextureName;
+}
+
+GLuint Renderer::getGASDebugTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->GASDebugRenderBuffer.m_RenderTargetTextureName;
 }
 
 Renderer::~Renderer()

@@ -20,6 +20,7 @@ public:
 		glm::vec3 f_nrm, bool skip_sync = true);
 
 	void AddMesh(HostMesh hmesh);
+	void LogStatus();
 
 	HostMesh getMesh(size_t mesh_idx);
 

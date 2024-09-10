@@ -20,7 +20,7 @@ public:
 	}
 
 	__device__ BSDFSample sampleBSDF(float3 wo) {
-		BSDFSample();
+		return BSDFSample();
 	}
 
 	__device__ float3 fOpaqueDielectric() {

@@ -135,6 +135,12 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 		seed += bounce_depth;
 		payload = Intersect(globals, ray);
 
+		if (bounce_depth == 0) {
+			surf2Dwrite(make_float4(payload.GAS_debug, 1),
+				globals.FrameBuffer.GAS_debug_render_surface_object,
+				ppixel.x * (int)sizeof(float4), ppixel.y);
+		}
+
 		//miss--
 		if (payload.hit_distance < 0)
 		{

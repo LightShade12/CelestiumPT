@@ -66,7 +66,7 @@ private:
 
 public:
 
-	Bounds3f m_BoundingBox;
+	Bounds3f m_BoundingBox;//Must be in World space
 	uint32_t m_BVHNodesCount = 0;
 	int m_BVHNodesStartIdx = -1;
 	int m_BVHRootIdx = -1;//Ideally should be startidx too

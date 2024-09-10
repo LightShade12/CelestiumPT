@@ -13,16 +13,16 @@ TLAS::TLAS(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNo
 	m_BoundingBox = tlasnodes[m_TLASRootIdx].m_BoundingBox;
 };
 
-int TLAS::FindBestMatch(int* list, int N, int A, std::vector<TLASNode>& tlasnodes)
+int TLAS::FindBestMatch(int* TLASwork_idx_list, int work_idx_list_size, int TLAS_A_idx, std::vector<TLASNode>& tlasnodes)
 {
 	float smallest = FLT_MAX;
 	int bestB = -1;
-	for (int B = 0; B < N; B++) if (B != A)
+	for (int B = 0; B < work_idx_list_size; B++) if (B != TLAS_A_idx)
 	{
-		float3 bmax = fmaxf(tlasnodes[list[A]].m_BoundingBox.pMax, tlasnodes[list[B]].m_BoundingBox.pMax);
-		float3 bmin = fminf(tlasnodes[list[A]].m_BoundingBox.pMin, tlasnodes[list[B]].m_BoundingBox.pMin);
+		float3 bmax = fmaxf(tlasnodes[TLASwork_idx_list[TLAS_A_idx]].m_BoundingBox.pMax, tlasnodes[TLASwork_idx_list[B]].m_BoundingBox.pMax);
+		float3 bmin = fminf(tlasnodes[TLASwork_idx_list[TLAS_A_idx]].m_BoundingBox.pMin, tlasnodes[TLASwork_idx_list[B]].m_BoundingBox.pMin);
 		float3 e = bmax - bmin;
-		float surfaceArea = e.x * e.y + e.y * e.z + e.z * e.x;
+		float surfaceArea = e.x * e.y + e.y * e.z + e.z * e.x;//half SA
 		if (surfaceArea < smallest) smallest = surfaceArea, bestB = B;
 	}
 	return bestB;
@@ -33,34 +33,34 @@ void TLAS::refresh(const thrust::universal_vector<BLAS>& read_blases, std::vecto
 void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNode>& tlasnodes)
 {
 	//TEST
-	assert(read_blases.size() == 2, "[TEST]MORE THAN 2 BLASES");
-	TLASNode tlasleaf1;
+	//assert(read_blases.size() == 2, "[TEST]MORE THAN 2 BLASES");
+	/*TLASNode tlasleaf1;
 	tlasleaf1.BLAS_idx = 0;
-	tlasleaf1.m_BoundingBox = Bounds3f({ 10,10,10 }, { 10,10,10 });
+	tlasleaf1.m_BoundingBox = Bounds3f({ -10,-10,-10 }, { 10,10,10 });
 	tlasnodes.push_back(tlasleaf1);
 
 	TLASNode tlasleaf2;
 	tlasleaf2.BLAS_idx = 1;
-	tlasleaf2.m_BoundingBox = Bounds3f({ 10,10,10 }, { 10,10,10 });
+	tlasleaf2.m_BoundingBox = Bounds3f({ -10,-10,-10 }, { 10,10,10 });
 	tlasnodes.push_back(tlasleaf2);
 
 	TLASNode tlasroot;
-	tlasroot.m_BoundingBox = Bounds3f({ 10,10,10 }, { 10,10,10 });
+	tlasroot.m_BoundingBox = Bounds3f({ -10,-10,-10 }, { 10,10,10 });
 	tlasroot.leftRight = 0 + (1 << 16);
 	tlasnodes.push_back(tlasroot);
 
 	m_BLASCount = read_blases.size();
 	m_TLASnodesCount = tlasnodes.size();
 	m_TLASRootIdx = tlasnodes.size() - 1;
-	return;
+	return;*/
 	//----------
 
+	int* TLASnodeIdx = new int[m_BLASCount];
+	int nodeIndices = m_BLASCount;//work list size
 	// assign a TLASleaf node to each BLAS; making work list
-	int* nodeIdx = new int[m_BLASCount];
-	int nodeIndices = m_BLASCount;
-
 	for (uint i = 0; i < m_BLASCount; i++)
 	{
+		TLASnodeIdx[i] = tlasnodes.size();//i derived from m_BLASCount also works
 		TLASNode tlasnode;
 		tlasnode.m_BoundingBox = read_blases[i].m_BoundingBox;
 		tlasnode.BLAS_idx = i;
@@ -68,30 +68,32 @@ void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<
 		tlasnodes.push_back(tlasnode);
 	}
 
-	//TODO:make and add root somewhere
 	// use agglomerative clustering to build the TLAS
-	int A = 0, B = FindBestMatch(nodeIdx, nodeIndices, A, tlasnodes);
+	int A = 0, B = FindBestMatch(TLASnodeIdx, nodeIndices, A, tlasnodes);
 	while (nodeIndices > 1)
 	{
-		int C = FindBestMatch(nodeIdx, nodeIndices, B, tlasnodes);
+		int C = FindBestMatch(TLASnodeIdx, nodeIndices, B, tlasnodes);
 		if (A == C)
 		{
-			int nodeIdxA = nodeIdx[A], nodeIdxB = nodeIdx[B];
-			TLASNode& nodeA = tlasnodes[nodeIdxA];
-			TLASNode& nodeB = tlasnodes[nodeIdxB];
-			TLASNode& newNode = tlasnodes[m_BLASCount];
+			int nodeIdxA = TLASnodeIdx[A], nodeIdxB = TLASnodeIdx[B];
+			const TLASNode* nodeA = &(tlasnodes[nodeIdxA]);
+			const TLASNode* nodeB = &(tlasnodes[nodeIdxB]);
+			TLASNode newNode;
 			newNode.leftRight = nodeIdxA + (nodeIdxB << 16);
-			newNode.m_BoundingBox.pMin = fminf(nodeA.m_BoundingBox.pMin, nodeB.m_BoundingBox.pMin);
-			newNode.m_BoundingBox.pMax = fmaxf(nodeA.m_BoundingBox.pMax, nodeB.m_BoundingBox.pMax);
-			nodeIdx[A] = m_BLASCount++;
-			nodeIdx[B] = nodeIdx[nodeIndices - 1];
-			B = FindBestMatch(nodeIdx, --nodeIndices, A, tlasnodes);
+			newNode.m_BoundingBox.pMin = fminf(nodeA->m_BoundingBox.pMin, nodeB->m_BoundingBox.pMin);
+			newNode.m_BoundingBox.pMax = fmaxf(nodeA->m_BoundingBox.pMax, nodeB->m_BoundingBox.pMax);
+			tlasnodes.push_back(newNode);
+			TLASnodeIdx[A] = tlasnodes.size() - 1;
+			TLASnodeIdx[B] = TLASnodeIdx[nodeIndices - 1];
+			B = FindBestMatch(TLASnodeIdx, --nodeIndices, A, tlasnodes);
 		}
 		else A = B, B = C;
 	}
-	tlasnodes[0] = tlasnodes[nodeIdx[A]];
+	//TODO:make and add root somewhere
+	//tlasnodes[0] = tlasnodes[TLASnodeIdx[A]];
+	tlasnodes.push_back(tlasnodes[TLASnodeIdx[A]]);
 
-	delete[] nodeIdx;
+	delete[] TLASnodeIdx;
 }
 __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
 {
@@ -129,7 +131,7 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 		//skip nodes farther than closest triangle; redundant: see the ordered traversal code
 		if (closest_hitpayload->triangle_idx != -1 && closest_hitpayload->hit_distance < current_node_hitdist)continue;
 		if (current_node_hitdist < 0) continue;
-		//closest_hitpayload->color += make_float3(1) * 0.05f;
+		closest_hitpayload->GAS_debug += make_float3(0, 0, 1) * 0.1f;
 
 		//if interior
 		if (!stackTopNode->isleaf())

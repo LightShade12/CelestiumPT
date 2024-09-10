@@ -393,7 +393,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 		//skip nodes farther than closest triangle; redundant
 		if (closest_hitpayload->triangle_idx != -1 && closest_hitpayload->hit_distance < current_node_hitdist)continue;
-
+		closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * 0.1f;
 		//closest_hitpayload->color += make_float3(1) * 0.05f;
 
 		//if interior

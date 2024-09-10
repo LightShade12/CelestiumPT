@@ -27,7 +27,8 @@ private:
 	enum class RenderView {
 		COMPOSITE = 0,
 		NORMALS = 1,
-		POSITIONS = 2
+		POSITIONS = 2,
+		GAS = 3
 	};
 	RenderView curent_renderview = RenderView::COMPOSITE;
 	Camera m_Camera;

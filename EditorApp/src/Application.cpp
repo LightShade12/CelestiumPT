@@ -44,6 +44,8 @@ Application::Application() : m_Camera()
 	builder.build(hostscenehandle);
 	hostscenehandle->syncDeviceGeometry();
 
+	hostscenehandle->LogStatus();
+
 	if (hostscenehandle->getMeshesCount() > 0)
 		m_selected_mesh = Mesh(hostscenehandle->getMesh(0));
 
@@ -92,7 +94,7 @@ void Application::run()
 			ImGui::Text("Loaded meshes: %zu", m_Renderer.getCurrentScene()->getMeshesCount());
 			ImGui::Text("Loaded triangles: %zu", m_Renderer.getCurrentScene()->getTrianglesCount());
 			ImGui::Separator();
-			ImGui::Combo("Renderer mode", (int*)&curent_renderview, "Composite\0Normals\0Positions");
+			ImGui::Combo("Renderer mode", (int*)&curent_renderview, "Composite\0Normals\0Positions\0GAS Debug");
 			ImGui::Separator();
 			//-----------------------
 
@@ -145,6 +147,7 @@ void Application::run()
 			ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);
 
 			ImVec2 vpdims = ImGui::GetContentRegionAvail();
+
 			if (curent_renderview == RenderView::COMPOSITE) {
 				if (m_Renderer.getCompositeRenderTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getCompositeRenderTargetTextureName(),
@@ -158,6 +161,11 @@ void Application::run()
 			else if (curent_renderview == RenderView::POSITIONS) {
 				if (m_Renderer.getNormalsTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getPositionsTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::GAS) {
+				if (m_Renderer.getGASDebugTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getGASDebugTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 			ImGui::End();

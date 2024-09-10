@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Bounds.cuh"
+#include <cuda_runtime.h>
 #include <cstdint>
 
 class TLASNode {
@@ -10,9 +11,9 @@ public:
 
 	Bounds3f m_BoundingBox;
 	uint32_t leftRight = 0;
-	int BLAS_idx = 0;
+	int BLAS_idx = -1;
 
-	bool isleaf() const {
+	__device__ __host__ bool isleaf() const {
 		return (leftRight == 0);
 	};
 

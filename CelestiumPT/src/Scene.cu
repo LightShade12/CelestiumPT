@@ -93,6 +93,51 @@ void HostScene::AddMesh(HostMesh hmesh)
 	m_DeviceScene->syncDeviceGeometry();
 }
 
+void HostScene::LogStatus()
+{
+	DeviceScene* dscene = m_DeviceScene;
+
+	printf("dev prim indices\n");
+	for (int idx = 0; idx < dscene->DeviceBVHTriangleIndices.size(); idx++) {
+		int n = dscene->DeviceBVHTriangleIndices[idx];
+		printf("%d, ", n);
+	}
+	printf("\n");
+	printf("bvh leafnodes prim indices\n");
+	for (int idx = 0; idx < dscene->DeviceBVHNodes.size(); idx++) {
+		if (dscene->DeviceBVHNodes[idx].triangle_indices_count < 1)continue;
+		int o = dscene->DeviceBVHNodes[idx].left_child_or_triangle_indices_start_idx;
+		int c = dscene->DeviceBVHNodes[idx].triangle_indices_count;
+		printf("leafnode %d: offset=%d, count=%d,", idx, o, c);
+	}
+	printf("\n");
+	printf("blas bvh indices\n");
+	for (int idx = 0; idx < dscene->DeviceBLASes.size(); idx++) {
+		int r = dscene->DeviceBLASes[idx].m_BVHRootIdx;
+		int c = dscene->DeviceBLASes[idx].m_BVHNodesCount;
+		int s = dscene->DeviceBLASes[idx].m_BVHNodesStartIdx;
+		printf("blas %d: node_root=%d, node_count=%d, node_start=%d,\n", idx, r, c, s);
+		float3 min = dscene->DeviceBLASes[idx].m_BoundingBox.pMin, max = dscene->DeviceBLASes[idx].m_BoundingBox.pMax;
+		printf(" bbox min x:%.3f y:%.3f z:%.3f | max x:%.3f y:%.3f z:%.3f\n", min.x, min.y, min.z, max.x, max.y, max.z);
+	}
+	printf("\n");
+	printf("tlasNodes bvh indices\n");
+	for (int idx = 0; idx < dscene->DeviceTLASNodes.size(); idx++) {
+		int bid = dscene->DeviceTLASNodes[idx].BLAS_idx;
+		int l = (dscene->DeviceTLASNodes[idx].leftRight) & 0xFFFF;
+		int r = (dscene->DeviceTLASNodes[idx].leftRight >> 16) & 0xFFFF;
+		printf("tlas %d: blas_idx=%d, left_idx=%d, right_idx=%d,\n", idx, bid, l, r);
+		float3 min = dscene->DeviceTLASNodes[idx].m_BoundingBox.pMin, max = dscene->DeviceTLASNodes[idx].m_BoundingBox.pMax;
+		printf(" bbox min x:%.3f y:%.3f z:%.3f | max x:%.3f y:%.3f z:%.3f\n", min.x, min.y, min.z, max.x, max.y, max.z);
+	}
+	printf("\n");
+	printf("TLAS RootIdx %d\n", dscene->DeviceSceneGeometry->GAS_structure.tlas.m_TLASRootIdx);
+	//float3 max = dscene->DeviceSceneGeometry->GAS_structure.tlas.m_TLASRootIdx, min = dscene->DeviceSceneGeometry->GAS_structure.tlas.m_BoundingBox.pMin;
+	//printf("TLAS bbox min x:%.3f y:%.3f z:%.3f | max x:%.3f y:%.3f z:%.3f\n", );
+	printf("TLAS nodes count %d\n", dscene->DeviceSceneGeometry->GAS_structure.tlas.m_TLASnodesCount);
+	printf("TLAS BLAS count %d\n", dscene->DeviceSceneGeometry->GAS_structure.tlas.m_BLASCount);
+}
+
 HostMesh HostScene::getMesh(size_t mesh_idx)
 {
 	assert(mesh_idx < m_DeviceScene->DeviceMeshes.size(), "DeviceMesh access Out Of Bounds");

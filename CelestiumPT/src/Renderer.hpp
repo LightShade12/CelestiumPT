@@ -24,6 +24,7 @@ public:
 	GLuint getCompositeRenderTargetTextureName() const;
 	GLuint getNormalsTargetTextureName() const;
 	GLuint getPositionsTargetTextureName() const;
+	GLuint getGASDebugTargetTextureName() const;
 
 	HostCamera* getCurrentCamera() { return &m_CurrentCamera; };
 	HostScene* getCurrentScene() { return &m_CurrentScene; };
