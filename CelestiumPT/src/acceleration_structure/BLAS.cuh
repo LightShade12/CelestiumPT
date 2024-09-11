@@ -3,7 +3,7 @@
 #include "Triangle.cuh"
 #include "Bounds.cuh"
 
-//#include <vector_types.h>
+#include "maths/matrix.cuh"
 #include <cuda_runtime.h>
 #include <thrust/universal_vector.h>
 
@@ -40,6 +40,8 @@ public:
 
 	__device__ void intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload);
 
+	void setTransform(Mat4 model_matrix);
+
 private:
 	void build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx, size_t prim_end_idx,
 		std::vector<BVHNode>& bvhnodes, std::vector<int>& prim_indices, BVHBuilderSettings cfg);
@@ -67,8 +69,10 @@ private:
 public:
 
 	Bounds3f m_BoundingBox;//Must be in World space
+	Bounds3f m_Original_bounding_box;//Must be in World space
 	uint32_t m_BVHNodesCount = 0;
 	int m_BVHNodesStartIdx = -1;
 	int m_BVHRootIdx = -1;//Ideally should be startidx too
-	DeviceMesh* m_MeshLink = nullptr;
+	DeviceMesh* m_MeshLink = nullptr;//TODO: remove this safely
+	Mat4 invModelMatrix;
 };

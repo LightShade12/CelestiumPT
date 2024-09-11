@@ -15,6 +15,7 @@ public:
 	GAS() = default;
 
 	void build(HostScene* host_scene);
+	void refresh(HostScene* host_scene);
 
 	__device__ ShapeIntersection intersect(const IntegratorGlobals& globals, const Ray& ray);
 

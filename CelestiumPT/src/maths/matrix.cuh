@@ -1,12 +1,14 @@
 #pragma once
+
 #include "vector_maths.cuh"
+
 #include <stdio.h>
 
 //column major maths
 class Matrix3x3 {
 public:
 	// Default constructor initializes to the identity matrix
-	__device__ Matrix3x3() : columns{ make_float3(1, 0, 0), make_float3(0, 1, 0), make_float3(0, 0, 1) } {}
+	__device__ Matrix3x3() : columns{ make_float3(1, 0, 0), make_float3(0, 1, 0), make_float3(0, 0, 1) } {};
 
 	// Constructor with individual columns
 	__device__ Matrix3x3(float3 c1, float3 c2, float3 c3) {
@@ -120,14 +122,59 @@ public:
 		return columns[idx];
 	}
 
-	__host__ __device__ float3 operator*(const float3& vec) const {
-		float3 result;
+	__host__ __device__ Matrix4x4 inverse() const {
+		// Alias for readability
+		const float4& c0 = columns[0];
+		const float4& c1 = columns[1];
+		const float4& c2 = columns[2];
+		const float4& c3 = columns[3];
 
-		result.x = columns[0].x * vec.x + columns[1].x * vec.y + columns[2].x * vec.z + columns[3].x;
-		result.y = columns[0].y * vec.x + columns[1].y * vec.y + columns[2].y * vec.z + columns[3].y;
-		result.z = columns[0].z * vec.x + columns[1].z * vec.y + columns[2].z * vec.z + columns[3].z;
+		// Compute the minors for the determinant calculation
+		float subfactor00 = c2.z * c3.w - c3.z * c2.w;
+		float subfactor01 = c2.y * c3.w - c3.y * c2.w;
+		float subfactor02 = c2.y * c3.z - c3.y * c2.z;
+		float subfactor03 = c2.x * c3.w - c3.x * c2.w;
+		float subfactor04 = c2.x * c3.z - c3.x * c2.z;
+		float subfactor05 = c2.x * c3.y - c3.x * c2.y;
 
-		return result;
+		// Compute the determinant
+		float det = c0.x * (c1.y * subfactor00 - c1.z * subfactor01 + c1.w * subfactor02) -
+			c0.y * (c1.x * subfactor00 - c1.z * subfactor03 + c1.w * subfactor04) +
+			c0.z * (c1.x * subfactor01 - c1.y * subfactor03 + c1.w * subfactor05) -
+			c0.w * (c1.x * subfactor02 - c1.y * subfactor04 + c1.z * subfactor05);
+
+		if (fabs(det) < 1e-6f) {
+			// Matrix is not invertible, return the identity matrix (or handle error)
+			return Matrix4x4::getIdentity();
+		}
+
+		// Inverse is 1/det * adjugate
+		float invDet = 1.0f / det;
+
+		Matrix4x4 inverseMatrix;
+
+		// Compute each element of the adjugate (transposed cofactor matrix) multiplied by invDet
+		inverseMatrix[0].x = (c1.y * subfactor00 - c1.z * subfactor01 + c1.w * subfactor02) * invDet;
+		inverseMatrix[0].y = -(c0.y * subfactor00 - c0.z * subfactor01 + c0.w * subfactor02) * invDet;
+		inverseMatrix[0].z = (c0.y * (c1.z * c3.w - c1.w * c3.z) - c0.z * (c1.y * c3.w - c1.w * c3.y) + c0.w * (c1.y * c3.z - c1.z * c3.y)) * invDet;
+		inverseMatrix[0].w = -(c0.y * (c1.z * c2.w - c1.w * c2.z) - c0.z * (c1.y * c2.w - c1.w * c2.y) + c0.w * (c1.y * c2.z - c1.z * c2.y)) * invDet;
+
+		inverseMatrix[1].x = -(c1.x * subfactor00 - c1.z * subfactor03 + c1.w * subfactor04) * invDet;
+		inverseMatrix[1].y = (c0.x * subfactor00 - c0.z * subfactor03 + c0.w * subfactor04) * invDet;
+		inverseMatrix[1].z = -(c0.x * (c1.z * c3.w - c1.w * c3.z) - c0.z * (c1.x * c3.w - c1.w * c3.x) + c0.w * (c1.x * c3.z - c1.z * c3.x)) * invDet;
+		inverseMatrix[1].w = (c0.x * (c1.z * c2.w - c1.w * c2.z) - c0.z * (c1.x * c2.w - c1.w * c2.x) + c0.w * (c1.x * c2.z - c1.z * c2.x)) * invDet;
+
+		inverseMatrix[2].x = (c1.x * subfactor01 - c1.y * subfactor03 + c1.w * subfactor05) * invDet;
+		inverseMatrix[2].y = -(c0.x * subfactor01 - c0.y * subfactor03 + c0.w * subfactor05) * invDet;
+		inverseMatrix[2].z = (c0.x * (c1.y * c3.w - c1.w * c3.y) - c0.y * (c1.x * c3.w - c1.w * c3.x) + c0.w * (c1.x * c3.y - c1.y * c3.x)) * invDet;
+		inverseMatrix[2].w = -(c0.x * (c1.y * c2.w - c1.w * c2.y) - c0.y * (c1.x * c2.w - c1.w * c2.x) + c0.w * (c1.x * c2.y - c1.y * c2.x)) * invDet;
+
+		inverseMatrix[3].x = -(c1.x * subfactor02 - c1.y * subfactor04 + c1.z * subfactor05) * invDet;
+		inverseMatrix[3].y = (c0.x * subfactor02 - c0.y * subfactor04 + c0.z * subfactor05) * invDet;
+		inverseMatrix[3].z = -(c0.x * (c1.y * c3.z - c1.z * c3.y) - c0.y * (c1.x * c3.z - c1.z * c3.x) + c0.z * (c1.x * c3.y - c1.y * c3.x)) * invDet;
+		inverseMatrix[3].w = (c0.x * (c1.y * c2.z - c1.z * c2.y) - c0.y * (c1.x * c2.z - c1.z * c2.x) + c0.z * (c1.x * c2.y - c1.y * c2.x)) * invDet;
+
+		return inverseMatrix;
 	}
 
 	__host__ __device__ float3 operator*(const float4& vec) const {
@@ -184,6 +231,7 @@ public:
 	}
 
 	__host__ __device__ static void print_matrix(const Matrix4x4& mat) {
+		printf("\n");
 		printf("| %.3f %.3f %.3f %.3f |\n", mat[0].x, mat[1].x, mat[2].x, mat[3].x);
 		printf("| %.3f %.3f %.3f %.3f |\n", mat[0].y, mat[1].y, mat[2].y, mat[3].y);
 		printf("| %.3f %.3f %.3f %.3f |\n", mat[0].z, mat[1].z, mat[2].z, mat[3].z);

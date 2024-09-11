@@ -370,9 +370,9 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 	float current_node_hitdist = FLT_MAX;
 
 	Ray local_ray = ray;
-	Mat4 transform = m_MeshLink->modelMatrix;
-	local_ray.setOrigin(transform * make_float4(local_ray.getOrigin(), 1));
-	local_ray.setDirection(normalize(transform * make_float4(local_ray.getDirection(), 0)));
+	//Mat4 inverse_transform = m_MeshLink->inverseModelMatrix;
+	local_ray.setOrigin(invModelMatrix * make_float4(local_ray.getOrigin(), 1));
+	local_ray.setDirection(normalize(invModelMatrix * make_float4(local_ray.getDirection(), 0)));
 
 	nodeIdxStack[stackPtr] = m_BVHRootIdx;
 	const BVHNode* stackTopNode = &(sceneGeo->DeviceBVHNodesBuffer[m_BVHRootIdx]);//is this in register?
@@ -431,6 +431,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < closest_hitpayload->hit_distance) {
 					//if (!AnyHit(ray, sceneGeo, &workinghitpayload))continue;
+					closest_hitpayload->invModelMatrix = invModelMatrix;
 					closest_hitpayload->hit_distance = workinghitpayload.hit_distance;
 					closest_hitpayload->triangle_idx = workinghitpayload.triangle_idx;
 					closest_hitpayload->bary = workinghitpayload.bary;
@@ -438,4 +439,14 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 			}
 		}
 	}
+}
+
+void BLAS::setTransform(Mat4 model_matrix)
+{
+	invModelMatrix = model_matrix.inverse();
+	m_BoundingBox.pMax = model_matrix * make_float4(m_Original_bounding_box.pMax, 1);
+	m_BoundingBox.pMin = model_matrix * make_float4(m_Original_bounding_box.pMin, 1);
+	//printf("\n");
+	//printf("bbox min: x:%.3f y:%.3f z:%.3f\n", m_BoundingBox.pMin.x, m_BoundingBox.pMin.y, m_BoundingBox.pMin.z);
+	//printf("bbox max: x:%.3f y:%.3f z:%.3f\n", m_BoundingBox.pMax.x, m_BoundingBox.pMax.y, m_BoundingBox.pMax.z);
 }

@@ -29,32 +29,14 @@ int TLAS::FindBestMatch(int* TLASwork_idx_list, int work_idx_list_size, int TLAS
 }
 void TLAS::refresh(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNode>& tlasnodes)
 {
+	m_BLASCount = read_blases.size();
+	build(read_blases, tlasnodes);
+	m_TLASRootIdx = tlasnodes.size() - 1;
+	m_TLASnodesCount = tlasnodes.size();
+	m_BoundingBox = tlasnodes[m_TLASRootIdx].m_BoundingBox;
 }
 void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNode>& tlasnodes)
 {
-	//TEST
-	//assert(read_blases.size() == 2, "[TEST]MORE THAN 2 BLASES");
-	/*TLASNode tlasleaf1;
-	tlasleaf1.BLAS_idx = 0;
-	tlasleaf1.m_BoundingBox = Bounds3f({ -10,-10,-10 }, { 10,10,10 });
-	tlasnodes.push_back(tlasleaf1);
-
-	TLASNode tlasleaf2;
-	tlasleaf2.BLAS_idx = 1;
-	tlasleaf2.m_BoundingBox = Bounds3f({ -10,-10,-10 }, { 10,10,10 });
-	tlasnodes.push_back(tlasleaf2);
-
-	TLASNode tlasroot;
-	tlasroot.m_BoundingBox = Bounds3f({ -10,-10,-10 }, { 10,10,10 });
-	tlasroot.leftRight = 0 + (1 << 16);
-	tlasnodes.push_back(tlasroot);
-
-	m_BLASCount = read_blases.size();
-	m_TLASnodesCount = tlasnodes.size();
-	m_TLASRootIdx = tlasnodes.size() - 1;
-	return;*/
-	//----------
-
 	int* TLASnodeIdx = new int[m_BLASCount];
 	int nodeIndices = m_BLASCount;//work list size
 	// assign a TLASleaf node to each BLAS; making work list
@@ -102,8 +84,6 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 	if (m_BLASCount == 0) return;//empty scene;empty TLAS
 
 	//if (m_BoundingBox.intersect(ray) < 0)return;
-	//int nodeIdxA = leftRight & 0xFFFF;        // Extract lower 16 bits (nodeIdxA)
-	//int nodeIdxB = (leftRight >> 16) & 0xFFFF; // Extract upper 16 bits (nodeIdxB)
 
 	const uint8_t maxStackSize = 64;//TODO: rename this var
 	int nodeIdxStack[maxStackSize];

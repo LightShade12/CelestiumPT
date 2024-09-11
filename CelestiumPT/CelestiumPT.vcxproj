@@ -158,6 +158,7 @@
     <ClInclude Include="src\ShapeIntersection.cuh" />
     <ClInclude Include="src\acceleration_structure\TLAS.cuh" />
     <ClInclude Include="src\Triangle.cuh" />
+    <ClInclude Include="src\utility.hpp" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
     <ClInclude Include="thirdparty\glad\include\KHR\khrplatform.h" />
   </ItemGroup>

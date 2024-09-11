@@ -12,7 +12,7 @@ __device__ ShapeIntersection MissStage(const IntegratorGlobals& globals, const R
 	return out_payload;
 }
 
-__device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, const Ray& ray, const Mat4& model_matrix, const ShapeIntersection& in_payload)
+__device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& in_payload)
 {
 	const Triangle& triangle = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[in_payload.triangle_idx];
 
@@ -22,18 +22,19 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 	out_payload.triangle_idx = in_payload.triangle_idx;
 	out_payload.hit_distance = in_payload.hit_distance;
 	out_payload.GAS_debug = in_payload.GAS_debug;
+	out_payload.invModelMatrix = in_payload.invModelMatrix;
 
-	out_payload.w_pos = model_matrix.transpose() * (ray.getOrigin() + ray.getDirection() * in_payload.hit_distance);//TODO:problem part
-	out_payload.w_pos -= model_matrix.transpose() * model_matrix[3];
+	Mat4 model_matrix = in_payload.invModelMatrix.inverse();
+	out_payload.w_pos = ray.getOrigin() + (ray.getDirection() * in_payload.hit_distance);
 
 	//TODO: implement smooth shading here
-	if (dot(triangle.face_normal, -1 * ray.getDirection()) < 0.f)
+	if (dot(normalize(model_matrix * make_float4(triangle.face_normal, 0)), -1 * ray.getDirection()) < 0.f)
 	{
 		out_payload.front_face = false;
-		out_payload.w_norm = normalize(model_matrix.transpose() * (-1.f * triangle.face_normal));
+		out_payload.w_norm = normalize(model_matrix * make_float4(-1.f * triangle.face_normal, 0));
 	}
 	else {
-		out_payload.w_norm = normalize(model_matrix.transpose() * triangle.face_normal);
+		out_payload.w_norm = normalize(model_matrix * make_float4(triangle.face_normal, 0));
 		out_payload.front_face = true;
 	}
 

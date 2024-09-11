@@ -82,13 +82,14 @@ void HostScene::AddMesh(HostMesh hmesh)
 	DeviceMesh dmesh;
 	dmesh.triangle_offset_idx = hmesh.triangle_offset_idx;
 	dmesh.tri_count = hmesh.tri_count;
-	Mat4 mat(
+	hmesh.modelMatrix = glm::inverse(hmesh.modelMatrix);
+	Mat4 invmat(
 		hmesh.modelMatrix[0][0], hmesh.modelMatrix[0][1], hmesh.modelMatrix[0][2], hmesh.modelMatrix[0][3],  // First column
 		hmesh.modelMatrix[1][0], hmesh.modelMatrix[1][1], hmesh.modelMatrix[1][2], hmesh.modelMatrix[1][3],  // Second column
 		hmesh.modelMatrix[2][0], hmesh.modelMatrix[2][1], hmesh.modelMatrix[2][2], hmesh.modelMatrix[2][3],  // Third column
 		hmesh.modelMatrix[3][0], hmesh.modelMatrix[3][1], hmesh.modelMatrix[3][2], hmesh.modelMatrix[3][3]   // Fourth column
 	);
-	dmesh.modelMatrix = mat;
+	dmesh.inverseModelMatrix = invmat;
 	m_DeviceScene->DeviceMeshes.push_back(dmesh);
 	m_DeviceScene->syncDeviceGeometry();
 }

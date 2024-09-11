@@ -3,7 +3,7 @@
 //#include "Ray.cuh"
 //#include "BSDF.cuh"
 //#include "maths/constants.cuh"
-#include "maths/vector_maths.cuh"
+#include "maths/maths_linear_algebra.cuh"
 #include <cuda_runtime.h>
 
 class BSDF;
@@ -15,6 +15,8 @@ struct ShapeIntersection {
 	float3 bary{};
 	float3 w_pos{};
 	float3 w_norm{};
+	Mat4 invModelMatrix;
+
 	bool front_face = true;
 	float3 GAS_debug = make_float3(0);
 

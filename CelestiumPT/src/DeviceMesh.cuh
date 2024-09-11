@@ -7,7 +7,8 @@ public:
 	//__device__ ShapeIntersection intersect(const Ray& ray);
 	//__device__ bool intersectP(const Ray& ray);
 
+	int BLAS_idx = -1;
 	int triangle_offset_idx = -1;
 	size_t tri_count = 0;
-	Mat4 modelMatrix;//TODO: store inv transform instead
+	Mat4 inverseModelMatrix;//TODO: store inv transform instead
 };

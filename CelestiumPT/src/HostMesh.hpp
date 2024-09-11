@@ -3,13 +3,14 @@
 #include <glm/glm.hpp>
 
 class DeviceMesh;
+class HostScene;
 
 class HostMesh {
 public:
 	HostMesh() = default;
 	explicit HostMesh(DeviceMesh* device_mesh);
 
-	void updateDevice();
+	void updateDevice(HostScene* hscene);
 
 	glm::mat4 getTransform() const {
 		return modelMatrix;

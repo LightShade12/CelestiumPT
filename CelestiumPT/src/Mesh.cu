@@ -1,30 +1,48 @@
 #include "HostMesh.hpp"
+
 #include "DeviceMesh.cuh"
+
+#include "HostScene.hpp"
+#include "DeviceScene.cuh"
+
 #include "maths/maths_linear_algebra.cuh"
+#include "utility.hpp"
 
 HostMesh::HostMesh(DeviceMesh* device_mesh)
 {
 	m_deviceMesh = device_mesh;
-	Mat4 mat = m_deviceMesh->modelMatrix;
+	Mat4 invmat = m_deviceMesh->inverseModelMatrix;
 	modelMatrix = glm::mat4(
-		mat[0].x, mat[0].y, mat[0].z, mat[0].w,
-		mat[1].x, mat[1].y, mat[1].z, mat[1].w,
-		mat[2].x, mat[2].y, mat[2].z, mat[2].w,
-		mat[3].x, mat[3].y, mat[3].z, mat[3].w
+		invmat[0].x, invmat[0].y, invmat[0].z, invmat[0].w,
+		invmat[1].x, invmat[1].y, invmat[1].z, invmat[1].w,
+		invmat[2].x, invmat[2].y, invmat[2].z, invmat[2].w,
+		invmat[3].x, invmat[3].y, invmat[3].z, invmat[3].w
 	);
+	modelMatrix = glm::inverse(modelMatrix);
+
 	triangle_offset_idx = device_mesh->triangle_offset_idx;
 	tri_count = device_mesh->tri_count;
 }
 
-void HostMesh::updateDevice()
+void HostMesh::updateDevice(HostScene* hscene)
 {
 	if (m_deviceMesh != nullptr) {
-		Mat4 mat(
-			modelMatrix[0][0], modelMatrix[0][1], modelMatrix[0][2], modelMatrix[0][3],  // First column
-			modelMatrix[1][0], modelMatrix[1][1], modelMatrix[1][2], modelMatrix[1][3],  // Second column
-			modelMatrix[2][0], modelMatrix[2][1], modelMatrix[2][2], modelMatrix[2][3],  // Third column
-			modelMatrix[3][0], modelMatrix[3][1], modelMatrix[3][2], -modelMatrix[3][3]   // Fourth column
+		//print_matrix(modelMatrix);
+
+		glm::mat4 invmat = glm::inverse(modelMatrix);
+
+		Mat4 dinvmat(
+			invmat[0][0], invmat[0][1], invmat[0][2], invmat[0][3],  // First column
+			invmat[1][0], invmat[1][1], invmat[1][2], invmat[1][3],  // Second column
+			invmat[2][0], invmat[2][1], invmat[2][2], invmat[2][3],  // Third column
+			invmat[3][0], invmat[3][1], invmat[3][2], invmat[3][3]   // Fourth column
 		);
-		m_deviceMesh->modelMatrix = mat;
+
+		Mat4 dmodmat = dinvmat.inverse();
+
+		//Mat4::print_matrix(dmodmat);
+
+		hscene->m_DeviceScene->DeviceBLASes[m_deviceMesh->BLAS_idx].setTransform(dmodmat);
+		m_deviceMesh->inverseModelMatrix = dinvmat;
 	}
 }

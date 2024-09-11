@@ -21,13 +21,6 @@ static void glfw_error_callback(int error, const char* description)
 	fprintf(stderr, "Error: %s\n", description);
 }
 
-static void print_matrix(const glm::mat4& mat) {
-	printf("| %.3f %.3f %.3f %.3f |\n", mat[0].x, mat[1].x, mat[2].x, mat[3].x);
-	printf("| %.3f %.3f %.3f %.3f |\n", mat[0].y, mat[1].y, mat[2].y, mat[3].y);
-	printf("| %.3f %.3f %.3f %.3f |\n", mat[0].z, mat[1].z, mat[2].z, mat[3].z);
-	printf("| %.3f %.3f %.3f %.3f |\n\n\n", mat[0].w, mat[1].w, mat[2].w, mat[3].w);
-}
-
 bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts);
 
 Application::Application() : m_Camera()
@@ -40,14 +33,13 @@ Application::Application() : m_Camera()
 	//TODO: make loading automatically sync geometry
 	hostscenehandle->syncDeviceGeometry();//updates raw buffer data; not needed at this point
 
-	GASBuilder builder;
-	builder.build(hostscenehandle);
+	m_GASBuilder.build(hostscenehandle);
 	hostscenehandle->syncDeviceGeometry();
 
-	hostscenehandle->LogStatus();
+	//hostscenehandle->LogStatus();
 
 	if (hostscenehandle->getMeshesCount() > 0)
-		m_selected_mesh = Mesh(hostscenehandle->getMesh(0));
+		m_selected_mesh = Mesh(hostscenehandle->getMesh(hostscenehandle->getMeshesCount() - 1));
 
 	m_Camera = Camera(m_Renderer.getCurrentCamera());
 }
@@ -108,17 +100,20 @@ void Application::run()
 				}
 			}
 			bool updateMesh = false;
-			updateMesh |= ImGui::DragFloat3("Translation", &m_selected_mesh.translation.x, 0.2);
+			updateMesh |= ImGui::DragFloat3("Translation", &m_selected_mesh.translation.x, 0.02);
 			updateMesh |= ImGui::DragFloat3("Scale", &m_selected_mesh.scale.x, 0.05);
 			updateMesh |= ImGui::DragFloat3("Rotation(degrees)", &m_selected_mesh.rotation.x, 0.2);
 			if (updateMesh) {
-				glm::mat4 trans = (glm::translate(glm::mat4(1), -m_selected_mesh.translation));
-				glm::mat4 scale = (glm::scale(glm::mat4(1), 1.f / m_selected_mesh.scale));
+				glm::mat4 trans = (glm::translate(glm::mat4(1),
+					glm::vec3(m_selected_mesh.translation.x, m_selected_mesh.translation.y + sinf(glfwGetTime()), m_selected_mesh.translation.z)));
+				glm::mat4 scale = (glm::scale(glm::mat4(1), m_selected_mesh.scale));
 				glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.x), glm::vec3(1, 0, 0));
 				glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.y), glm::vec3(0, 1, 0));
 				glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.z), glm::vec3(0, 0, 1));
-				m_selected_mesh.host_mesh_handle.setTransform(scale * rot_x * rot_y * rot_z * trans * m_selected_mesh.original_tranform);
-				m_selected_mesh.host_mesh_handle.updateDevice();
+				glm::mat4 model = scale * rot_x * rot_y * rot_z * trans * m_selected_mesh.original_tranform;
+				//print_matrix(model);
+				m_selected_mesh.host_mesh_handle.setTransform(model);
+				m_selected_mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
 				m_Renderer.clearAccumulation();
 			}
 
@@ -173,6 +168,7 @@ void Application::run()
 			if (vpdims.y > 14)vpdims.y -= 12;//TODO: make this sensible var; not a constant
 			if (vpdims.y < 5)vpdims.y = 10;
 			m_Renderer.resizeResolution((int)vpdims.x, (int)vpdims.y);
+			m_GASBuilder.refresh(m_Renderer.getCurrentScene());
 			m_Renderer.renderFrame();
 		}
 

@@ -15,4 +15,8 @@ void GASBuilder::build(HostScene* host_scene)
 }
 void GASBuilder::refresh(HostScene* host_scene)
 {
+	GAS gas = host_scene->m_DeviceScene->DeviceSceneGeometry->GAS_structure;
+	gas.refresh(host_scene);
+	host_scene->m_DeviceScene->DeviceSceneGeometry->GAS_structure = gas;
+	host_scene->syncDeviceGeometry();
 };

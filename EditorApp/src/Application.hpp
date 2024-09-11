@@ -35,5 +35,6 @@ private:
 	GLFWwindow* m_MainWindow = nullptr;
 	uint32_t m_width, m_height = 0;
 	Renderer m_Renderer;
+	GASBuilder m_GASBuilder;
 	Mesh m_selected_mesh;
 };
