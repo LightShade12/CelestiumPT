@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Mesh.hpp"
-#include "Camera.hpp"
-#include "CelestiumPT.hpp"
+#include "EditorSandbox.hpp"
 
 #include <cstdint>
 
@@ -16,6 +14,9 @@ public:
 
 	void run();
 
+	GLFWwindow* getWindowHandle() { return m_MainWindow; };
+	static Application& Get();
+
 	~Application();
 
 private:
@@ -24,17 +25,8 @@ private:
 	void close();
 
 private:
-	enum class RenderView {
-		COMPOSITE = 0,
-		NORMALS = 1,
-		POSITIONS = 2,
-		GAS = 3
-	};
-	RenderView curent_renderview = RenderView::COMPOSITE;
-	Camera m_Camera;
+
+	EditorSandbox m_EditorSandbox;
 	GLFWwindow* m_MainWindow = nullptr;
 	uint32_t m_width, m_height = 0;
-	Renderer m_Renderer;
-	GASBuilder m_GASBuilder;
-	Mesh m_selected_mesh;
 };

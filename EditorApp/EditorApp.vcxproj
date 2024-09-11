@@ -91,6 +91,7 @@
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\EditorApp.cpp" />
+    <ClCompile Include="src\EditorSandbox.cpp" />
     <ClCompile Include="src\ModelImporter.cpp" />
     <ClCompile Include="thirdparty\glad\src\glad.c" />
     <ClCompile Include="thirdparty\imgui\backends\imgui_impl_glfw.cpp" />
@@ -110,6 +111,7 @@
   <ItemGroup>
     <ClInclude Include="src\Camera.hpp" />
     <ClInclude Include="src\Application.hpp" />
+    <ClInclude Include="src\EditorSandbox.hpp" />
     <ClInclude Include="src\ModelImporter.hpp" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
     <ClInclude Include="thirdparty\glad\include\KHR\khrplatform.h" />

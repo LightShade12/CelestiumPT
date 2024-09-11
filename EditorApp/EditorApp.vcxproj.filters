@@ -51,6 +51,9 @@
     <ClCompile Include="thirdparty\tinygltf\tiny_gltf.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\EditorSandbox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.hpp">
@@ -102,5 +105,8 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Mesh.hpp" />
+    <ClInclude Include="src\EditorSandbox.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
