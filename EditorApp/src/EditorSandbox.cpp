@@ -37,8 +37,42 @@ void EditorSandbox::destroy()
 {
 }
 
+static bool s_updateCam = false;
+static bool s_updateMesh = false;
+
 void EditorSandbox::onUpdate(float delta)
 {
+	s_updateCam |= processMouse(Application::Get().getWindowHandle(), &m_Camera, delta);
+
+	if (s_updateMesh) {
+		glm::mat4 trans = (glm::translate(glm::mat4(1),
+			glm::vec3(m_selected_mesh.translation.x, m_selected_mesh.translation.y, m_selected_mesh.translation.z)));
+		glm::mat4 scale = (glm::scale(glm::mat4(1), m_selected_mesh.scale));
+		glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.x), glm::vec3(1, 0, 0));
+		glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.y), glm::vec3(0, 1, 0));
+		glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.z), glm::vec3(0, 0, 1));
+		glm::mat4 model = scale * rot_x * rot_y * rot_z * trans * m_selected_mesh.original_tranform;
+		//print_matrix(model);
+		m_selected_mesh.host_mesh_handle.setTransform(model);
+		m_selected_mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
+		m_Renderer.clearAccumulation();
+	}
+
+	if (s_updateCam)
+	{
+		glm::mat4 view = glm::mat4(
+			glm::vec4(m_Camera.right, 0),
+			glm::vec4(m_Camera.up, 0),
+			glm::vec4(m_Camera.forward, 0),
+			glm::vec4(m_Camera.position, 1)
+		);
+		m_Camera.host_camera_handle->setTransform(view);
+		m_Camera.host_camera_handle->updateDevice();
+		m_Renderer.clearAccumulation();
+	};
+
+	s_updateCam = false;
+	s_updateMesh = false;
 }
 
 void EditorSandbox::onRender(float delta)
@@ -46,89 +80,87 @@ void EditorSandbox::onRender(float delta)
 	{
 		ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
-		ImGui::Begin("Window");
-
+		ImGui::Begin("Dev Window");
+		ImGui::Text("FPS: %.2f", 10.f / delta);//TODO: fix timing mterics
+		ImGui::Text("Delta time: %.3fms", delta);
 		ImGui::Text("Loaded meshes: %zu", m_Renderer.getCurrentScene()->getMeshesCount());
 		ImGui::Text("Loaded triangles: %zu", m_Renderer.getCurrentScene()->getTrianglesCount());
 		ImGui::Separator();
-		ImGui::Combo("Renderer mode", (int*)&curent_renderview, "Composite\0Normals\0Positions\0GAS Debug");
-		ImGui::Separator();
-		//-----------------------
+		if (ImGui::BeginTabBar("dev_tabs")) {
+			if (ImGui::BeginTabItem("Rendering")) {
+				if (ImGui::CollapsingHeader("Debug")) {
+					ImGui::Combo("Renderer mode", (int*)&curent_renderview, "Composite\0Normals\0Positions\0GAS Debug");
+				};
 
-		ImGui::Text("Mesh transformations");
-		{
-			static int sel_idx = 0;
-			if (ImGui::InputInt("selected mesh idx", &sel_idx)) {
-				sel_idx = (sel_idx < 0) ? 0 :
-					(sel_idx == m_Renderer.getCurrentScene()->getMeshesCount()) ? (m_Renderer.getCurrentScene()->getMeshesCount() - 1) : sel_idx;
-				m_selected_mesh = Mesh(m_Renderer.getCurrentScene()->getMesh(sel_idx));
+				if (ImGui::CollapsingHeader("Camera")) {
+					ImGui::Text("Camera transformations");
+					s_updateCam |= ImGui::DragFloat3("Camera translation", &m_Camera.position.x);
+				};
+				if (ImGui::CollapsingHeader("Pathtracing")) {
+				};
+				if (ImGui::CollapsingHeader("Geometry")) {
+					ImGui::Text("Mesh transformations");
+					{
+						static int sel_idx = 0;
+						if (ImGui::InputInt("selected mesh idx", &sel_idx)) {
+							sel_idx = (sel_idx < 0) ? 0 :
+								(sel_idx == m_Renderer.getCurrentScene()->getMeshesCount()) ? (m_Renderer.getCurrentScene()->getMeshesCount() - 1) : sel_idx;
+							m_selected_mesh = Mesh(m_Renderer.getCurrentScene()->getMesh(sel_idx));
+						}
+					}
+					s_updateMesh |= ImGui::DragFloat3("Translation", &m_selected_mesh.translation.x, 0.02);
+					s_updateMesh |= ImGui::DragFloat3("Scale", &m_selected_mesh.scale.x, 0.05);
+					s_updateMesh |= ImGui::DragFloat3("Rotation(degrees)", &m_selected_mesh.rotation.x, 0.2);
+				};
+				if (ImGui::CollapsingHeader("Post-Processing")) {
+				};
+				if (ImGui::CollapsingHeader("Denoising")) {
+				};
+				if (ImGui::CollapsingHeader("General")) {
+				};
+
+				ImGui::EndTabItem();
 			}
-		}
-		bool updateMesh = false;
-		updateMesh |= ImGui::DragFloat3("Translation", &m_selected_mesh.translation.x, 0.02);
-		updateMesh |= ImGui::DragFloat3("Scale", &m_selected_mesh.scale.x, 0.05);
-		updateMesh |= ImGui::DragFloat3("Rotation(degrees)", &m_selected_mesh.rotation.x, 0.2);
-		if (updateMesh) {
-			glm::mat4 trans = (glm::translate(glm::mat4(1),
-				glm::vec3(m_selected_mesh.translation.x, m_selected_mesh.translation.y, m_selected_mesh.translation.z)));
-			glm::mat4 scale = (glm::scale(glm::mat4(1), m_selected_mesh.scale));
-			glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.x), glm::vec3(1, 0, 0));
-			glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.y), glm::vec3(0, 1, 0));
-			glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.z), glm::vec3(0, 0, 1));
-			glm::mat4 model = scale * rot_x * rot_y * rot_z * trans * m_selected_mesh.original_tranform;
-			//print_matrix(model);
-			m_selected_mesh.host_mesh_handle.setTransform(model);
-			m_selected_mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
-			m_Renderer.clearAccumulation();
-		}
-
-		//-----------------------
-		ImGui::Separator();
-
-		ImGui::Text("Camera transformations");
-		bool updateCam = false;
-		updateCam |= ImGui::DragFloat3("Camera translation", &m_Camera.position.x);
-		updateCam |= processMouse(Application::Get().getWindowHandle(), &m_Camera, delta);
-		if (updateCam)
-		{
-			glm::mat4 view = glm::mat4(
-				glm::vec4(m_Camera.right, 0),
-				glm::vec4(m_Camera.up, 0),
-				glm::vec4(m_Camera.forward, 0),
-				glm::vec4(m_Camera.position, 1)
-			);
-			m_Camera.host_camera_handle->setTransform(view);
-			m_Camera.host_camera_handle->updateDevice();
-			m_Renderer.clearAccumulation();
+			if (ImGui::BeginTabItem("Setup")) {
+				if (ImGui::CollapsingHeader("Material")) {
+				};
+				if (ImGui::CollapsingHeader("Sky")) {
+				};
+				ImGui::EndTabItem();
+			}
+			ImGui::EndTabBar();
 		};
 		ImGui::End();
+
 		//-----------------------------------------------------------------------------
+		ImVec2 vpdims;
+		{
+			ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);
 
-		ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);
+			vpdims = ImGui::GetContentRegionAvail();
 
-		ImVec2 vpdims = ImGui::GetContentRegionAvail();
-
-		if (curent_renderview == RenderView::COMPOSITE) {
-			if (m_Renderer.getCompositeRenderTargetTextureName() != NULL)
-				ImGui::Image((void*)(uintptr_t)m_Renderer.getCompositeRenderTargetTextureName(),
-					ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			if (curent_renderview == RenderView::COMPOSITE) {
+				if (m_Renderer.getCompositeRenderTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getCompositeRenderTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::NORMALS) {
+				if (m_Renderer.getNormalsTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getNormalsTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::POSITIONS) {
+				if (m_Renderer.getNormalsTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getPositionsTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::GAS) {
+				if (m_Renderer.getGASDebugTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getGASDebugTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			ImGui::End();
 		}
-		else if (curent_renderview == RenderView::NORMALS) {
-			if (m_Renderer.getNormalsTargetTextureName() != NULL)
-				ImGui::Image((void*)(uintptr_t)m_Renderer.getNormalsTargetTextureName(),
-					ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
-		}
-		else if (curent_renderview == RenderView::POSITIONS) {
-			if (m_Renderer.getNormalsTargetTextureName() != NULL)
-				ImGui::Image((void*)(uintptr_t)m_Renderer.getPositionsTargetTextureName(),
-					ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
-		}
-		else if (curent_renderview == RenderView::GAS) {
-			if (m_Renderer.getGASDebugTargetTextureName() != NULL)
-				ImGui::Image((void*)(uintptr_t)m_Renderer.getGASDebugTargetTextureName(),
-					ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
-		}
-		ImGui::End();
 
 		if (vpdims.y > 14)vpdims.y -= 12;//TODO: make this sensible var; not a constant
 		if (vpdims.y < 5)vpdims.y = 10;
