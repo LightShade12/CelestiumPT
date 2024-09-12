@@ -7,6 +7,10 @@
 
 #include <vector>
 
+struct PhsyicsSettings {
+	bool enabled = true;
+};
+
 //TODO: rename; its like between a client project runtime and game procesing
 class EditorSandbox {
 public:
@@ -29,6 +33,8 @@ public:
 	HostScene* m_HostSceneHandle = nullptr;
 	Mesh m_selected_mesh;
 	Camera m_Camera;
+
+	PhsyicsSettings m_PhysCFG;
 
 	std::vector<Mesh> m_Meshes;
 	Renderer m_Renderer;

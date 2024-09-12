@@ -190,8 +190,11 @@ void Renderer::renderFrame()
 
 void Renderer::clearAccumulation()
 {
+	if (!m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.accumulate)return;
+
 	thrust::fill(m_CelestiumPTResourceAPI->AccumulationFrameBuffer.begin(),
 		m_CelestiumPTResourceAPI->AccumulationFrameBuffer.end(), make_float3(0, 0, 0));
+
 	g_frameIndex = 1;
 }
 
@@ -213,6 +216,11 @@ GLuint Renderer::getPositionsTargetTextureName() const
 GLuint Renderer::getGASDebugTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->GASDebugRenderBuffer.m_RenderTargetTextureName;
+}
+
+IntegratorSettings* Renderer::getIntegratorSettings()
+{
+	return &(m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG);
 }
 
 Renderer::~Renderer()

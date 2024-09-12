@@ -48,38 +48,40 @@ void EditorSandbox::onUpdate(float delta)
 {
 	s_updateCam |= processMouse(Application::Get().getWindowHandle(), &m_Camera, delta);
 
-	for (Mesh mesh : m_Meshes)
-	{
-		bool updatemesh = false;
-		glm::vec3 translation(0);
-		glm::vec3 rotation(0);
-		if (mesh.host_mesh_handle.name == "monkey") {
-			rotation.y = mesh.rotation.y + (10 * glfwGetTime());
-			updatemesh |= true;
-		}
-		if (mesh.host_mesh_handle.name == "moving_platform") {
-			translation.z = mesh.translation.z + (1 * sinf(glfwGetTime()));
-			updatemesh |= true;
-		}
-		if (mesh.host_mesh_handle.name == "gear") {
-			translation.x = mesh.translation.x + (1 * sinf(glfwGetTime()));
-			updatemesh |= true;
-		}
-		if (mesh.host_mesh_handle.name == "teapot") {
-			translation.y = mesh.translation.y + (0.15 * sinf(glfwGetTime()));
-			updatemesh |= true;
-		}
+	if (m_PhysCFG.enabled) {
+		for (Mesh mesh : m_Meshes)
+		{
+			bool updatemesh = false;
+			glm::vec3 translation(0);
+			glm::vec3 rotation(0);
+			if (mesh.host_mesh_handle.name == "monkey") {
+				rotation.y = mesh.rotation.y + (10 * glfwGetTime());
+				updatemesh |= true;
+			}
+			if (mesh.host_mesh_handle.name == "moving_platform") {
+				translation.z = mesh.translation.z + (1 * sinf(glfwGetTime()));
+				updatemesh |= true;
+			}
+			if (mesh.host_mesh_handle.name == "gear") {
+				translation.x = mesh.translation.x + (1 * sinf(glfwGetTime()));
+				updatemesh |= true;
+			}
+			if (mesh.host_mesh_handle.name == "teapot") {
+				translation.y = mesh.translation.y + (0.15 * sinf(glfwGetTime()));
+				updatemesh |= true;
+			}
 
-		if (updatemesh) {
-			glm::mat4 trans = (glm::translate(glm::mat4(1), translation));
-			glm::mat4 scale = (glm::scale(glm::mat4(1), mesh.scale));
-			glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(rotation.x), glm::vec3(1, 0, 0));
-			glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(rotation.y), glm::vec3(0, 1, 0));
-			glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(rotation.z), glm::vec3(0, 0, 1));
-			glm::mat4 model = mesh.original_tranform * trans * rot_x * rot_y * rot_z * scale;
-			mesh.host_mesh_handle.setTransform(model);
-			mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
-			m_Renderer.clearAccumulation();
+			if (updatemesh) {
+				glm::mat4 trans = (glm::translate(glm::mat4(1), translation));
+				glm::mat4 scale = (glm::scale(glm::mat4(1), mesh.scale));
+				glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(rotation.x), glm::vec3(1, 0, 0));
+				glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(rotation.y), glm::vec3(0, 1, 0));
+				glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(rotation.z), glm::vec3(0, 0, 1));
+				glm::mat4 model = mesh.original_tranform * trans * rot_x * rot_y * rot_z * scale;
+				mesh.host_mesh_handle.setTransform(model);
+				mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
+				m_Renderer.clearAccumulation();
+			}
 		}
 	}
 
@@ -114,21 +116,22 @@ void EditorSandbox::onUpdate(float delta)
 	s_updateMesh = false;
 }
 
-void EditorSandbox::onRender(float delta)
+void EditorSandbox::onRender(float delta_secs)
 {
 	{
 		ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
 		ImGui::Begin("Dev Window");
-		ImGui::Text("FPS: %.2f", 10.f / delta);//TODO: fix timing mterics
-		ImGui::Text("Delta time: %.3fms", delta);
+		ImGui::Text("FPS: %.2f", 1000.f / (delta_secs * 1000.f));//TODO: fix timing mterics
+		ImGui::Text("Delta time: %.3fms", (delta_secs * 1000.f));
 		ImGui::Text("Loaded meshes: %zu", m_Renderer.getCurrentScene()->getMeshesCount());
 		ImGui::Text("Loaded triangles: %zu", m_Renderer.getCurrentScene()->getTrianglesCount());
 		ImGui::Separator();
 		if (ImGui::BeginTabBar("dev_tabs")) {
 			if (ImGui::BeginTabItem("Rendering")) {
 				if (ImGui::CollapsingHeader("Debug")) {
-					ImGui::Combo("Renderer mode", (int*)&curent_renderview, "Composite\0Normals\0Positions\0GAS Debug");
+					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
+						"Composite\0Normals\0Positions\0GAS Debug");
 				};
 
 				if (ImGui::CollapsingHeader("Camera")) {
@@ -136,6 +139,8 @@ void EditorSandbox::onRender(float delta)
 					s_updateCam |= ImGui::DragFloat3("Camera translation", &m_Camera.position.x);
 				};
 				if (ImGui::CollapsingHeader("Pathtracing")) {
+					ImGui::Checkbox("Accumulation", &(m_Renderer.getIntegratorSettings()->accumulate));
+					ImGui::InputInt("Ray bounces", &(m_Renderer.getIntegratorSettings()->bounces));
 				};
 				if (ImGui::CollapsingHeader("Geometry")) {
 					ImGui::Text("Mesh transformations");
@@ -164,6 +169,12 @@ void EditorSandbox::onRender(float delta)
 				if (ImGui::CollapsingHeader("Material")) {
 				};
 				if (ImGui::CollapsingHeader("Sky")) {
+				};
+				ImGui::EndTabItem();
+			}
+			if (ImGui::BeginTabItem("Physics")) {
+				if (ImGui::CollapsingHeader("General")) {
+					ImGui::Checkbox("Physics enabled", &m_PhysCFG.enabled);
 				};
 				ImGui::EndTabItem();
 			}

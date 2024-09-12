@@ -139,6 +139,7 @@
     <ClInclude Include="src\DeviceCamera.cuh" />
     <ClInclude Include="src\DeviceScene.cuh" />
     <ClInclude Include="src\ErrorCheck.cuh" />
+    <ClInclude Include="src\IntegratorSettings.hpp" />
     <ClInclude Include="src\Storage.cuh" />
     <ClInclude Include="src\HostCamera.hpp" />
     <ClInclude Include="src\HostMesh.hpp" />

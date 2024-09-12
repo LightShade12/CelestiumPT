@@ -1,5 +1,7 @@
 #pragma once
 
+#include "IntegratorSettings.hpp"
+
 #include <vector_types.h>
 #include <glad/include/glad/glad.h>//for cudagl_interop
 #include <cuda_gl_interop.h>
@@ -33,12 +35,6 @@ struct DeviceSceneDescriptor {
 	DeviceBuffer<Light>dev_lights;
 	DeviceBuffer<Light>dev_inf_lights;
 	DeviceCamera* dev_camera = nullptr;
-};
-
-struct IntegratorSettings {
-	bool accumulate = true;
-	int bounces = 2;
-	bool MIS = false;
 };
 
 struct IntegratorGlobals {

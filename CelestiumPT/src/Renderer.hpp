@@ -1,6 +1,6 @@
 #pragma once
 
-//#include <Windows.h>
+#include "IntegratorSettings.hpp"
 #include "HostCamera.hpp"
 #include "HostScene.hpp"
 
@@ -26,6 +26,8 @@ public:
 	GLuint getPositionsTargetTextureName() const;
 	GLuint getGASDebugTargetTextureName() const;
 
+	IntegratorSettings* getIntegratorSettings();//TODO: make this safer and more robust
+
 	HostCamera* getCurrentCamera() { return &m_CurrentCamera; };
 	HostScene* getCurrentScene() { return &m_CurrentScene; };
 
@@ -35,7 +37,7 @@ public:
 	~Renderer();
 
 private:
-	//GLuint m_CompositeRenderTargetTextureName = NULL;
+
 	uint32_t m_NativeRenderResolutionWidth = NULL;
 	uint32_t m_NativeRenderResolutionHeight = NULL;
 	HostCamera m_CurrentCamera;
