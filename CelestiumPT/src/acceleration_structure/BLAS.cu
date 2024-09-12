@@ -360,7 +360,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 	if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
 	if (m_BVHNodesCount == 0) return;//empty BLAS
 
-	SceneGeometry* sceneGeo = globals.SceneDescriptor.dev_aggregate;
+	SceneGeometry* sceneGeo = globals.SceneDescriptor.device_geometry_aggregate;
 
 	const uint8_t maxStackSize = 64;
 	int nodeIdxStack[maxStackSize];

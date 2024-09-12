@@ -79,7 +79,7 @@ void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<
 }
 __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
 {
-	SceneGeometry* sceneGeo = globals.SceneDescriptor.dev_aggregate;
+	SceneGeometry* sceneGeo = globals.SceneDescriptor.device_geometry_aggregate;
 
 	if (m_BLASCount == 0) return;//empty scene;empty TLAS
 

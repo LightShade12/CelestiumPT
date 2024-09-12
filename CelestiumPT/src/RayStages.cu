@@ -14,7 +14,7 @@ __device__ ShapeIntersection MissStage(const IntegratorGlobals& globals, const R
 
 __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& in_payload)
 {
-	const Triangle& triangle = globals.SceneDescriptor.dev_aggregate->DeviceTrianglesBuffer[in_payload.triangle_idx];
+	const Triangle& triangle = globals.SceneDescriptor.device_geometry_aggregate->DeviceTrianglesBuffer[in_payload.triangle_idx];
 
 	ShapeIntersection out_payload;
 

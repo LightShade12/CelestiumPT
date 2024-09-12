@@ -2,9 +2,9 @@
 #include "DeviceCamera.cuh"
 #include "Ray.cuh"
 
-HostCamera::HostCamera(DeviceCamera* dev_camera)
+HostCamera::HostCamera(DeviceCamera* device_camera)
 {
-	m_device_camera = dev_camera;
+	m_device_camera = device_camera;
 	Mat4 mat = m_device_camera->viewMatrix;
 	m_transform = glm::mat4(
 		mat[0].x, mat[0].y, mat[0].z, mat[0].w,

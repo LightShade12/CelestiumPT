@@ -14,6 +14,7 @@ public:
 
 	void run();
 
+	float getDeltaTimeSeconds();
 	GLFWwindow* getWindowHandle() { return m_MainWindow; };
 	static Application& Get();
 
@@ -25,7 +26,6 @@ private:
 	void close();
 
 private:
-
 	EditorSandbox m_EditorSandbox;
 	GLFWwindow* m_MainWindow = nullptr;
 	uint32_t m_width, m_height = 0;

@@ -66,6 +66,11 @@ size_t HostScene::getMeshesCount() {
 	return m_DeviceScene->DeviceMeshes.size();
 }
 
+void HostScene::setCamera(HostCamera camera)
+{
+
+}
+
 void HostScene::AddTriangle(
 	glm::vec3 v0p, glm::vec3 v0n,
 	glm::vec3 v1p, glm::vec3 v1n,

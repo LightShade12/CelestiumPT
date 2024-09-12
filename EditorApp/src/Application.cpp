@@ -34,9 +34,8 @@ Application::~Application()
 	s_Instance = nullptr;
 }
 
-//TODO:proper placement of application timings
-float deltaTimeSecs = 0.0f;	// Time between current frame and last frame
-float lastFrame = 0.0f; // Time of last frame
+static float delta_time_secs = 0.0f;
+static float last_frame_secs = 0.0f;
 
 void Application::run()
 {
@@ -47,7 +46,7 @@ void Application::run()
 	while (!glfwWindowShouldClose(m_MainWindow))
 	{
 		glfwPollEvents();
-		m_EditorSandbox.onUpdate(deltaTimeSecs);
+		m_EditorSandbox.onUpdate(delta_time_secs);
 
 		if (glfwGetWindowAttrib(m_MainWindow, GLFW_ICONIFIED) != 0)
 		{
@@ -64,7 +63,7 @@ void Application::run()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		m_EditorSandbox.onRender(deltaTimeSecs);
+		m_EditorSandbox.onRender(delta_time_secs);
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -79,15 +78,20 @@ void Application::run()
 
 		//printf("secs: %.3f\n", (float)glfwGetTime());
 
-		float currentFrame = glfwGetTime();
-		deltaTimeSecs = currentFrame - lastFrame;
+		float currentFrame_secs = glfwGetTime();
+		delta_time_secs = currentFrame_secs - last_frame_secs;
 
-		//printf("delta secs: %.3f\n", (float)deltaTimeSecs);
+		//printf("delta secs: %.3f\n", (float)delta_time_secs);
 
-		lastFrame = currentFrame;
+		last_frame_secs = currentFrame_secs;
 
 		glfwSwapBuffers(m_MainWindow);
 	}
+}
+
+float Application::getDeltaTimeSeconds()
+{
+	return delta_time_secs;
 }
 
 void Application::initialize()

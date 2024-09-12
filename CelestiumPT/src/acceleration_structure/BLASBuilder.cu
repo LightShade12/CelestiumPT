@@ -10,7 +10,7 @@ void BLASBuilder::build(HostScene* hscene)
 	DeviceScene* dscene = hscene->m_DeviceScene;
 	std::vector<BVHNode>hnodes;
 	std::vector<int>prim_indices;
-	const thrust::universal_vector<Triangle> read_prims = dscene->DeviceTriangles;
+	const thrust::universal_vector<Triangle>& read_prims = dscene->DeviceTriangles;
 
 	BLAS::BVHBuilderSettings cfg;
 	cfg.m_TargetLeafPrimitivesCount = 8;

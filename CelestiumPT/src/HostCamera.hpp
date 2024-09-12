@@ -9,7 +9,7 @@ class DeviceCamera;
 class HostCamera {
 public:
 	HostCamera() = default;
-	explicit HostCamera(DeviceCamera* dev_camera);
+	explicit HostCamera(DeviceCamera* device_camera);
 	//apply/construct matrix and send off to device
 	void updateDevice();
 

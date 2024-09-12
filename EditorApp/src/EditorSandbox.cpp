@@ -19,11 +19,8 @@ void EditorSandbox::initialise()
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
 	m_ModelImporter.loadGLTF("../models/moving_test.glb", m_HostSceneHandle);//uses host API to add scene geo
-	//TODO: make loading automatically sync geometry
-	m_HostSceneHandle->syncDeviceGeometry();//updates raw buffer data; not needed at this point
 
 	m_GASBuilder.build(m_HostSceneHandle);
-	m_HostSceneHandle->syncDeviceGeometry();
 
 	//m_HostSceneHandle->LogStatus();
 
@@ -122,7 +119,7 @@ void EditorSandbox::onRender(float delta_secs)
 		ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
 		ImGui::Begin("Dev Window");
-		ImGui::Text("FPS: %.2f", 1000.f / (delta_secs * 1000.f));//TODO: fix timing mterics
+		ImGui::Text("FPS: %.2f", 1000.f / (delta_secs * 1000.f));
 		ImGui::Text("Delta time: %.3fms", (delta_secs * 1000.f));
 		ImGui::Text("Loaded meshes: %zu", m_Renderer.getCurrentScene()->getMeshesCount());
 		ImGui::Text("Loaded triangles: %zu", m_Renderer.getCurrentScene()->getTrianglesCount());
@@ -212,8 +209,10 @@ void EditorSandbox::onRender(float delta_secs)
 			ImGui::End();
 		}
 
-		if (vpdims.y > 14)vpdims.y -= 12;//TODO: make this sensible var; not a constant
-		if (vpdims.y < 5)vpdims.y = 10;
+		if (vpdims.y > viewport_vertical_scrolloverdraw_compensation_offset +
+			minimum_viewport_height_threshold)vpdims.y -= viewport_vertical_scrolloverdraw_compensation_offset;
+		if (vpdims.y < minimum_viewport_height_threshold)vpdims.y = minimum_viewport_height;
+
 		m_Renderer.resizeResolution((int)vpdims.x, (int)vpdims.y);
 		m_GASBuilder.refresh(m_Renderer.getCurrentScene());
 		m_Renderer.renderFrame();
