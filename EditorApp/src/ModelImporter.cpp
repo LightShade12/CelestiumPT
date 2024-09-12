@@ -92,7 +92,6 @@ bool ModelImporter::loadGLTFModel(const char* filename)
 
 bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 {
-	printf("parse mesh called\n");
 	tinygltf::Mesh gltf_mesh = m_SceneModel.meshes[mesh_node.mesh];
 
 	std::vector<glm::vec3> loadedMeshPositions;
@@ -100,11 +99,10 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 	std::vector<glm::vec2>loadedMeshUVs;
 	std::vector<int>loadedMeshPrimitiveMatIdx;
 
-	//Mesh drt_mesh;
-	//setName(drt_mesh.Name, gltf_mesh.name.c_str());
-	//printf("\nprocessing mesh:%s\n", gltf_mesh.name.c_str());
+	printf("\nprocessing mesh:%s\n", mesh_node.name.c_str());
 
 	HostMesh mesh;
+	mesh.name = mesh_node.name;
 	mesh.triangle_offset_idx = m_WorkingScene->getTrianglesCount();
 	extractVertices(gltf_mesh, loadedMeshPositions,
 		loadedMeshNormals, loadedMeshUVs, loadedMeshPrimitiveMatIdx);

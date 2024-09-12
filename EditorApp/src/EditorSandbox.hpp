@@ -4,6 +4,9 @@
 #include "ModelImporter.hpp"
 #include "Camera.hpp"
 #include "Mesh.hpp"
+
+#include <vector>
+
 //TODO: rename; its like between a client project runtime and game procesing
 class EditorSandbox {
 public:
@@ -27,6 +30,7 @@ public:
 	Mesh m_selected_mesh;
 	Camera m_Camera;
 
+	std::vector<Mesh> m_Meshes;
 	Renderer m_Renderer;
 	GASBuilder m_GASBuilder;
 	ModelImporter m_ModelImporter;

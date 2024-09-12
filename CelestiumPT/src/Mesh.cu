@@ -11,6 +11,7 @@
 HostMesh::HostMesh(DeviceMesh* device_mesh)
 {
 	m_deviceMesh = device_mesh;
+	name = device_mesh->name;
 	Mat4 invmat = m_deviceMesh->inverseModelMatrix;
 	modelMatrix = glm::mat4(
 		invmat[0].x, invmat[0].y, invmat[0].z, invmat[0].w,

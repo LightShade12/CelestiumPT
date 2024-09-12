@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <string>
 
 class DeviceMesh;
 class HostScene;
@@ -20,6 +21,7 @@ public:
 		modelMatrix = (transform);
 	};
 public:
+	std::string name;
 	DeviceMesh* m_deviceMesh = nullptr;
 	//TODO: guarded access to sensitive data modification
 	int triangle_offset_idx = 1;

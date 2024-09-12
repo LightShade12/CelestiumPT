@@ -7,6 +7,7 @@ public:
 	//__device__ ShapeIntersection intersect(const Ray& ray);
 	//__device__ bool intersectP(const Ray& ray);
 
+	char name[32];
 	int BLAS_idx = -1;
 	int triangle_offset_idx = -1;
 	size_t tri_count = 0;

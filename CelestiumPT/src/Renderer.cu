@@ -120,10 +120,10 @@ Renderer::Renderer()
 	//TODO: temporary; make this part of initing a camera
 	m_CurrentCamera.setTransform(
 		glm::mat4(
-			glm::vec4(1, 0, 0, 0),
-			glm::vec4(0, 1, 0, 0),
 			glm::vec4(0, 0, -1, 0),
-			glm::vec4(0, 0.5, 12.5, 0)
+			glm::vec4(0, 1, 0, 0),
+			glm::vec4(-1, 0, 0, 0),
+			glm::vec4(2, 0.5, 0, 0)
 		)
 	);
 

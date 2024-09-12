@@ -30,6 +30,10 @@ void EditorSandbox::initialise()
 	if (m_HostSceneHandle->getMeshesCount() > 0)
 		m_selected_mesh = Mesh(m_HostSceneHandle->getMesh(m_HostSceneHandle->getMeshesCount() - 1));
 
+	for (size_t obj_idx = 0; obj_idx < m_HostSceneHandle->getMeshesCount(); obj_idx++) {
+		m_Meshes.push_back(Mesh(m_HostSceneHandle->getMesh(obj_idx)));
+	}
+
 	m_Camera = Camera(m_Renderer.getCurrentCamera());
 }
 
@@ -44,6 +48,41 @@ void EditorSandbox::onUpdate(float delta)
 {
 	s_updateCam |= processMouse(Application::Get().getWindowHandle(), &m_Camera, delta);
 
+	for (Mesh mesh : m_Meshes)
+	{
+		bool updatemesh = false;
+		glm::vec3 translation(0);
+		glm::vec3 rotation(0);
+		if (mesh.host_mesh_handle.name == "monkey") {
+			rotation.y = mesh.rotation.y + (10 * glfwGetTime());
+			updatemesh |= true;
+		}
+		if (mesh.host_mesh_handle.name == "moving_platform") {
+			translation.z = mesh.translation.z + (1 * sinf(glfwGetTime()));
+			updatemesh |= true;
+		}
+		if (mesh.host_mesh_handle.name == "gear") {
+			translation.x = mesh.translation.x + (1 * sinf(glfwGetTime()));
+			updatemesh |= true;
+		}
+		if (mesh.host_mesh_handle.name == "teapot") {
+			translation.y = mesh.translation.y + (0.15 * sinf(glfwGetTime()));
+			updatemesh |= true;
+		}
+
+		if (updatemesh) {
+			glm::mat4 trans = (glm::translate(glm::mat4(1), translation));
+			glm::mat4 scale = (glm::scale(glm::mat4(1), mesh.scale));
+			glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(rotation.x), glm::vec3(1, 0, 0));
+			glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(rotation.y), glm::vec3(0, 1, 0));
+			glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(rotation.z), glm::vec3(0, 0, 1));
+			glm::mat4 model = mesh.original_tranform * trans * rot_x * rot_y * rot_z * scale;
+			mesh.host_mesh_handle.setTransform(model);
+			mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
+			m_Renderer.clearAccumulation();
+		}
+	}
+
 	if (s_updateMesh) {
 		glm::mat4 trans = (glm::translate(glm::mat4(1),
 			glm::vec3(m_selected_mesh.translation.x, m_selected_mesh.translation.y, m_selected_mesh.translation.z)));
@@ -51,7 +90,7 @@ void EditorSandbox::onUpdate(float delta)
 		glm::mat4 rot_x = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.x), glm::vec3(1, 0, 0));
 		glm::mat4 rot_y = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.y), glm::vec3(0, 1, 0));
 		glm::mat4 rot_z = glm::rotate(glm::mat4(1), glm::radians(m_selected_mesh.rotation.z), glm::vec3(0, 0, 1));
-		glm::mat4 model = scale * rot_x * rot_y * rot_z * trans * m_selected_mesh.original_tranform;
+		glm::mat4 model = m_selected_mesh.original_tranform * trans * rot_x * rot_y * rot_z * scale;
 		//print_matrix(model);
 		m_selected_mesh.host_mesh_handle.setTransform(model);
 		m_selected_mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());

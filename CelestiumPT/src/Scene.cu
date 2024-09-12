@@ -9,6 +9,14 @@
 #include "SceneGeometry.cuh"
 //#include "SceneGeometry.cuh"
 
+#define CLSPT_NAME_STRING_LENGTH 32
+
+static void setName(char* dst, const char* src) {
+	memset(dst, 0, CLSPT_NAME_STRING_LENGTH);
+	strncpy(dst, src, CLSPT_NAME_STRING_LENGTH);
+	dst[CLSPT_NAME_STRING_LENGTH - 1] = '\0';
+};
+
 DeviceScene::DeviceScene(SceneGeometry* device_scene_geo) :DeviceSceneGeometry(device_scene_geo)
 {
 	if (DeviceSceneGeometry == nullptr) {
@@ -80,6 +88,7 @@ void HostScene::AddTriangle(
 void HostScene::AddMesh(HostMesh hmesh)
 {
 	DeviceMesh dmesh;
+	setName(dmesh.name, hmesh.name.c_str());
 	dmesh.triangle_offset_idx = hmesh.triangle_offset_idx;
 	dmesh.tri_count = hmesh.tri_count;
 	hmesh.modelMatrix = glm::inverse(hmesh.modelMatrix);
