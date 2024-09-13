@@ -23,6 +23,7 @@ public:
 
 public:
 
+	float FOV_y_radians = glm::radians(60.f);
 	glm::mat4 m_transform;
 	DeviceCamera* m_device_camera = nullptr;//non-owning link
 };

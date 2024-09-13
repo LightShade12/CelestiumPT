@@ -66,9 +66,18 @@ size_t HostScene::getMeshesCount() {
 	return m_DeviceScene->DeviceMeshes.size();
 }
 
-void HostScene::setCamera(HostCamera camera)
+size_t HostScene::getCamerasCount()
 {
+	return m_DeviceScene->DeviceCameras.size();
+}
 
+void HostScene::addCamera(HostCamera camera)
+{
+	DeviceCamera dcam;
+	dcam.FOV_y_radians = camera.FOV_y_radians;
+	dcam.viewMatrix = Mat4(camera.m_transform);
+
+	m_DeviceScene->DeviceCameras.push_back(dcam);
 }
 
 void HostScene::AddTriangle(

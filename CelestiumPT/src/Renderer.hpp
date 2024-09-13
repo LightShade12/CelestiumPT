@@ -26,8 +26,8 @@ public:
 	GLuint getPositionsTargetTextureName() const;
 	GLuint getGASDebugTargetTextureName() const;
 
+	void setCamera(int idx);
 	IntegratorSettings* getIntegratorSettings();//TODO: make this safer and more robust
-
 	HostCamera* getCurrentCamera() { return &m_CurrentCamera; };
 	HostScene* getCurrentScene() { return &m_CurrentScene; };
 

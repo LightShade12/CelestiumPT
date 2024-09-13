@@ -34,7 +34,7 @@ struct DeviceSceneDescriptor {
 	SceneGeometry* device_geometry_aggregate = nullptr;
 	DeviceBuffer<Light>dev_lights;
 	DeviceBuffer<Light>dev_inf_lights;
-	DeviceCamera* device_camera = nullptr;
+	DeviceCamera* active_camera = nullptr;
 };
 
 struct IntegratorGlobals {

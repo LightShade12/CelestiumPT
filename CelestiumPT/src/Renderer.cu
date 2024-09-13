@@ -110,24 +110,10 @@ Renderer::Renderer()
 	m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
-	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_camera, sizeof(DeviceCamera));
 	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate, sizeof(SceneGeometry));
 
-	m_CurrentCamera = HostCamera(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_camera);
 	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);
 	m_CurrentScene = HostScene(&(m_CelestiumPTResourceAPI->DeviceScene));
-
-	//TODO: temporary; make this part of initing a camera
-	m_CurrentCamera.setTransform(
-		glm::mat4(
-			glm::vec4(0, 0, -1, 0),
-			glm::vec4(0, 1, 0, 0),
-			glm::vec4(-1, 0, 0, 0),
-			glm::vec4(2, 0.5, 0, 0)
-		)
-	);
-
-	m_CurrentCamera.updateDevice();
 }
 
 void Renderer::resizeResolution(int width, int height)
@@ -218,6 +204,15 @@ GLuint Renderer::getGASDebugTargetTextureName() const
 	return m_CelestiumPTResourceAPI->GASDebugRenderBuffer.m_RenderTargetTextureName;
 }
 
+void Renderer::setCamera(int idx)
+{
+	if (idx < 0)idx = 0;
+	if (idx >= m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras.size())idx = m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras.size() - 1;
+	DeviceCamera* dcam = thrust::raw_pointer_cast(&m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras[idx]);
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.active_camera = dcam;
+	m_CurrentCamera = HostCamera(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.active_camera);
+}
+
 IntegratorSettings* Renderer::getIntegratorSettings()
 {
 	return &(m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG);
@@ -225,7 +220,7 @@ IntegratorSettings* Renderer::getIntegratorSettings()
 
 Renderer::~Renderer()
 {
-	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_camera);
+	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.active_camera);
 	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);
 	delete m_CudaResourceAPI;
 	delete m_CelestiumPTResourceAPI;

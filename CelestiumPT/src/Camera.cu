@@ -12,6 +12,7 @@ HostCamera::HostCamera(DeviceCamera* device_camera)
 		mat[2].x, mat[2].y, mat[2].z, mat[2].w,
 		mat[3].x, mat[3].y, mat[3].z, mat[3].w
 	);
+	FOV_y_radians = device_camera->FOV_y_radians;
 }
 
 void HostCamera::updateDevice()
@@ -24,6 +25,7 @@ void HostCamera::updateDevice()
 			m_transform[3][0], m_transform[3][1], m_transform[3][2], m_transform[3][3]   // Fourth column
 		);
 		m_device_camera->viewMatrix = mat;
+		m_device_camera->FOV_y_radians = FOV_y_radians;
 	}
 }
 
@@ -33,6 +35,17 @@ __host__ __device__ float deg2rad(float degree)
 	return (degree * (PI / 180.f));
 }
 
+__device__ DeviceCamera::DeviceCamera()
+{
+	viewMatrix = Mat4(
+		make_float4(1, 0, 0, 0),
+		make_float4(0, 1, 0, 0),
+		make_float4(0, 0, -1, 0),
+		make_float4(0, 0, 0, 0)
+	);
+	FOV_y_radians = deg2rad(60);
+};
+
 __device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, float2 screen_uv)
 {
 	float3 position = make_float3(viewMatrix[3]);
@@ -40,9 +53,7 @@ __device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, floa
 	float3 up = make_float3(viewMatrix[1]);
 	float3 right = make_float3(viewMatrix[0]);
 
-	float vertical_fov_radians = deg2rad(60);
-
-	float theta = vertical_fov_radians / 2;
+	float theta = FOV_y_radians / 2;
 
 	float fov_factor = tanf(theta / 2.0f);
 

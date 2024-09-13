@@ -444,9 +444,5 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 void BLAS::setTransform(Mat4 model_matrix)
 {
 	invModelMatrix = model_matrix.inverse();
-	m_BoundingBox.pMax = model_matrix * make_float4(m_Original_bounding_box.pMax, 1);
-	m_BoundingBox.pMin = model_matrix * make_float4(m_Original_bounding_box.pMin, 1);
-	//printf("\n");
-	//printf("bbox min: x:%.3f y:%.3f z:%.3f\n", m_BoundingBox.pMin.x, m_BoundingBox.pMin.y, m_BoundingBox.pMin.z);
-	//printf("bbox max: x:%.3f y:%.3f z:%.3f\n", m_BoundingBox.pMax.x, m_BoundingBox.pMax.y, m_BoundingBox.pMax.z);
+	m_BoundingBox.adaptBounds(model_matrix, m_Original_bounding_box);
 }

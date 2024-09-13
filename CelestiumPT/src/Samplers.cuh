@@ -2,6 +2,7 @@
 
 #include <cuda_runtime.h>
 #include "maths/vector_maths.cuh"
+#include "maths/constants.cuh"
 
 namespace Samplers {
 	__device__ uint32_t pcg_hash(uint32_t input)

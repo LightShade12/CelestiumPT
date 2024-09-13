@@ -22,6 +22,7 @@ void EditorSandbox::initialise()
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
+	m_Renderer.setCamera(0);
 	//m_HostSceneHandle->LogStatus();
 
 	if (m_HostSceneHandle->getMeshesCount() > 0)

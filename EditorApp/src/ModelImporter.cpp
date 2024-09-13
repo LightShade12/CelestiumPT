@@ -5,8 +5,6 @@
 
 #include <iostream>
 
-//TODO: add camera handling and fallback
-
 static std::string GetFilePathExtension(const std::string& FileName) {
 	if (FileName.find_last_of(".") != std::string::npos)
 		return FileName.substr(FileName.find_last_of(".") + 1);
@@ -34,9 +32,9 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 	printf("Detected cameras in file:%zu\n", m_SceneModel.cameras.size());
 
 	//node looping
-	for (size_t nodeIdx = 0; nodeIdx < m_SceneModel.nodes.size(); nodeIdx++)
+	for (size_t nodeIdx = 0; nodeIdx < m_SceneModel.scenes[0].nodes.size(); nodeIdx++)
 	{
-		tinygltf::Node gltf_node = m_SceneModel.nodes[nodeIdx];
+		tinygltf::Node gltf_node = m_SceneModel.nodes[m_SceneModel.scenes[0].nodes[nodeIdx]];
 		printf("Processing node: %s\n", gltf_node.name.c_str());
 
 		if (gltf_node.children.size() > 0) {
@@ -50,6 +48,21 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 		if (gltf_node.mesh >= 0) {
 			parseMesh(gltf_node);
 		}
+	}
+
+	//default fallback camera
+	if (scene_object->getCamerasCount() < 1) {
+		HostCamera hcam;
+		hcam.FOV_y_radians = glm::radians(60.f);
+		hcam.setTransform(
+			glm::mat4(
+				glm::vec4(1, 0, 0, 0),
+				glm::vec4(0, 1, 0, 0),
+				glm::vec4(0, 0, -1, 0),
+				glm::vec4(0, 0, 0, 0)
+			)
+		);
+		scene_object->addCamera(hcam);
 	}
 
 	return status;
@@ -108,43 +121,41 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 		loadedMeshNormals, loadedMeshUVs, loadedMeshPrimitiveMatIdx);
 	mesh.tri_count = loadedMeshPositions.size() / 3;
 
+	glm::mat4 modelMatrix(1);
 	if (mesh_node.matrix.size() > 0) {
-		mesh.setTransform(glm::mat4(
+		modelMatrix = glm::mat4(
 			mesh_node.matrix[0], mesh_node.matrix[1], mesh_node.matrix[2], mesh_node.matrix[3],
 			mesh_node.matrix[4], mesh_node.matrix[5], mesh_node.matrix[6], mesh_node.matrix[7],
 			mesh_node.matrix[8], mesh_node.matrix[9], mesh_node.matrix[10], mesh_node.matrix[11],
 			mesh_node.matrix[12], mesh_node.matrix[13], mesh_node.matrix[14], mesh_node.matrix[15]
-		));
-	}
-	else if (mesh_node.translation.size() > 0) {
-		glm::mat4 mat(1);
-		mat[3] = glm::vec4(mesh_node.translation[0], mesh_node.translation[1], mesh_node.translation[2], 1);
-		if (mesh_node.scale.size() > 0) {
-			mat[0][0] = mesh_node.scale[0];
-			mat[1][1] = mesh_node.scale[1];
-			mat[2][2] = mesh_node.scale[2];
-		}
-		if (mesh_node.rotation.size() > 0) {
-			float costheta_half = mesh_node.rotation[3];
-			glm::vec3 axis = glm::vec3(mesh_node.rotation[0], mesh_node.rotation[1], mesh_node.rotation[2]);
-			glm::quat quaternion = glm::quat(costheta_half, axis);
-			glm::mat rotmat = glm::toMat4(quaternion);
-			mat *= rotmat;
-		}
-
-		mesh.setTransform(mat);
+		);
 	}
 	else {
-		mesh.setTransform(glm::mat4(1));
+		if (mesh_node.scale.size() > 0) {
+			glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(mesh_node.scale[0], mesh_node.scale[1], mesh_node.scale[2]));
+			modelMatrix = scaleMat * modelMatrix;
+		}
+
+		if (mesh_node.rotation.size() > 0) {
+			glm::quat quaternion = glm::quat(mesh_node.rotation[3], mesh_node.rotation[0], mesh_node.rotation[1], mesh_node.rotation[2]);
+			glm::mat4 rotMat = glm::toMat4(quaternion);
+			modelMatrix = rotMat * modelMatrix;
+		}
+
+		if (mesh_node.translation.size() > 0) {
+			glm::mat4 translationMat = glm::translate(glm::mat4(1.0f), glm::vec3(mesh_node.translation[0], mesh_node.translation[1], mesh_node.translation[2]));
+			modelMatrix = translationMat * modelMatrix;
+		}
 	}
+	mesh.setTransform(modelMatrix);
 
 	m_WorkingScene->AddMesh(mesh);
 
-	printf("mesh positions: %zu\nmesh normals: %zu\n", loadedMeshPositions.size(), loadedMeshNormals.size());
-	//Contruct and push Triangles
+	//TODO: error handling
 	//Positions.size() and vertex_normals.size() must be equal!
-	//TODO: error handling ^
+	if (loadedMeshPositions.size() != loadedMeshNormals.size())printf("\nPOSITIONS-NORMALS COUNT MISMATCH\n");
 
+	//Contruct and push Triangles
 	for (size_t i = 0; i < loadedMeshPositions.size(); i += 3)
 	{
 		//surface normal construction
@@ -247,33 +258,60 @@ bool ModelImporter::loadMaterials(const tinygltf::Model& model)
 
 bool ModelImporter::parseCamera(tinygltf::Node camera_node)
 {
-	/*tinygltf::Camera gltf_camera = m_SceneModel.cameras[gltf_node.camera];
-		printf("\nfound a camera: %s\n", gltf_camera.name.c_str());
-		glm::vec3 cpos = { gltf_node.translation[0] ,gltf_node.translation[1] ,gltf_node.translation[2] };
-		DustRayTracer::HostCamera drt_camera;
-		setName(drt_camera.getNamePtr(), gltf_camera.name.c_str());
+	tinygltf::Camera gltf_camera = m_SceneModel.cameras[camera_node.camera];
+	printf("\nfound a camera: %s\n", gltf_camera.name.c_str());
+	glm::vec3 trans = { camera_node.translation[0] ,camera_node.translation[1] ,camera_node.translation[2] };
+	HostCamera hcam;
 
-		drt_camera.setPosition(glm::vec3(cpos.x, cpos.y, cpos.z));
-		drt_camera.setVerticalFOV(gltf_camera.perspective.yfov);
+	hcam.FOV_y_radians = gltf_camera.perspective.yfov;
 
-		if (gltf_node.rotation.size() > 0) {
-			float qx = gltf_node.rotation[0];
-			float qy = gltf_node.rotation[1];
-			float qz = gltf_node.rotation[2];
-			float qw = gltf_node.rotation[3];
-			glm::quat quaternion(qw, qx, qy, qz);
-			glm::mat4 rotationMatrix = glm::toMat4(quaternion);
-			glm::vec3 forwardDir = -glm::vec3(rotationMatrix[2]);
-			glm::vec3 lookDir = glm::vec3(forwardDir.x, forwardDir.y, forwardDir.z);
-			drt_camera.setLookDir(glm::vec3(lookDir.x, lookDir.y, lookDir.z));
-		}
+	glm::mat4 viewMatrix(
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, -1, 0,
+		0, 0, 0, 1
+	);
 
-		m_WorkingScene->addCamera(drt_camera);*/
+	//if (camera_node.translation.size() > 0) {
+	//	viewMatrix[3] = glm::vec4(camera_node.translation[0], camera_node.translation[1], camera_node.translation[2], 1);
+	//}
+	if (camera_node.rotation.size() > 0) {
+		glm::quat quaternion = glm::quat(camera_node.rotation[3], camera_node.rotation[0], camera_node.rotation[1], camera_node.rotation[2]);
+		glm::mat4 rotmat = glm::toMat4(quaternion);
+		viewMatrix = rotmat * viewMatrix;  // Apply rotation first
+	}
+
+	if (camera_node.translation.size() > 0) {
+		glm::mat4 translationMat = glm::translate(glm::mat4(1.0f), glm::vec3(camera_node.translation[0], camera_node.translation[1], camera_node.translation[2]));
+		viewMatrix = translationMat * viewMatrix;
+	}
+
+	hcam.setTransform(viewMatrix);
+
+	m_WorkingScene->addCamera(hcam);
 	return false;
 }
 
 bool ModelImporter::parseNode(tinygltf::Node node)
 {
+	//node looping
+	for (size_t nodeIdx = 0; nodeIdx < node.children.size(); nodeIdx++)
+	{
+		tinygltf::Node gltf_node = m_SceneModel.nodes[nodeIdx];
+		printf("Processing node: %s\n", gltf_node.name.c_str());
+
+		if (gltf_node.children.size() > 0) {
+			parseNode(gltf_node);
+		}
+
+		if (gltf_node.camera >= 0) {
+			parseCamera(gltf_node);
+		}
+
+		if (gltf_node.mesh >= 0) {
+			parseMesh(gltf_node);
+		}
+	}
 	return false;
 }
 

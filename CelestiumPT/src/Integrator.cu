@@ -59,7 +59,7 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 	float2 screen_uv = { (ppixel.x / frameres.x),(ppixel.y / frameres.y) };
 	screen_uv = screen_uv * 2 - 1;//-1->1
 
-	Ray primary_ray = globals.SceneDescriptor.device_camera->generateRay(frameres.x, frameres.y, screen_uv);
+	Ray primary_ray = globals.SceneDescriptor.active_camera->generateRay(frameres.x, frameres.y, screen_uv);
 
 	float3 L = IntegratorPipeline::Li(globals, primary_ray, seed, ppixel);
 

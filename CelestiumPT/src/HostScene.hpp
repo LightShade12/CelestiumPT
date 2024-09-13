@@ -14,8 +14,9 @@ public:
 
 	size_t getTrianglesCount();
 	size_t getMeshesCount();
+	size_t getCamerasCount();
 
-	void setCamera(HostCamera camera);
+	void addCamera(HostCamera camera);
 
 	void AddTriangle(glm::vec3 v0p, glm::vec3 v0n,
 		glm::vec3 v1p, glm::vec3 v1n,

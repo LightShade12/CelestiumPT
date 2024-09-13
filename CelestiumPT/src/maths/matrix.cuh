@@ -2,89 +2,8 @@
 
 #include "vector_maths.cuh"
 
+#include "glm/mat4x4.hpp"
 #include <stdio.h>
-
-//column major maths
-class Matrix3x3 {
-public:
-	// Default constructor initializes to the identity matrix
-	__device__ Matrix3x3() : columns{ make_float3(1, 0, 0), make_float3(0, 1, 0), make_float3(0, 0, 1) } {};
-
-	// Constructor with individual columns
-	__device__ Matrix3x3(float3 c1, float3 c2, float3 c3) {
-		columns[0] = c1; columns[1] = c2; columns[2] = c3;
-	}
-
-	// Accessor for non-const objects
-	__device__ float3& operator [] (size_t idx) {
-		return columns[idx];
-	}
-
-	// Accessor for const objects
-	__device__ const float3& operator[](size_t idx) const {
-		return columns[idx];
-	}
-
-	// Matrix-vector multiplication
-	__device__ float3 operator*(const float3& vec) const {
-		float3 result;
-		result = columns[0] * vec.x + columns[1] * vec.y + columns[3] * vec.z;
-		return result;
-	}
-
-	// Matrix-matrix multiplication
-	__device__ Matrix3x3 operator*(const Matrix3x3& mat2) const {
-		Matrix3x3 res; // Interpreted as row-major storage
-		Matrix3x3 mat1 = this->transpose(); // Rows enabled; interpret as columns
-
-		// Multiply each row with all columns; fill up entire rows
-		for (int rowidx = 0; rowidx < 3; rowidx++) {
-			res[rowidx].x = dot(mat1[rowidx], mat2[0]);
-			res[rowidx].y = dot(mat1[rowidx], mat2[1]);
-			res[rowidx].z = dot(mat1[rowidx], mat2[2]);
-		}
-
-		return res.transpose(); // Rows back to columns
-	}
-
-	// Transpose function
-	__device__ Matrix3x3 transpose() const {
-		return Matrix3x3(
-			make_float3(columns[0].x, columns[1].x, columns[2].x),
-			make_float3(columns[0].y, columns[1].y, columns[2].y),
-			make_float3(columns[0].z, columns[1].z, columns[2].z)
-		);
-	}
-
-	// Identity matrix generator
-	__device__ static Matrix3x3 getIdentity() {
-		return Matrix3x3(
-			make_float3(1, 0, 0),
-			make_float3(0, 1, 0),
-			make_float3(0, 0, 1)
-		);
-	}
-
-	// Zero matrix generator
-	__device__ static Matrix3x3 getZero() {
-		return Matrix3x3(
-			make_float3(0, 0, 0),
-			make_float3(0, 0, 0),
-			make_float3(0, 0, 0)
-		);
-	}
-
-	// Print matrix function (similar to Matrix4x4)
-	__device__ static void print_matrix(const Matrix3x3& mat) {
-		printf("| %.3f %.3f %.3f |\n", mat[0].x, mat[1].x, mat[2].x);
-		printf("| %.3f %.3f %.3f |\n", mat[0].y, mat[1].y, mat[2].y);
-		printf("| %.3f %.3f %.3f |\n", mat[0].z, mat[1].z, mat[2].z);
-	}
-
-private:
-	// Columns storing the matrix data in column-major order
-	float3 columns[3] = {};
-};
 
 //column major maths
 class Matrix4x4 {
@@ -92,12 +11,20 @@ public:
 	__host__ __device__ Matrix4x4() : columns{ make_float4(1, 0, 0,0), make_float4(0, 1, 0,0),
 		make_float4(0, 0, 1,0),make_float4(0,0,0,1) } {};
 
-	__host__ __device__ Matrix4x4(float val) {
+	__host__ __device__ explicit Matrix4x4(float val) {
 		columns[0] = make_float4(val, 0, 0, 0);
 		columns[1] = make_float4(0, val, 0, 0);
 		columns[2] = make_float4(0, 0, val, 0);
 		columns[3] = make_float4(0, 0, 0, val);
 	};
+
+	__host__ explicit Matrix4x4(const glm::mat4& mat)
+	{
+		columns[0] = make_float4(mat[0][0], mat[0][1], mat[0][2], mat[0][3]);  // First column
+		columns[1] = make_float4(mat[1][0], mat[1][1], mat[1][2], mat[1][3]);  // Second column
+		columns[2] = make_float4(mat[2][0], mat[2][1], mat[2][2], mat[2][3]);  // Third column
+		columns[3] = make_float4(mat[3][0], mat[3][1], mat[3][2], mat[3][3]);  // Fourth column
+	}
 
 	__host__ __device__ Matrix4x4(float4 c1, float4 c2, float4 c3, float4 c4) {
 		columns[0] = c1; columns[1] = c2; columns[2] = c3; columns[3] = c4;
@@ -230,6 +157,15 @@ public:
 		);
 	}
 
+	__host__ glm::mat4 toGLM() {
+		return glm::mat4(
+			columns[0].x, columns[0].y, columns[0].z, columns[0].w,
+			columns[1].x, columns[1].y, columns[1].z, columns[1].w,
+			columns[2].x, columns[2].y, columns[2].z, columns[2].w,
+			columns[3].x, columns[3].y, columns[3].z, columns[3].w
+		);
+	}
+
 	__host__ __device__ static void print_matrix(const Matrix4x4& mat) {
 		printf("\n");
 		printf("| %.3f %.3f %.3f %.3f |\n", mat[0].x, mat[1].x, mat[2].x, mat[3].x);
@@ -242,5 +178,4 @@ private:
 };
 
 //column major maths
-using Mat3 = Matrix3x3;
 using Mat4 = Matrix4x4;
