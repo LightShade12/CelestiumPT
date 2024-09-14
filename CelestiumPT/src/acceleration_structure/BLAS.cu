@@ -357,8 +357,8 @@ void BLAS::binToShallowNodes(BVHNode& left, BVHNode& right, float bin, Partition
 //-----------------------------------------------------------------------------------------------------------------------
 __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
 {
-	if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
 	if (m_BVHNodesCount == 0) return;//empty BLAS
+	if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
 
 	SceneGeometry* sceneGeo = globals.SceneDescriptor.device_geometry_aggregate;
 
@@ -379,7 +379,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(local_ray);
 
 	//TODO: make the shapeIntersetion shorter
-	ShapeIntersection workinghitpayload;//only to be written to by primitive proccessing
+	CompactShapeIntersection workinghitpayload;//only to be written to by primitive proccessing
 	float child1_hitdist = -1;
 	float child2_hitdist = -1;
 	const Triangle* primitive = nullptr;
@@ -394,7 +394,6 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 		//skip nodes farther than closest triangle; redundant
 		if (closest_hitpayload->triangle_idx != -1 && closest_hitpayload->hit_distance < current_node_hitdist)continue;
 		closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * 0.1f;
-		//closest_hitpayload->color += make_float3(1) * 0.05f;
 
 		//if interior
 		if (stackTopNode->triangle_indices_count <= 0)
@@ -427,7 +426,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 			{
 				int primIdx = sceneGeo->DeviceBVHTriangleIndicesBuffer[primIndiceIdx];
 				primitive = &(sceneGeo->DeviceTrianglesBuffer[primIdx]);
-				workinghitpayload = IntersectionStage(local_ray, *primitive, primIdx);
+				IntersectionStage(local_ray, *primitive, primIdx, &workinghitpayload);
 
 				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < closest_hitpayload->hit_distance) {
 					//if (!AnyHit(ray, sceneGeo, &workinghitpayload))continue;

@@ -25,3 +25,9 @@ struct ShapeIntersection {
 
 	__device__ Ray spawnRay(const float3& wi);
 };
+
+struct CompactShapeIntersection {
+	float hit_distance = -1;
+	int triangle_idx = -1;
+	float3 bary{};
+};

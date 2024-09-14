@@ -97,7 +97,6 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(ray);
 
 	//TODO: make the shapeIntersetion shorter
-	ShapeIntersection workinghitpayload;//only to be written to by primitive proccessing
 	float child1_hitdist = -1;
 	float child2_hitdist = -1;
 
@@ -110,7 +109,6 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 		//skip nodes farther than closest triangle; redundant: see the ordered traversal code
 		if (closest_hitpayload->triangle_idx != -1 && closest_hitpayload->hit_distance < current_node_hitdist)continue;
-		if (current_node_hitdist < 0) continue;
 		closest_hitpayload->GAS_debug += make_float3(0, 0, 1) * 0.1f;
 
 		//if interior

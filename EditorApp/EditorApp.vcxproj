@@ -65,6 +65,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib;cudadevrt.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)thirdparty\glfw\lib-vc2022;$(SolutionDir)CelestiumPT\lib</AdditionalLibraryDirectories>
+      <Profile>false</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -86,6 +87,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)thirdparty\glfw\lib-vc2022;$(SolutionDir)CelestiumPT\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib;cudadevrt.lib</AdditionalDependencies>
+      <Profile>false</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
