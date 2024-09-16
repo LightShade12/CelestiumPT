@@ -183,6 +183,8 @@ void EditorSandbox::onRender(float delta_secs)
 		//-----------------------------------------------------------------------------
 		ImVec2 vpdims;
 		{
+			//TODO: set sensible storage for magic numbers
+			ImGui::SetNextWindowSize(ImVec2(640 + 16, 360 + 47));
 			ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);
 
 			vpdims = ImGui::GetContentRegionAvail();
@@ -207,6 +209,16 @@ void EditorSandbox::onRender(float delta_secs)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getGASDebugTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
+			
+			ImGui::BeginChild("viewport_status", ImVec2(ImGui::GetContentRegionAvail().x, 14), 0);
+
+			//ImGui::SetCursorScreenPos({ ImGui::GetCursorScreenPos().x + 5, ImGui::GetCursorScreenPos().y + 4 });
+
+			ImGui::Text("dims: %d x %d px", m_Renderer.getFrameWidth(), m_Renderer.getFrameHeight());
+			ImGui::SameLine();
+			ImGui::Text(" | RGBA32F");
+			ImGui::EndChild();
+
 			ImGui::End();
 		}
 

@@ -106,7 +106,8 @@ void Application::initialize()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	const char* glsl_version = "#version 460";
 
-	m_width = m_height = 600;
+	m_width = 640+16;
+	m_height = 700;
 	m_MainWindow = glfwCreateWindow(m_width, m_height, "MainWindow", NULL, NULL);
 
 	if (!m_MainWindow) {

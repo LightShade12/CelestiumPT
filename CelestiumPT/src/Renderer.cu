@@ -99,6 +99,7 @@ struct CelestiumPT_API
 	FrameBuffer NormalsRenderBuffer;
 	FrameBuffer PositionsRenderBuffer;
 	FrameBuffer GASDebugRenderBuffer;
+	FrameBuffer VelocityRenderBuffer;
 	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
 
@@ -126,6 +127,7 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->NormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->VelocityRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
@@ -147,6 +149,9 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.GAS_debug_render_surface_object));
+	m_CelestiumPTResourceAPI->VelocityRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
+
 
 	//prepare globals--------------------
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.frameidx = g_frameIndex;
@@ -166,6 +171,8 @@ void Renderer::renderFrame()
 	//post render cuda---------------------------------------------------------------------------------
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object));
+	m_CelestiumPTResourceAPI->VelocityRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
 	m_CelestiumPTResourceAPI->NormalsRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.normals_render_surface_object));
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.endRender(

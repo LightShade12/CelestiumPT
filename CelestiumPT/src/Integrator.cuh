@@ -11,7 +11,7 @@ __global__ void renderKernel(IntegratorGlobals globals);
 
 namespace IntegratorPipeline {
 	//wrapper for kernel launch
-	void invokeRenderKernel(const IntegratorGlobals& globals, dim3 block_grid_dims, dim3 thread_block_dims);
+	__host__  void invokeRenderKernel(const IntegratorGlobals& globals, dim3 block_grid_dims, dim3 thread_block_dims);
 
 	__device__ float3 evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel);
 

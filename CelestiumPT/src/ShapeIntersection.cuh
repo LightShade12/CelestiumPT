@@ -15,11 +15,15 @@ struct ShapeIntersection {
 	float3 bary{};
 	float3 w_pos{};
 	float3 w_norm{};
+	//float3 w_shading_norm{};
+	//Material material;
+	//Light arealight;
 	Mat4 invModelMatrix;
 
 	bool front_face = true;
 	float3 GAS_debug = make_float3(0);
 
+	__device__ inline bool hasHit() { return triangle_idx != 1; };
 	__device__ BSDF getBSDF();
 	__device__ float3 Le();
 

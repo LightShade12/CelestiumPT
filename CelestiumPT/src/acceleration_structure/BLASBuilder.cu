@@ -13,7 +13,7 @@ void BLASBuilder::build(HostScene* hscene)
 	const thrust::universal_vector<Triangle>& read_prims = dscene->DeviceTriangles;
 
 	BLAS::BVHBuilderSettings cfg;
-	cfg.m_TargetLeafPrimitivesCount = 8;
+	cfg.m_TargetLeafPrimitivesCount = 6;
 
 	for (int meshidx = 0; meshidx < dscene->DeviceMeshes.size(); meshidx++) {
 		DeviceMesh* dmesh = thrust::raw_pointer_cast(&(dscene->DeviceMeshes[meshidx]));

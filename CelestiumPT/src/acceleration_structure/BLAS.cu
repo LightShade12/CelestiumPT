@@ -355,52 +355,48 @@ void BLAS::binToShallowNodes(BVHNode& left, BVHNode& right, float bin, Partition
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
+
+#define BLAS_TRAVERSAL_MAX_STACK_DEPTH 64
 __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
 {
 	if (m_BVHNodesCount == 0) return;//empty BLAS
-	if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
 
-	SceneGeometry* sceneGeo = globals.SceneDescriptor.device_geometry_aggregate;
+	//if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
 
-	const uint8_t maxStackSize = 64;
-	int nodeIdxStack[maxStackSize];
-	float nodeHitDistStack[maxStackSize];
-	uint8_t stackPtr = 0;
+	Ray local_ray = ray;
+	local_ray.setOrigin(invModelMatrix * make_float4(local_ray.getOrigin(), 1));
+	local_ray.setDirection((invModelMatrix * make_float4(local_ray.getDirection(), 0)));
+
+	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
+
+	unsigned short nodeIdxStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];//max idx = 65,535
+	float nodeHitDistStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];
+	uint8_t stackPtr = 0;//max points to 255
 
 	float current_node_hitdist = FLT_MAX;
 
-	Ray local_ray = ray;
-	//Mat4 inverse_transform = m_MeshLink->inverseModelMatrix;
-	local_ray.setOrigin(invModelMatrix * make_float4(local_ray.getOrigin(), 1));
-	local_ray.setDirection(normalize(invModelMatrix * make_float4(local_ray.getDirection(), 0)));
-
 	nodeIdxStack[stackPtr] = m_BVHRootIdx;
-	const BVHNode* stackTopNode = &(sceneGeo->DeviceBVHNodesBuffer[m_BVHRootIdx]);//is this in register?
+	const BVHNode* stackTopNode = &(scene_data->DeviceBVHNodesBuffer[m_BVHRootIdx]);//is this in register?
 	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(local_ray);
 
-	//TODO: make the shapeIntersetion shorter
-	CompactShapeIntersection workinghitpayload;//only to be written to by primitive proccessing
+	CompactShapeIntersection workinghitpayload;
 	float child1_hitdist = -1;
 	float child2_hitdist = -1;
 	const Triangle* primitive = nullptr;
 
 	while (stackPtr > 0) {
-		stackTopNode = &(sceneGeo->DeviceBVHNodesBuffer[nodeIdxStack[--stackPtr]]);
+		stackTopNode = &(scene_data->DeviceBVHNodesBuffer[nodeIdxStack[--stackPtr]]);
 		current_node_hitdist = nodeHitDistStack[stackPtr];
 
-		//custom ray interval culling
-		//if (!(ray.interval.surrounds(current_node_hitdist)))continue;//TODO: can put this in triangle looping part to get inner clipping working
-
 		//skip nodes farther than closest triangle; redundant
-		if (closest_hitpayload->triangle_idx != -1 && closest_hitpayload->hit_distance < current_node_hitdist)continue;
+		if (closest_hitpayload->hasHit() && closest_hitpayload->hit_distance < current_node_hitdist)continue;
 		closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * 0.1f;
 
 		//if interior
 		if (stackTopNode->triangle_indices_count <= 0)
 		{
-			child1_hitdist = (sceneGeo->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray);
-			child2_hitdist = (sceneGeo->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray);
-			//TODO:implement early cull properly see discord for ref
+			child1_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray);
+			child2_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray);
 			if (child1_hitdist > child2_hitdist) {
 				if (child1_hitdist >= 0 && child1_hitdist < closest_hitpayload->hit_distance) {
 					nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx;
@@ -424,8 +420,8 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 				primIndiceIdx < stackTopNode->left_child_or_triangle_indices_start_idx + stackTopNode->triangle_indices_count;
 				primIndiceIdx++)
 			{
-				int primIdx = sceneGeo->DeviceBVHTriangleIndicesBuffer[primIndiceIdx];
-				primitive = &(sceneGeo->DeviceTrianglesBuffer[primIdx]);
+				int primIdx = scene_data->DeviceBVHTriangleIndicesBuffer[primIndiceIdx];
+				primitive = &(scene_data->DeviceTrianglesBuffer[primIdx]);
 				IntersectionStage(local_ray, *primitive, primIdx, &workinghitpayload);
 
 				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < closest_hitpayload->hit_distance) {

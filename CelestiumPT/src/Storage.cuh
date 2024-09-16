@@ -20,6 +20,7 @@ public:
 	cudaSurfaceObject_t normals_render_surface_object;
 	cudaSurfaceObject_t positions_render_surface_object;
 	cudaSurfaceObject_t GAS_debug_render_surface_object;
+	cudaSurfaceObject_t velocity_render_surface_object;
 	cudaSurfaceObject_t albedo_render_surface_object;
 	float3* accumulation_framebuffer = nullptr;
 };

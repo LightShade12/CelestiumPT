@@ -19,7 +19,38 @@
 #include <surface_indirect_functions.h>
 #include <float.h>
 
-void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& globals, dim3 block_grid_dims, dim3 thread_block_dims)
+__device__ static float3 uncharted2_tonemap_partial(float3 x)
+{
+	constexpr float A = 0.15f;
+	constexpr float B = 0.50f;
+	constexpr float C = 0.10f;
+	constexpr float D = 0.20f;
+	constexpr float E = 0.02f;
+	constexpr float F = 0.30f;
+	return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
+}
+
+__device__ static float3 uncharted2_filmic(float3 v, float exposure)
+{
+	float exposure_bias = exposure;
+	float3 curr = uncharted2_tonemap_partial(v * exposure_bias);
+
+	float3 W = make_float3(11.2f);
+	float3 white_scale = make_float3(1.0f) / uncharted2_tonemap_partial(W);
+	return curr * white_scale;
+}
+
+__device__ static float3 toneMapping(float3 HDR_color, float exposure = 2.f) {
+	float3 LDR_color = uncharted2_filmic(HDR_color, exposure);
+	return LDR_color;
+}
+
+__device__ static float3 gammaCorrection(const float3 linear_color) {
+	float3 gamma_space_color = { sqrtf(linear_color.x),sqrtf(linear_color.y) ,sqrtf(linear_color.z) };
+	return gamma_space_color;
+}
+
+__host__ void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& globals, dim3 block_grid_dims, dim3 thread_block_dims)
 {
 	renderKernel << < block_grid_dims, thread_block_dims >> > (globals);
 };
@@ -42,9 +73,11 @@ __global__ void renderKernel(IntegratorGlobals globals)
 	}
 
 	float4 fragcolor = { sampled_radiance.x,sampled_radiance.y,sampled_radiance.z, 1 };
-
+	
 	//EOTF
-	fragcolor = make_float4(sqrtf(sampled_radiance.x), sqrtf(sampled_radiance.y), sqrtf(sampled_radiance.z), 1);
+	fragcolor = make_float4(gammaCorrection(make_float3(fragcolor)), 1);
+	fragcolor = make_float4(toneMapping(make_float3(fragcolor), 8), 1);
+	//fragcolor = make_float4(sqrtf(sampled_radiance.x), sqrtf(sampled_radiance.y), sqrtf(sampled_radiance.z), 1);
 
 	surf2Dwrite(fragcolor, globals.FrameBuffer.composite_render_surface_object, thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
 }
@@ -92,6 +125,7 @@ __device__ bool IntegratorPipeline::Unoccluded(const IntegratorGlobals& globals,
 
 __device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel)
 {
+	//return make_float3(1, 0, 1);
 	return IntegratorPipeline::LiRandomWalk(globals, ray, seed, ppixel);
 }
 
@@ -99,7 +133,7 @@ __device__ float3 SkyShading(const Ray& ray) {
 	float3 unit_direction = normalize(ray.getDirection());
 	float a = 0.5f * (unit_direction.y + 1.0);
 	//return make_float3(0.2f, 0.3f, 0.4f);
-	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.5, 0.7, 1.0);
+	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.25, 0.4, 1.0);
 };
 
 __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
@@ -109,11 +143,11 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 	float3 throughtput = make_float3(1);
 	float3 light = make_float3(0);
 
-	ShapeIntersection payload;
+	ShapeIntersection payload{};
 
 	for (int bounce_depth = 0; bounce_depth < globals.IntegratorCFG.bounces; bounce_depth++) {
 		seed += bounce_depth;
-		payload = Intersect(globals, ray);
+		payload = IntegratorPipeline::Intersect(globals, ray);
 
 		if (bounce_depth == 0) {
 			surf2Dwrite(make_float4(payload.GAS_debug, 1),
