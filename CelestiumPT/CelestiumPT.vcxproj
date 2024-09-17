@@ -122,6 +122,7 @@
     <CudaCompile Include="src\Camera.cu" />
     <CudaCompile Include="src\ErrorCheck.cu" />
     <CudaCompile Include="src\Integrator.cu" />
+    <CudaCompile Include="src\maths\maths_linear_algebra.cu" />
     <CudaCompile Include="src\maths\vector_maths.cu" />
     <CudaCompile Include="src\Mesh.cu" />
     <CudaCompile Include="src\RayStages.cu" />
@@ -142,6 +143,7 @@
     <ClInclude Include="src\DeviceScene.cuh" />
     <ClInclude Include="src\ErrorCheck.cuh" />
     <ClInclude Include="src\IntegratorSettings.hpp" />
+    <ClInclude Include="src\Light.cuh" />
     <ClInclude Include="src\Storage.cuh" />
     <ClInclude Include="src\HostCamera.hpp" />
     <ClInclude Include="src\HostMesh.hpp" />

@@ -1,6 +1,7 @@
 #include "HostCamera.hpp"
 #include "DeviceCamera.cuh"
 #include "Ray.cuh"
+#include "maths/maths_linear_algebra.cuh"
 
 HostCamera::HostCamera(DeviceCamera* device_camera)
 {
@@ -27,12 +28,6 @@ void HostCamera::updateDevice()
 		m_device_camera->viewMatrix = mat;
 		m_device_camera->FOV_y_radians = FOV_y_radians;
 	}
-}
-
-__host__ __device__ float deg2rad(float degree)
-{
-	float const PI = 3.14159265359f;
-	return (degree * (PI / 180.f));
 }
 
 __device__ DeviceCamera::DeviceCamera()

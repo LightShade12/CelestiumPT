@@ -32,6 +32,9 @@ void DeviceScene::syncDeviceGeometry()
 	DeviceSceneGeometry->DeviceTrianglesBuffer = thrust::raw_pointer_cast(DeviceTriangles.data());
 	DeviceSceneGeometry->DeviceTrianglesCount = DeviceTriangles.size();
 
+	DeviceSceneGeometry->DeviceLightsBuffer = thrust::raw_pointer_cast(DeviceLights.data());
+	DeviceSceneGeometry->DeviceLightsCount = DeviceLights.size();
+
 	DeviceSceneGeometry->DeviceBVHTriangleIndicesBuffer = thrust::raw_pointer_cast(DeviceBVHTriangleIndices.data());
 	DeviceSceneGeometry->DeviceBVHTriangleIndicesCount = DeviceBVHTriangleIndices.size();
 
@@ -97,6 +100,13 @@ void HostScene::AddTriangle(
 	if (!skip_sync) {
 		m_DeviceScene->syncDeviceGeometry();
 	}
+}
+
+void HostScene::addLight(int triangle_idx, glm::vec3 color, float scale)
+{
+	Light dlight(&(m_DeviceScene->DeviceTriangles[triangle_idx]), make_float3(color.x, color.y, color.z), scale);
+	(m_DeviceScene->DeviceTriangles[triangle_idx]).LightIdx = m_DeviceScene->DeviceLights.size();
+	m_DeviceScene->DeviceLights.push_back(dlight);
 }
 
 void HostScene::AddMesh(HostMesh hmesh)

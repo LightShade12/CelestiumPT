@@ -23,6 +23,7 @@ public:
 		glm::vec3 v2p, glm::vec3 v2n,
 		glm::vec3 f_nrm, bool skip_sync = true);
 
+	void addLight(int triangle_idx, glm::vec3 color, float scale);
 	void AddMesh(HostMesh hmesh);
 	void LogStatus();
 

@@ -23,6 +23,7 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 	out_payload.hit_distance = in_payload.hit_distance;
 	out_payload.GAS_debug = in_payload.GAS_debug;
 	out_payload.invModelMatrix = in_payload.invModelMatrix;
+	out_payload.arealight = in_payload.arealight;
 
 	Mat4 model_matrix = in_payload.invModelMatrix.inverse();
 	out_payload.w_pos = ray.getOrigin() + (ray.getDirection() * in_payload.hit_distance);

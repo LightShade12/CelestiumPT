@@ -3,6 +3,7 @@
 //#include "ShapeIntersection.cuh"
 #include "acceleration_structure/GAS.cuh"
 
+class Light;
 class DeviceMesh;
 class Ray;
 struct Triangle;
@@ -16,6 +17,9 @@ struct SceneGeometry {
 	//__device__ bool intersectP(const Ray& ray) { return false; };
 
 	GAS GAS_structure;
+
+	Light* DeviceLightsBuffer = nullptr;
+	size_t DeviceLightsCount = 0;
 
 	int* DeviceBVHTriangleIndicesBuffer = nullptr;
 	size_t DeviceBVHTriangleIndicesCount = 0;

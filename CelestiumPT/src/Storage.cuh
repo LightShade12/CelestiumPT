@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IntegratorSettings.hpp"
+#include "Light.cuh"
 
 #include <vector_types.h>
 #include <glad/include/glad/glad.h>//for cudagl_interop
@@ -11,7 +12,6 @@ struct Triangle;
 struct ShapeIntersection;
 struct SceneGeometry;
 class DeviceCamera;
-class Light {};
 
 struct FrameBufferStorage {
 public:
@@ -26,15 +26,7 @@ public:
 };
 
 struct DeviceSceneDescriptor {
-	template<typename T>
-	struct DeviceBuffer {
-		const T* data = nullptr;
-		size_t size = 0;
-	};
-
 	SceneGeometry* device_geometry_aggregate = nullptr;
-	DeviceBuffer<Light>dev_lights;
-	DeviceBuffer<Light>dev_inf_lights;
 	DeviceCamera* active_camera = nullptr;
 };
 

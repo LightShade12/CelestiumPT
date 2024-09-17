@@ -168,7 +168,7 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 
 		glm::vec3 surface_normal = (ndot < 0.0f) ? -faceNormal : faceNormal;
 
-		//uint32_t mtidx = loadedMeshPrimitiveMatIdx[i / 3];
+		uint32_t mtidx = loadedMeshPrimitiveMatIdx[i / 3];
 
 		m_WorkingScene->AddTriangle(
 			loadedMeshPositions[i], loadedMeshNormals[i],
@@ -176,12 +176,14 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 			loadedMeshPositions[i + 2], loadedMeshNormals[i + 2],
 			normalize(surface_normal)
 		);
-		//DustRayTracer::HostMaterial mat = m_WorkingScene->getMaterial(mtidx);
-		//glm::vec3 emcol = mat.getEmissiveColor();
-		//if (mat.getEmissionTextureIndex() >= 0 ||
-		//	!(emcol.x == 0 && emcol.y == 0 && emcol.z == 0)) {
-		//	m_WorkingScene->addTriangleLightidx(m_WorkingScene->getTrianglesBufferSize() - 1);
-		//}
+
+		tinygltf::Material mat = m_SceneModel.materials[mtidx];
+		glm::vec3 emcol = glm::vec3(mat.emissiveFactor[0], mat.emissiveFactor[1], mat.emissiveFactor[2]);
+		float scale = 3;
+
+		if (!(emcol.x == 0 && emcol.y == 0 && emcol.z == 0)) {
+			//m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1, emcol, scale);
+		}
 	}
 
 	//printf("\rloaded mesh:%zu/%zu", nodeIdx + 1, m_SceneModel.nodes.size());

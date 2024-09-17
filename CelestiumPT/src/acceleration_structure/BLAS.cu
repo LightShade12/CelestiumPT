@@ -426,6 +426,11 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < closest_hitpayload->hit_distance) {
 					//if (!AnyHit(ray, sceneGeo, &workinghitpayload))continue;
+					if (primitive->LightIdx >= 0) {
+						closest_hitpayload->arealight =
+							&(globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsBuffer[primitive->LightIdx]);
+						//printf("Hit light");
+					}
 					closest_hitpayload->invModelMatrix = invModelMatrix;
 					closest_hitpayload->hit_distance = workinghitpayload.hit_distance;
 					closest_hitpayload->triangle_idx = workinghitpayload.triangle_idx;

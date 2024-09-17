@@ -3,9 +3,7 @@
 #include "DeviceCamera.cuh"
 #include "Storage.cuh"
 #include "RayStages.cuh"
-//#include "Triangle.cuh"
 #include "Ray.cuh"
-//#include "DeviceMesh.cuh"
 #include "ShapeIntersection.cuh"
 #include "BSDF.cuh"
 #include "acceleration_structure/GAS.cuh"
@@ -73,7 +71,7 @@ __global__ void renderKernel(IntegratorGlobals globals)
 	}
 
 	float4 fragcolor = { sampled_radiance.x,sampled_radiance.y,sampled_radiance.z, 1 };
-	
+
 	//EOTF
 	fragcolor = make_float4(gammaCorrection(make_float3(fragcolor)), 1);
 	fragcolor = make_float4(toneMapping(make_float3(fragcolor), 8), 1);
@@ -130,10 +128,11 @@ __device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const
 }
 
 __device__ float3 SkyShading(const Ray& ray) {
+	//return make_float3(0);
 	float3 unit_direction = normalize(ray.getDirection());
 	float a = 0.5f * (unit_direction.y + 1.0);
 	//return make_float3(0.2f, 0.3f, 0.4f);
-	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.25, 0.4, 1.0);
+	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.2, 0.4, 1.0);
 };
 
 __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
@@ -182,7 +181,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 		//light = (payload.w_pos); break;
 
 		float3 wo = -ray.getDirection();
-		light += payload.Le() * throughtput;
+		light += payload.Le(wo) * throughtput;
 
 		//get BSDF
 		BSDF bsdf = payload.getBSDF();

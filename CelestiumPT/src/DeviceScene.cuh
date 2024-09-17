@@ -3,6 +3,7 @@
 #include "Triangle.cuh"
 #include "DeviceMesh.cuh"
 #include "DeviceCamera.cuh"
+#include "Light.cuh"
 #include "acceleration_structure/BVHNode.cuh"
 #include "acceleration_structure/BLAS.cuh"
 #include "acceleration_structure/TLASNode.cuh"
@@ -25,6 +26,7 @@ public:
 
 	SceneGeometry* DeviceSceneGeometry = nullptr;
 	thrust::universal_vector<Triangle>DeviceTriangles;
+	thrust::universal_vector<Light>DeviceLights;
 	thrust::universal_vector<BVHNode>DeviceBVHNodes;
 	thrust::universal_vector<BLAS>DeviceBLASes;
 	thrust::universal_vector<TLASNode>DeviceTLASNodes;

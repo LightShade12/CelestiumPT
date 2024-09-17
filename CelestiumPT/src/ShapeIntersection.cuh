@@ -1,8 +1,6 @@
 #pragma once
 
-//#include "Ray.cuh"
-//#include "BSDF.cuh"
-//#include "maths/constants.cuh"
+#include "Light.cuh"
 #include "maths/maths_linear_algebra.cuh"
 #include <cuda_runtime.h>
 
@@ -17,7 +15,7 @@ struct ShapeIntersection {
 	float3 w_norm{};
 	//float3 w_shading_norm{};
 	//Material material;
-	//Light arealight;
+	const Light* arealight = nullptr;
 	Mat4 invModelMatrix;
 
 	bool front_face = true;
@@ -25,7 +23,7 @@ struct ShapeIntersection {
 
 	__device__ inline bool hasHit() { return triangle_idx != 1; };
 	__device__ BSDF getBSDF();
-	__device__ float3 Le();
+	__device__ float3 Le(float3 w);//actually wo?
 
 	__device__ Ray spawnRay(const float3& wi);
 };
