@@ -16,7 +16,6 @@ struct PhsyicsSettings {
 class EditorSandbox {
 public:
 	EditorSandbox() = default;
-	~EditorSandbox() = default;
 
 	void initialise();
 	void onUpdate(float delta_secs);

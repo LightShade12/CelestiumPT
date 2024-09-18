@@ -104,12 +104,13 @@ public:
 		return inverseMatrix;
 	}
 
-	__host__ __device__ float3 operator*(const float4& vec) const {
-		float3 result;
+	__host__ __device__ float4 operator*(const float4& vec) const {
+		float4 result;
 
 		result.x = columns[0].x * vec.x + columns[1].x * vec.y + columns[2].x * vec.z + columns[3].x * vec.w;
 		result.y = columns[0].y * vec.x + columns[1].y * vec.y + columns[2].y * vec.z + columns[3].y * vec.w;
 		result.z = columns[0].z * vec.x + columns[1].z * vec.y + columns[2].z * vec.z + columns[3].z * vec.w;
+		result.w = columns[0].w * vec.x + columns[1].w * vec.y + columns[2].w * vec.z + columns[3].w * vec.w;
 
 		return result;
 	}

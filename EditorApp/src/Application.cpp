@@ -32,6 +32,7 @@ Application::~Application()
 {
 	close();
 	s_Instance = nullptr;
+	printf("\ndestructed application");
 }
 
 static float delta_time_secs = 0.0f;
@@ -148,5 +149,5 @@ void Application::close()
 
 	glfwDestroyWindow(m_MainWindow);
 	glfwTerminate();
-	exit(EXIT_SUCCESS);
+	exit(EXIT_SUCCESS);//TODO: remove this, it blocks exectution of destructor
 }

@@ -36,7 +36,7 @@ __host__ void Bounds3f::adaptBounds(const Mat4& model_mat, const Bounds3f& origi
 	// Transform all 8 corners and compute new bounds
 	for (int i = 0; i < 8; ++i) {
 		// Transform the corner by the matrix (assume `transform` is a 4x4 matrix)
-		float3 transformedPoint = model_mat * make_float4(corners[i], 1.0f);
+		float3 transformedPoint = make_float3(model_mat * make_float4(corners[i], 1.0f));
 
 		// Update the new bounding box
 		newMin = fminf(newMin, transformedPoint); // fminf compares each component (x, y, z)

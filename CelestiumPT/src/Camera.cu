@@ -6,26 +6,28 @@
 HostCamera::HostCamera(DeviceCamera* device_camera)
 {
 	m_device_camera = device_camera;
-	Mat4 mat = m_device_camera->viewMatrix;
-	m_transform = glm::mat4(
-		mat[0].x, mat[0].y, mat[0].z, mat[0].w,
-		mat[1].x, mat[1].y, mat[1].z, mat[1].w,
-		mat[2].x, mat[2].y, mat[2].z, mat[2].w,
-		mat[3].x, mat[3].y, mat[3].z, mat[3].w
-	);
+	Mat4 viewmat = m_device_camera->viewMatrix;
+	Mat4 projmat = m_device_camera->projectionMatrix;
+	Mat4 invprojmat = m_device_camera->invProjectionMatrix;
+
+	m_transform = viewmat.toGLM();
+	m_projection = projmat.toGLM();
+	m_invProjection = invprojmat.toGLM();
+
 	FOV_y_radians = device_camera->FOV_y_radians;
 }
 
 void HostCamera::updateDevice()
 {
 	if (m_device_camera != nullptr) {
-		Mat4 mat(
-			m_transform[0][0], m_transform[0][1], m_transform[0][2], m_transform[0][3],  // First column
-			m_transform[1][0], m_transform[1][1], m_transform[1][2], m_transform[1][3],  // Second column
-			m_transform[2][0], m_transform[2][1], m_transform[2][2], m_transform[2][3],  // Third column
-			m_transform[3][0], m_transform[3][1], m_transform[3][2], m_transform[3][3]   // Fourth column
-		);
-		m_device_camera->viewMatrix = mat;
+		Mat4 viewmat(m_transform);
+		Mat4 projmat(m_projection);
+		Mat4 invprojmat(m_invProjection);
+
+		m_device_camera->viewMatrix = viewmat;
+		m_device_camera->projectionMatrix = projmat;
+		m_device_camera->invProjectionMatrix = invprojmat;
+
 		m_device_camera->FOV_y_radians = FOV_y_radians;
 	}
 }
@@ -38,33 +40,23 @@ __device__ DeviceCamera::DeviceCamera()
 		make_float4(0, 0, -1, 0),
 		make_float4(0, 0, 0, 0)
 	);
+	projectionMatrix = Mat4(1);
 	FOV_y_radians = deg2rad(60);
 };
 
 __device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, float2 screen_uv)
 {
-	float3 position = make_float3(viewMatrix[3]);
-	float3 forward = make_float3(viewMatrix[2]);
-	float3 up = make_float3(viewMatrix[1]);
-	float3 right = make_float3(viewMatrix[0]);
+	float theta = FOV_y_radians / 2.f;
 
-	float theta = FOV_y_radians / 2;
+	float fov_factor = tanf(theta);
 
-	float fov_factor = tanf(theta / 2.0f);
+	float aspect_ratio = float(frame_width) / float(frame_height);
 
-	float aspect_ratio = (float)frame_width / frame_height;
+	float4 target_cs = invProjectionMatrix * make_float4(screen_uv.x, screen_uv.y, 1.f, 1.f);
+	float4 target_ws = viewMatrix * make_float4(
+		normalize(make_float3(target_cs) / target_cs.w), 0);
+	float3 raydir_ws = (make_float3(target_ws));
+	float3 rayorig_ws = make_float3(viewMatrix * make_float4(0, 0, 0, 1));
 
-	float film_plane_height = 2.0f * fov_factor;
-	float film_plane_width = film_plane_height * aspect_ratio;
-	float film_plane_distance = 1;
-
-	//doing it like this intead of matmul circumvents the issue of translated raydir
-	float3 sample_pt =
-		(right * film_plane_width * screen_uv.x) +
-		(up * film_plane_height * screen_uv.y) +
-		(forward * film_plane_distance);
-
-	float3 raydir = normalize(sample_pt);
-
-	return Ray(position, raydir);
+	return Ray(rayorig_ws, raydir_ws);
 };

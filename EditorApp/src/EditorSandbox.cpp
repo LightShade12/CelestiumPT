@@ -135,6 +135,10 @@ void EditorSandbox::onRender(float delta_secs)
 				if (ImGui::CollapsingHeader("Camera")) {
 					ImGui::Text("Camera transformations");
 					s_updateCam |= ImGui::DragFloat3("Camera translation", &m_Camera.position.x);
+					if (ImGui::SliderAngle("FoV", &(m_Camera.fovYrad), 20, 120)) {
+						m_Camera.recalculateProjection();
+						s_updateCam |= true;
+					};
 				};
 				if (ImGui::CollapsingHeader("Pathtracing")) {
 					ImGui::Checkbox("Accumulation", &(m_Renderer.getIntegratorSettings()->accumulate));
@@ -209,7 +213,7 @@ void EditorSandbox::onRender(float delta_secs)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getGASDebugTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
-			
+
 			ImGui::BeginChild("viewport_status", ImVec2(ImGui::GetContentRegionAvail().x, 14), 0);
 
 			//ImGui::SetCursorScreenPos({ ImGui::GetCursorScreenPos().x + 5, ImGui::GetCursorScreenPos().y + 4 });
@@ -226,6 +230,7 @@ void EditorSandbox::onRender(float delta_secs)
 			minimum_viewport_height_threshold)vpdims.y -= viewport_vertical_scrolloverdraw_compensation_offset;
 		if (vpdims.y < minimum_viewport_height_threshold)vpdims.y = minimum_viewport_height;
 
+		m_Camera.resizeFrame((int)vpdims.x, (int)vpdims.y);
 		m_Renderer.resizeResolution((int)vpdims.x, (int)vpdims.y);
 		m_GASBuilder.refresh(m_Renderer.getCurrentScene());
 		m_Renderer.renderFrame();
@@ -260,19 +265,19 @@ bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts)
 	{
 		camera->position -= camera->movement_speed * delta_ts * camera->forward; moved |= true;
 	}
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)//LEFT
 	{
 		camera->position -= camera->movement_speed * delta_ts * camera->right; moved |= true;
 	}
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)//RIGHT
 	{
 		camera->position += camera->movement_speed * delta_ts * camera->right; moved |= true;
 	}
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)//UP
 	{
 		camera->position += camera->movement_speed * delta_ts * global_up; moved |= true;
 	}
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)//DOWN
 	{
 		camera->position -= camera->movement_speed * delta_ts * global_up; moved |= true;
 	}

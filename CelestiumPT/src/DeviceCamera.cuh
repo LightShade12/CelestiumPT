@@ -16,4 +16,6 @@ public:
 
 	float FOV_y_radians = 1.0472f;
 	Mat4 viewMatrix;
+	Mat4 projectionMatrix;
+	Mat4 invProjectionMatrix;
 };

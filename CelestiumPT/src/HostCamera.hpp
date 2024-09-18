@@ -21,9 +21,23 @@ public:
 		m_transform = mat;
 	}
 
-public:
+	glm::mat4 getProjection() const {
+		return m_projection;
+	}
+	glm::mat4 getInvProjection() const {
+		return m_invProjection;
+	}
+
+	void setProjection(glm::mat4 mat) {
+		m_projection = mat;
+	}
+	void setInvProjection(glm::mat4 mat) {
+		m_invProjection = mat;
+	}
 
 	float FOV_y_radians = glm::radians(60.f);
 	glm::mat4 m_transform;
+	glm::mat4 m_projection;
+	glm::mat4 m_invProjection;
 	DeviceCamera* m_device_camera = nullptr;//non-owning link
 };

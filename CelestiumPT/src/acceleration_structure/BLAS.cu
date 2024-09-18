@@ -364,8 +364,8 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 	//if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
 
 	Ray local_ray = ray;
-	local_ray.setOrigin(invModelMatrix * make_float4(local_ray.getOrigin(), 1));
-	local_ray.setDirection((invModelMatrix * make_float4(local_ray.getDirection(), 0)));
+	local_ray.setOrigin(make_float3(invModelMatrix * make_float4(local_ray.getOrigin(), 1)));
+	local_ray.setDirection(make_float3(invModelMatrix * make_float4(local_ray.getDirection(), 0)));
 
 	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
 
