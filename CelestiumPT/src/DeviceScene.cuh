@@ -30,7 +30,7 @@ public:
 	thrust::universal_vector<BVHNode>DeviceBVHNodes;
 	thrust::universal_vector<BLAS>DeviceBLASes;
 	thrust::universal_vector<TLASNode>DeviceTLASNodes;
-	thrust::universal_vector<int>DeviceBVHTriangleIndices;
+	thrust::universal_vector<size_t>DeviceBVHTriangleIndices;
 	thrust::universal_vector<DeviceMesh>DeviceMeshes;
 	thrust::universal_vector<DeviceCamera>DeviceCameras;
 };

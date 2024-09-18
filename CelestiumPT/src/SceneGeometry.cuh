@@ -21,7 +21,7 @@ struct SceneGeometry {
 	Light* DeviceLightsBuffer = nullptr;
 	size_t DeviceLightsCount = 0;
 
-	int* DeviceBVHTriangleIndicesBuffer = nullptr;
+	size_t* DeviceBVHTriangleIndicesBuffer = nullptr;
 	size_t DeviceBVHTriangleIndicesCount = 0;
 
 	BVHNode* DeviceBVHNodesBuffer = nullptr;

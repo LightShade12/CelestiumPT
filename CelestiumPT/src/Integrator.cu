@@ -144,7 +144,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 
 	ShapeIntersection payload{};
 
-	for (int bounce_depth = 0; bounce_depth < globals.IntegratorCFG.bounces; bounce_depth++) {
+	for (int bounce_depth = 0; bounce_depth <= globals.IntegratorCFG.bounces; bounce_depth++) {
 		seed += bounce_depth;
 		payload = IntegratorPipeline::Intersect(globals, ray);
 

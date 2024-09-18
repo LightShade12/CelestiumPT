@@ -32,6 +32,6 @@ public:
 public:
 	Bounds3f m_BoundingBox;
 	int m_TLASRootIdx = -1;
-	int m_TLASnodesCount = 0;
-	int m_BLASCount = 0;
+	size_t m_TLASnodesCount = 0;
+	size_t m_BLASCount = 0;
 };

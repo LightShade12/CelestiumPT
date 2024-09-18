@@ -8,7 +8,7 @@ TLAS::TLAS(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNo
 {
 	m_BLASCount = read_blases.size();
 	build(read_blases, tlasnodes);
-	m_TLASRootIdx = tlasnodes.size() - 1;
+	m_TLASRootIdx = int(tlasnodes.size() - 1);
 	m_TLASnodesCount = tlasnodes.size();
 	m_BoundingBox = tlasnodes[m_TLASRootIdx].m_BoundingBox;
 };
@@ -40,7 +40,7 @@ void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<
 	int* TLASnodeIdx = new int[m_BLASCount];
 	int nodeIndices = m_BLASCount;//work list size
 	// assign a TLASleaf node to each BLAS; making work list
-	for (uint i = 0; i < m_BLASCount; i++)
+	for (size_t i = 0; i < m_BLASCount; i++)
 	{
 		TLASnodeIdx[i] = tlasnodes.size();//i derived from m_BLASCount also works
 		TLASNode tlasnode;
@@ -65,7 +65,7 @@ void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<
 			newNode.m_BoundingBox.pMin = fminf(nodeA->m_BoundingBox.pMin, nodeB->m_BoundingBox.pMin);
 			newNode.m_BoundingBox.pMax = fmaxf(nodeA->m_BoundingBox.pMax, nodeB->m_BoundingBox.pMax);
 			tlasnodes.push_back(newNode);
-			TLASnodeIdx[A] = tlasnodes.size() - 1;
+			TLASnodeIdx[A] = (tlasnodes.size() - 1);
 			TLASnodeIdx[B] = TLASnodeIdx[nodeIndices - 1];
 			B = FindBestMatch(TLASnodeIdx, --nodeIndices, A, tlasnodes);
 		}
