@@ -44,30 +44,32 @@ public:
 	void setTransform(Mat4 model_matrix);
 
 private:
+
 	void build(const thrust::universal_vector<Triangle>& read_tris, size_t prim_start_idx, size_t prim_end_idx,
 		std::vector<BVHNode>& bvhnodes, std::vector<size_t>& prim_indices, const std::vector<BVHPrimitiveBounds>& prim_bounds, BVHBuilderSettings cfg);
-
-	int costHeursitic(const BVHNode& left_node, const BVHNode& right_node, const Bounds3f& parent_bbox, BVHBuilderSettings bvhcfg);
 
 	//reads prim_indices from pos=start_idx to end_idx to access and compute triangles bound
 	float3 get_Absolute_Extent(const thrust::universal_vector<Triangle>& primitives_, const std::vector<BVHPrimitiveBounds>& prim_bounds, const std::vector<size_t>& primitive_indices,
 		size_t start_idx_, size_t end_idx_, float3& min_extent_);
 
+	//this is used for making temp shallow bin partition nodes
+	float3 get_Absolute_Extent_shallow(const thrust::universal_vector<Triangle>& read_tris, const std::vector<size_t>& prim_indices,
+		const std::vector<BVHPrimitiveBounds>& prim_bounds, float3& min_extent);
+
+	int costHeursitic(const BVHNode& left_node, const BVHNode& right_node, const Bounds3f& parent_bbox, BVHBuilderSettings bvhcfg);
+
 	//retval nodes always have triangle indices assigned
-	void makePartition(const thrust::universal_vector<Triangle>& read_tris, const std::vector<BVHPrimitiveBounds>& prim_bounds, std::vector<size_t>& primitives_indices,
+	void makePartition(const thrust::universal_vector<Triangle>& read_tris, const std::vector<BVHPrimitiveBounds>& prim_bounds,
+		std::vector<size_t>& primitives_indices, const Bounds3f& bbox,
 		size_t start_idx, size_t end_idx, BVHNode* leftnode, BVHNode* rightnode, BVHBuilderSettings cfg);
 
-	//this overload is used for making temp shallow bin partition nodes
-	float3 get_Absolute_Extent(const thrust::universal_vector<Triangle>& read_tris, const std::vector<size_t>& prim_indices,
-		const std::vector<BVHPrimitiveBounds>& prim_bounds, size_t start_idx, size_t end_idx, float3& min_extent);
+	void makeTestPartition(BVHNode& left, BVHNode& right, float bin, PartitionAxis axis,
+		const thrust::universal_vector<Triangle>& read_tris, const std::vector<BVHPrimitiveBounds>& prim_bounds, const std::vector<size_t>& primitives_indices, size_t start_idx, size_t end_idx);
 
 	//bin is in world space
-	void binToNodes(BVHNode& left, BVHNode& right, float bin, PartitionAxis axis,
+	void makeFinalPartition(BVHNode& left, BVHNode& right, float bin, PartitionAxis axis,
 		const thrust::universal_vector<Triangle>& read_tris,
 		const std::vector<BVHPrimitiveBounds>& prim_bounds, std::vector<size_t>& primitives_indices, size_t start_idx, size_t end_idx);
-
-	void binToShallowNodes(BVHNode& left, BVHNode& right, float bin, PartitionAxis axis,
-		const thrust::universal_vector<Triangle>& read_tris, const std::vector<BVHPrimitiveBounds>& prim_bounds, const std::vector<size_t>& primitives_indices, size_t start_idx, size_t end_idx);
 
 public:
 
