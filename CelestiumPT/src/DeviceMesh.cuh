@@ -8,7 +8,7 @@ public:
 	//__device__ bool intersectP(const Ray& ray);
 
 	char name[32];
-	int BLAS_idx = -1;
+	long int BLAS_idx = -1;
 	int triangle_offset_idx = -1;
 	size_t tri_count = 0;
 	Mat4 inverseModelMatrix;//TODO: store inv transform instead

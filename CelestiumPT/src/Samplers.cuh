@@ -22,6 +22,13 @@ namespace Samplers {
 	__device__ float2 get2D_PCGHash(uint32_t& seed) { return make_float2(get1D_PCGHash(seed), get1D_PCGHash(seed)); };
 	__device__ float2 getPixel2D_PCGHash(uint32_t& seed) { return get2D_PCGHash(seed); };
 
+	__device__ float3 sampleUniformSphere(float2 seed) {
+		float z = 1 - 2 * seed.x;
+		float r = fmaxf(0, sqrtf(1 - (z * z)));
+		float phi = 2 * PI * seed.y;
+		return { r * cosf(phi), r * sinf(phi), z };
+	}
+
 	//TODO: replace with tangent space version
 	__device__ float3 sampleCosineWeightedHemisphere(const float3& normal, float2 xi) {
 		// Generate a cosine-weighted direction in the local frame

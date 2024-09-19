@@ -31,6 +31,6 @@ struct ShapeIntersection {
 
 struct CompactShapeIntersection {
 	float hit_distance = -1;
-	int triangle_idx = -1;
+	long int triangle_idx = -1;
 	float3 bary{};
 };

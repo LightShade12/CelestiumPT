@@ -189,11 +189,12 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 
 		//sample dir
 		float3 wi = Samplers::sampleCosineWeightedHemisphere(payload.w_norm, Samplers::get2D_PCGHash(seed));
+		//float3 wi = Samplers::sampleUniformSphere(Samplers::get2D_PCGHash(seed));
 
 		RGBSpectrum fcos = bsdf.f(wo, wi) * AbsDot(wi, payload.w_norm);
 		if (!fcos)break;
 
-		float pdf = 1 / (2 * PI);
+		float pdf = 1 / (4 * PI);
 		pdf = AbsDot(payload.w_norm, wi) / PI;
 
 		throughtput *= fcos / pdf;

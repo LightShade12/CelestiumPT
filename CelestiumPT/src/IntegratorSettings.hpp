@@ -1,7 +1,7 @@
 #pragma once
 
 struct IntegratorSettings {
-	bool accumulate = false;
+	bool accumulate = true;
 	int bounces = 2;
 	bool MIS = false;
 };

@@ -11,7 +11,7 @@ public:
 
 	Bounds3f m_BoundingBox;
 	uint32_t leftRight = 0;
-	int BLAS_idx = -1;
+	long int BLAS_idx = -1;
 
 	__device__ __host__ bool isleaf() const {
 		return (leftRight == 0);

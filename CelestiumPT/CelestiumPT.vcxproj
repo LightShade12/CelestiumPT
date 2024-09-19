@@ -115,6 +115,7 @@
   <ItemGroup>
     <CudaCompile Include="src\acceleration_structure\BLAS.cu" />
     <CudaCompile Include="src\acceleration_structure\BLASBuilder.cu" />
+    <CudaCompile Include="src\acceleration_structure\BVHCache.cu" />
     <CudaCompile Include="src\acceleration_structure\GAS.cu" />
     <CudaCompile Include="src\acceleration_structure\GASBuilder.cu" />
     <CudaCompile Include="src\acceleration_structure\TLAS.cu" />
@@ -135,6 +136,7 @@
     <ClInclude Include="include\CelestiumPT.hpp" />
     <ClInclude Include="src\acceleration_structure\BLAS.cuh" />
     <ClInclude Include="src\acceleration_structure\BLASBuilder.hpp" />
+    <ClInclude Include="src\acceleration_structure\BVHCache.cuh" />
     <ClInclude Include="src\acceleration_structure\BVHNode.cuh" />
     <ClInclude Include="src\acceleration_structure\GAS.cuh" />
     <ClInclude Include="src\acceleration_structure\GASBuilder.hpp" />
