@@ -1,13 +1,14 @@
 #include "ShapeIntersection.cuh"
 #include "BSDF.cuh"
 #include "Ray.cuh"
+#include "Spectrum.cuh"
 
 __device__ BSDF ShapeIntersection::getBSDF()
 {
 	return BSDF();
 }
 
-__device__ float3 ShapeIntersection::Le(float3 w)
+__device__ RGBSpectrum ShapeIntersection::Le(float3 w)
 {
 
 	//if(arealight!=nullptr)printf("light scale: %.3f | ", arealight->scale);

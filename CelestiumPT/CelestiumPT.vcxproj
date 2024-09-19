@@ -128,6 +128,8 @@
     <CudaCompile Include="src\RayStages.cu" />
     <CudaCompile Include="src\Scene.cu" />
     <CudaCompile Include="src\ShapeIntersection.cu" />
+    <CudaCompile Include="src\Light.cu" />
+    <CudaCompile Include="src\Spectrum.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\CelestiumPT.hpp" />
@@ -139,6 +141,7 @@
     <ClInclude Include="src\acceleration_structure\TLASNode.cuh" />
     <ClInclude Include="src\Bounds.cuh" />
     <ClInclude Include="src\BSDF.cuh" />
+    <ClInclude Include="src\Spectrum.cuh" />
     <ClInclude Include="src\DeviceCamera.cuh" />
     <ClInclude Include="src\DeviceScene.cuh" />
     <ClInclude Include="src\ErrorCheck.cuh" />

@@ -4,6 +4,7 @@
 #include "maths/maths_linear_algebra.cuh"
 #include <cuda_runtime.h>
 
+class RGBSpectrum;
 class BSDF;
 class Ray;
 
@@ -23,7 +24,7 @@ struct ShapeIntersection {
 
 	__device__ inline bool hasHit() { return triangle_idx != 1; };
 	__device__ BSDF getBSDF();
-	__device__ float3 Le(float3 w);//actually wo?
+	__device__ RGBSpectrum Le(float3 w);//actually wo?
 
 	__device__ Ray spawnRay(const float3& wi);
 };

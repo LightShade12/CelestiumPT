@@ -5,6 +5,7 @@
 #include "RayStages.cuh"
 #include "Ray.cuh"
 #include "ShapeIntersection.cuh"
+#include "Spectrum.cuh"
 #include "BSDF.cuh"
 #include "acceleration_structure/GAS.cuh"
 #include "Samplers.cuh"
@@ -17,7 +18,7 @@
 #include <surface_indirect_functions.h>
 #include <float.h>
 
-__device__ static float3 uncharted2_tonemap_partial(float3 x)
+__device__ static RGBSpectrum uncharted2_tonemap_partial(RGBSpectrum x)
 {
 	constexpr float A = 0.15f;
 	constexpr float B = 0.50f;
@@ -28,23 +29,23 @@ __device__ static float3 uncharted2_tonemap_partial(float3 x)
 	return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
 }
 
-__device__ static float3 uncharted2_filmic(float3 v, float exposure)
+__device__ static RGBSpectrum uncharted2_filmic(RGBSpectrum v, float exposure)
 {
 	float exposure_bias = exposure;
-	float3 curr = uncharted2_tonemap_partial(v * exposure_bias);
+	RGBSpectrum curr = uncharted2_tonemap_partial(v * exposure_bias);
 
-	float3 W = make_float3(11.2f);
-	float3 white_scale = make_float3(1.0f) / uncharted2_tonemap_partial(W);
+	RGBSpectrum W = make_float3(11.2f);
+	RGBSpectrum white_scale = RGBSpectrum(1.0f) / uncharted2_tonemap_partial(W);
 	return curr * white_scale;
 }
 
-__device__ static float3 toneMapping(float3 HDR_color, float exposure = 2.f) {
-	float3 LDR_color = uncharted2_filmic(HDR_color, exposure);
+__device__ static RGBSpectrum toneMapping(RGBSpectrum HDR_color, float exposure = 2.f) {
+	RGBSpectrum LDR_color = uncharted2_filmic(HDR_color, exposure);
 	return LDR_color;
 }
 
-__device__ static float3 gammaCorrection(const float3 linear_color) {
-	float3 gamma_space_color = { sqrtf(linear_color.x),sqrtf(linear_color.y) ,sqrtf(linear_color.z) };
+__device__ static RGBSpectrum gammaCorrection(const RGBSpectrum linear_color) {
+	RGBSpectrum gamma_space_color = { sqrtf(linear_color.r),sqrtf(linear_color.g) ,sqrtf(linear_color.b) };
 	return gamma_space_color;
 }
 
@@ -61,16 +62,16 @@ __global__ void renderKernel(IntegratorGlobals globals)
 
 	if ((thread_pixel_coord_x >= frameres.x) || (thread_pixel_coord_y >= frameres.y)) return;
 
-	float3 sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, { (float)thread_pixel_coord_x,(float)thread_pixel_coord_y });
+	RGBSpectrum sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, { (float)thread_pixel_coord_x,(float)thread_pixel_coord_y });
 
 	if (globals.IntegratorCFG.accumulate) {
 		globals.FrameBuffer.accumulation_framebuffer
-			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] += sampled_radiance;
+			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] += make_float3(sampled_radiance);
 		sampled_radiance = globals.FrameBuffer.accumulation_framebuffer
 			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] / (globals.frameidx);
 	}
 
-	float4 fragcolor = { sampled_radiance.x,sampled_radiance.y,sampled_radiance.z, 1 };
+	float4 fragcolor = { sampled_radiance.r,sampled_radiance.g,sampled_radiance.b, 1 };
 
 	//EOTF
 	fragcolor = make_float4(gammaCorrection(make_float3(fragcolor)), 1);
@@ -80,7 +81,7 @@ __global__ void renderKernel(IntegratorGlobals globals)
 	surf2Dwrite(fragcolor, globals.FrameBuffer.composite_render_surface_object, thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
 }
 
-__device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel)
+__device__ RGBSpectrum IntegratorPipeline::evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel)
 {
 	uint32_t seed = ppixel.x + ppixel.y * globals.FrameBuffer.resolution.x;
 	seed *= globals.frameidx;
@@ -92,7 +93,7 @@ __device__ float3 IntegratorPipeline::evaluatePixelSample(const IntegratorGlobal
 
 	Ray primary_ray = globals.SceneDescriptor.active_camera->generateRay(frameres.x, frameres.y, screen_uv);
 
-	float3 L = IntegratorPipeline::Li(globals, primary_ray, seed, ppixel);
+	RGBSpectrum L = IntegratorPipeline::Li(globals, primary_ray, seed, ppixel);
 
 	return L;
 }
@@ -121,13 +122,13 @@ __device__ bool IntegratorPipeline::Unoccluded(const IntegratorGlobals& globals,
 	return !(IntegratorPipeline::IntersectP(globals, ray));
 }
 
-__device__ float3 IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel)
+__device__ RGBSpectrum IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel)
 {
 	//return make_float3(1, 0, 1);
 	return IntegratorPipeline::LiRandomWalk(globals, ray, seed, ppixel);
 }
 
-__device__ float3 SkyShading(const Ray& ray) {
+__device__ RGBSpectrum SkyShading(const Ray& ray) {
 	//return make_float3(0);
 	float3 unit_direction = normalize(ray.getDirection());
 	float a = 0.5f * (unit_direction.y + 1.0);
@@ -135,12 +136,12 @@ __device__ float3 SkyShading(const Ray& ray) {
 	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.2, 0.4, 1.0);
 };
 
-__device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
+__device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
 {
 	Ray ray = in_ray;
 
-	float3 throughtput = make_float3(1);
-	float3 light = make_float3(0);
+	RGBSpectrum throughtput = make_float3(1);
+	RGBSpectrum light = make_float3(0);
 
 	ShapeIntersection payload{};
 
@@ -189,7 +190,7 @@ __device__ float3 IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& glob
 		//sample dir
 		float3 wi = Samplers::sampleCosineWeightedHemisphere(payload.w_norm, Samplers::get2D_PCGHash(seed));
 
-		float3 fcos = bsdf.f(wo, wi) * AbsDot(wi, payload.w_norm);
+		RGBSpectrum fcos = bsdf.f(wo, wi) * AbsDot(wi, payload.w_norm);
 		if (!fcos)break;
 
 		float pdf = 1 / (2 * PI);

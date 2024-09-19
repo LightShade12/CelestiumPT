@@ -1,6 +1,9 @@
 #pragma once
 #include "Triangle.cuh"
 #include "maths/matrix.cuh"
+#include "Spectrum.cuh"
+
+//class RGBSpectrum;
 
 struct LightSampleContext {
 	float3 pos;
@@ -8,12 +11,7 @@ struct LightSampleContext {
 	float3 s_norm;
 };
 
-struct LightSample {
-	float3 L;
-	float3 wi;
-	float3 pLight;
-	float pdf;
-};
+struct LightSample;
 
 class Light {
 public:
@@ -26,13 +24,13 @@ public:
 		area = 0.5f * length(cross(edge0, edge1));
 	};
 
-	__device__ float3 PhiPower() { return make_float3(0); }
-	__device__ float3 L(float3 p, float3 n, float3 w) const { return scale * Lemit; };
-	__device__ LightSample SampleLi(LightSampleContext ctx) { return LightSample(); };//take uint32_t& seed
+	__device__ RGBSpectrum PhiPower() { return make_float3(0); }
+	__device__ RGBSpectrum L(float3 p, float3 n, float3 w) const { return scale * Lemit; };
+	__device__ LightSample SampleLi(LightSampleContext ctx);//take uint32_t& seed
 	__device__ float PDF_Li(LightSampleContext ctx, float3 wi) { return 0; };
 
 	//Mat4 m_transform;
-	float3 Lemit;
+	RGBSpectrum Lemit;
 	float scale;
 	Triangle* m_triangle;
 	float area;
