@@ -108,7 +108,7 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 		//if (!(ray.interval.surrounds(current_node_hitdist)))continue;//TODO: can put this in triangle looping part to get inner clipping working
 
 		//skip nodes farther than closest triangle; redundant: see the ordered traversal code
-		if (closest_hitpayload->triangle_idx != -1 && closest_hitpayload->hit_distance < current_node_hitdist)continue;
+		if (closest_hitpayload->hasHit() && closest_hitpayload->hit_distance < current_node_hitdist)continue;
 		closest_hitpayload->GAS_debug += make_float3(0, 0, 1) * 0.1f;
 
 		//if interior

@@ -174,7 +174,8 @@ void HostScene::LogStatus()
 
 HostMesh HostScene::getMesh(size_t mesh_idx)
 {
-	assert(mesh_idx < m_DeviceScene->DeviceMeshes.size(), "DeviceMesh access Out Of Bounds");
+	assert(mesh_idx < m_DeviceScene->DeviceMeshes.size(), "DeviceMesh access Out Of Bounds");//TODO:fix
+
 	DeviceMesh* dmeshptr = thrust::raw_pointer_cast(&m_DeviceScene->DeviceMeshes[mesh_idx]);
 	HostMesh hmesh(dmeshptr);
 	return hmesh;

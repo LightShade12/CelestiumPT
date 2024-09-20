@@ -389,10 +389,10 @@ void BLAS::makeFinalPartition(BVHNode& left, BVHNode& right, float bin, Partitio
 //-----------------------------------------------------------------------------------------------------------------------
 
 #define BLAS_TRAVERSAL_MAX_STACK_DEPTH 128
+
 __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
 {
 	if (m_BVHNodesCount == 0) return;//empty BLAS
-
 	//if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
 
 	Ray local_ray = ray;
@@ -412,6 +412,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(local_ray);
 
 	CompactShapeIntersection workinghitpayload;
+	workinghitpayload.hit_distance = FLT_MAX;
 	float child1_hitdist = -1;
 	float child2_hitdist = -1;
 	const Triangle* primitive = nullptr;
@@ -456,8 +457,13 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 				primitive = &(scene_data->DeviceTrianglesBuffer[primIdx]);
 				IntersectionStage(local_ray, *primitive, primIdx, &workinghitpayload);
 
-				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < closest_hitpayload->hit_distance) {
+				if (workinghitpayload.hit_distance < closest_hitpayload->hit_distance)closest_hitpayload->GAS_debug = make_float3(1, 0, 1);
+
+				//TODO: depth test fails around 41 BLAS idx
+				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < closest_hitpayload->hit_distance)
+				{
 					//if (!AnyHit(ray, sceneGeo, &workinghitpayload))continue;
+					//TODO:fix lights
 					if (primitive->LightIdx >= 0) {
 						closest_hitpayload->arealight =
 							&(globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsBuffer[primitive->LightIdx]);

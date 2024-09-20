@@ -44,10 +44,14 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 
 __device__ void IntersectionStage(const Ray& ray, const Triangle& triangle, int triangle_idx, CompactShapeIntersection* payload)
 {
+	payload->hit_distance = FLT_MAX;
+	payload->triangle_idx = -1;
+
 	float3 v0v1 = triangle.vertex1.position - triangle.vertex0.position;
 	float3 v0v2 = triangle.vertex2.position - triangle.vertex0.position;
 
 	float3 pvec = cross(ray.getDirection(), v0v2);
+
 	float det = dot(v0v1, pvec);
 	if (det > -TRIANGLE_EPSILON && det < TRIANGLE_EPSILON)
 		return; //payload; // This ray is parallel to this triangle
