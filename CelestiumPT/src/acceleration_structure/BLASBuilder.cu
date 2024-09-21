@@ -25,7 +25,7 @@ void PreProcess(const thrust::universal_vector<Triangle>& tris, std::vector<BVHP
 		}
 		primbounds.push_back(BVHPrimitiveBounds(min, max));
 	}
-	printf("prim bounds cached! \n");
+	printf("prim bounds cached! \n-------------------------------------\n");
 }
 
 void BLASBuilder::build(HostScene* hscene)

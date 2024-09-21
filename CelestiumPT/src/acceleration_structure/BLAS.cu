@@ -401,7 +401,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
 
-	unsigned short nodeIdxStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];//max idx = 65,535
+	size_t nodeIdxStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];//max idx = 65,535
 	float nodeHitDistStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];
 	uint8_t stackPtr = 0;//max points to 255
 
