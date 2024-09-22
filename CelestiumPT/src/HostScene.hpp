@@ -18,9 +18,10 @@ public:
 
 	void addCamera(HostCamera camera);
 
-	void AddTriangle(glm::vec3 v0p, glm::vec3 v0n,
-		glm::vec3 v1p, glm::vec3 v1n,
-		glm::vec3 v2p, glm::vec3 v2n,
+	void AddTriangle(
+		glm::vec3 v0p, glm::vec3 v0n, glm::vec2 v0uv,
+		glm::vec3 v1p, glm::vec3 v1n, glm::vec2 v1uv,
+		glm::vec3 v2p, glm::vec3 v2n, glm::vec2 v2uv,
 		glm::vec3 f_nrm, bool skip_sync = true);
 
 	void addLight(int triangle_idx, glm::vec3 color, float scale);

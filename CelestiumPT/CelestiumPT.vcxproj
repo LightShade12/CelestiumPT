@@ -120,6 +120,7 @@
     <CudaCompile Include="src\acceleration_structure\GASBuilder.cu" />
     <CudaCompile Include="src\acceleration_structure\TLAS.cu" />
     <CudaCompile Include="src\Bounds.cu" />
+    <CudaCompile Include="src\BSDF.cu" />
     <CudaCompile Include="src\Camera.cu" />
     <CudaCompile Include="src\ErrorCheck.cu" />
     <CudaCompile Include="src\Integrator.cu" />
@@ -127,6 +128,7 @@
     <CudaCompile Include="src\maths\vector_maths.cu" />
     <CudaCompile Include="src\Mesh.cu" />
     <CudaCompile Include="src\RayStages.cu" />
+    <CudaCompile Include="src\Samplers.cu" />
     <CudaCompile Include="src\Scene.cu" />
     <CudaCompile Include="src\ShapeIntersection.cu" />
     <CudaCompile Include="src\Light.cu" />

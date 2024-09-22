@@ -25,6 +25,8 @@ public:
 	GLuint getNormalsTargetTextureName() const;
 	GLuint getPositionsTargetTextureName() const;
 	GLuint getGASDebugTargetTextureName() const;
+	GLuint getUVsDebugTargetTextureName() const;
+	GLuint getBarycentricsDebugTargetTextureName() const;
 
 	void setCamera(int idx);
 	IntegratorSettings* getIntegratorSettings();//TODO: make this safer and more robust

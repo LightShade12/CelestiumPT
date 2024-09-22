@@ -4,10 +4,15 @@
 #include <glm/glm.hpp>
 
 struct Vertex {
-	Vertex(float3 p, float3 n) :position(p), normal(n) {}
-	Vertex(glm::vec3 p, glm::vec3 n) :position(make_float3(p.x, p.y, p.z)), normal(make_float3(n.x, n.y, n.z)) {}
+	Vertex(float3 p, float3 n, float2 uv) :position(p), normal(n), UV(uv) {}
+	Vertex(glm::vec3 p, glm::vec3 n, glm::vec2 uv) :
+		position(make_float3(p.x, p.y, p.z)),
+		normal(make_float3(n.x, n.y, n.z)),
+		UV(make_float2(uv.x, uv.y))
+	{}
 	float3 position;
 	float3 normal;
+	float2 UV;
 };
 
 struct Triangle {

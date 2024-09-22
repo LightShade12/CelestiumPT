@@ -153,28 +153,28 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 
 	//TODO: error handling
 	//Positions.size() and vertex_normals.size() must be equal!
-	if (loadedMeshPositions.size() != loadedMeshNormals.size())printf("\nPOSITIONS-NORMALS COUNT MISMATCH\n");
+	if (loadedMeshPositions.size() != loadedMeshNormals.size())printf("\n>> [POSITIONS-NORMALS COUNT MISMATCH] !\n");
 
 	//Contruct and push Triangles
 	for (size_t i = 0; i < loadedMeshPositions.size(); i += 3)
 	{
-		//surface normal construction
-		glm::vec3 p0 = loadedMeshPositions[i + 1] - loadedMeshPositions[i];
-		glm::vec3 p1 = loadedMeshPositions[i + 2] - loadedMeshPositions[i];
-		glm::vec3 faceNormal = cross(p0, p1);
+		//geometric normal construction
+		glm::vec3 edge0 = loadedMeshPositions[i + 1] - loadedMeshPositions[i];
+		glm::vec3 edge1 = loadedMeshPositions[i + 2] - loadedMeshPositions[i];
+		glm::vec3 geo_norm = cross(edge0, edge1);
 
 		glm::vec3 avgVertexNormal = (loadedMeshNormals[i] + loadedMeshNormals[i + 1] + loadedMeshNormals[i + 2]) / 3.f;
-		float ndot = dot(faceNormal, avgVertexNormal);
 
-		glm::vec3 surface_normal = (ndot < 0.0f) ? -faceNormal : faceNormal;
+		float shn_gn_dot = dot(geo_norm, avgVertexNormal);
+		glm::vec3 geometric_normal = (shn_gn_dot < 0.0f) ? -geo_norm : geo_norm;
 
 		uint32_t mtidx = loadedMeshPrimitiveMatIdx[i / 3];
 
 		m_WorkingScene->AddTriangle(
-			loadedMeshPositions[i], loadedMeshNormals[i],
-			loadedMeshPositions[i + 1], loadedMeshNormals[i + 1],
-			loadedMeshPositions[i + 2], loadedMeshNormals[i + 2],
-			normalize(surface_normal)
+			loadedMeshPositions[i], loadedMeshNormals[i], loadedMeshUVs[i],
+			loadedMeshPositions[i + 1], loadedMeshNormals[i + 1], loadedMeshUVs[i + 1],
+			loadedMeshPositions[i + 2], loadedMeshNormals[i + 2], loadedMeshUVs[i + 2],
+			normalize(geometric_normal)
 		);
 
 		//tinygltf::Material mat = m_SceneModel.materials[mtidx];

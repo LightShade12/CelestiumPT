@@ -28,14 +28,30 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 	Mat4 model_matrix = in_payload.invModelMatrix.inverse();
 	out_payload.w_pos = ray.getOrigin() + (ray.getDirection() * in_payload.hit_distance);
 
-	//TODO: implement smooth shading here
-	if (dot(normalize(make_float3(model_matrix * make_float4(triangle.face_normal, 0))), -1 * ray.getDirection()) < 0.f)
+	out_payload.w_geo_norm = triangle.face_normal;
+
+	out_payload.uv =
+		(triangle.vertex0.UV * out_payload.bary.x) +
+		(triangle.vertex1.UV * out_payload.bary.y) +
+		(triangle.vertex2.UV * out_payload.bary.z);
+
+	out_payload.w_shading_norm = normalize(
+		(triangle.vertex0.normal * out_payload.bary.x) +
+		(triangle.vertex1.normal * out_payload.bary.y) +
+		(triangle.vertex2.normal * out_payload.bary.z)
+	);
+
+	if (dot(
+		normalize(make_float3(model_matrix * make_float4(out_payload.w_geo_norm, 0))),
+		-1 * ray.getDirection()) < 0.f)
 	{
 		out_payload.front_face = false;
-		out_payload.w_norm = normalize(make_float3(model_matrix * make_float4(-1.f * triangle.face_normal, 0)));
+		out_payload.w_geo_norm = normalize(make_float3(model_matrix * make_float4(-1.f * out_payload.w_geo_norm, 0)));
+		out_payload.w_shading_norm = normalize(make_float3(model_matrix * make_float4(-1.f * out_payload.w_shading_norm, 0)));
 	}
 	else {
-		out_payload.w_norm = normalize(make_float3(model_matrix * make_float4(triangle.face_normal, 0)));
+		out_payload.w_geo_norm = normalize(make_float3(model_matrix * make_float4(out_payload.w_geo_norm, 0)));
+		out_payload.w_shading_norm = normalize(make_float3(model_matrix * make_float4(out_payload.w_shading_norm, 0)));
 		out_payload.front_face = true;
 	}
 

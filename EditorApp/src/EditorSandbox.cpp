@@ -18,7 +18,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/sponza_low.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -129,7 +129,7 @@ void EditorSandbox::onRender(float delta_secs)
 			if (ImGui::BeginTabItem("Rendering")) {
 				if (ImGui::CollapsingHeader("Debug")) {
 					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug");
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics");
 				};
 
 				if (ImGui::CollapsingHeader("Camera")) {
@@ -196,21 +196,36 @@ void EditorSandbox::onRender(float delta_secs)
 			if (curent_renderview == RenderView::COMPOSITE) {
 				if (m_Renderer.getCompositeRenderTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getCompositeRenderTargetTextureName(),
-						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 			else if (curent_renderview == RenderView::NORMALS) {
 				if (m_Renderer.getNormalsTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getNormalsTargetTextureName(),
-						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 			else if (curent_renderview == RenderView::POSITIONS) {
 				if (m_Renderer.getNormalsTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getPositionsTargetTextureName(),
-						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 			else if (curent_renderview == RenderView::GAS) {
 				if (m_Renderer.getGASDebugTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getGASDebugTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::UVs) {
+				if (m_Renderer.getUVsDebugTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getUVsDebugTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::BARY) {
+				if (m_Renderer.getBarycentricsDebugTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getBarycentricsDebugTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 

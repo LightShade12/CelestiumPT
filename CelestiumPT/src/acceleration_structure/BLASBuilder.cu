@@ -43,9 +43,10 @@ void BLASBuilder::build(HostScene* hscene)
 	cfg.m_TargetLeafPrimitivesCount = 6;
 
 	for (int meshidx = 0; meshidx < dscene->DeviceMeshes.size(); meshidx++) {
+		
 		DeviceMesh* dmesh = thrust::raw_pointer_cast(&(dscene->DeviceMeshes[meshidx]));
 		std::string name = dmesh->name;
-		fprintf(stderr, "BLAS mesh: %s\n", name.c_str());
+		fprintf(stderr, "%d> BLAS mesh: %s\n",meshidx, name.c_str());
 		BLAS blas(dmesh, read_prims, hnodes, prim_indices, prim_bounds, cfg);//local space build
 
 		Mat4 d_inv_mat = dmesh->inverseModelMatrix;

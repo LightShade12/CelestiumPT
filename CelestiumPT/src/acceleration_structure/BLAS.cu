@@ -388,7 +388,7 @@ void BLAS::makeFinalPartition(BVHNode& left, BVHNode& right, float bin, Partitio
 
 //-----------------------------------------------------------------------------------------------------------------------
 
-#define BLAS_TRAVERSAL_MAX_STACK_DEPTH 128
+#define BLAS_TRAVERSAL_MAX_STACK_DEPTH 64
 
 __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
 {
@@ -423,7 +423,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 		//skip nodes farther than closest triangle; redundant
 		if (closest_hitpayload->hasHit() && closest_hitpayload->hit_distance < current_node_hitdist)continue;
-		closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * 0.1f;
+		closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * 0.01f;
 
 		//if interior
 		if (stackTopNode->triangle_indices_count <= 0)
@@ -457,9 +457,6 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 				primitive = &(scene_data->DeviceTrianglesBuffer[primIdx]);
 				IntersectionStage(local_ray, *primitive, primIdx, &workinghitpayload);
 
-				if (workinghitpayload.hit_distance < closest_hitpayload->hit_distance)closest_hitpayload->GAS_debug = make_float3(1, 0, 1);
-
-				//TODO: depth test fails around 41 BLAS idx
 				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < closest_hitpayload->hit_distance)
 				{
 					//if (!AnyHit(ray, sceneGeo, &workinghitpayload))continue;

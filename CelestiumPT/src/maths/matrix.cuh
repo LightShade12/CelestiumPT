@@ -5,6 +5,146 @@
 #include "glm/mat4x4.hpp"
 #include <stdio.h>
 
+// column-major maths
+class Matrix3x3 {
+public:
+	__host__ __device__ Matrix3x3() : columns{ make_float3(1, 0, 0), make_float3(0, 1, 0), make_float3(0, 0, 1) } {};
+
+	__host__ __device__ explicit Matrix3x3(float val) {
+		columns[0] = make_float3(val, 0, 0);
+		columns[1] = make_float3(0, val, 0);
+		columns[2] = make_float3(0, 0, val);
+	};
+
+	__host__ explicit Matrix3x3(const glm::mat3& mat)
+	{
+		columns[0] = make_float3(mat[0][0], mat[0][1], mat[0][2]);  // First column
+		columns[1] = make_float3(mat[1][0], mat[1][1], mat[1][2]);  // Second column
+		columns[2] = make_float3(mat[2][0], mat[2][1], mat[2][2]);  // Third column
+	}
+
+	__host__ __device__ Matrix3x3(float3 c1, float3 c2, float3 c3) {
+		columns[0] = c1; columns[1] = c2; columns[2] = c3;
+	};
+
+	__host__ __device__ Matrix3x3(
+		float c1r1, float c1r2, float c1r3,
+		float c2r1, float c2r2, float c2r3,
+		float c3r1, float c3r2, float c3r3)
+	{
+		columns[0] = make_float3(c1r1, c1r2, c1r3);
+		columns[1] = make_float3(c2r1, c2r2, c2r3);
+		columns[2] = make_float3(c3r1, c3r2, c3r3);
+	};
+
+	__host__ __device__ float3& operator [] (size_t idx) {
+		return columns[idx];
+	}
+	__host__ __device__ const float3& operator[](size_t idx) const {
+		return columns[idx];
+	}
+
+	__host__ __device__ Matrix3x3 transpose() const {
+		return Matrix3x3(
+			make_float3(columns[0].x, columns[1].x, columns[2].x),
+			make_float3(columns[0].y, columns[1].y, columns[2].y),
+			make_float3(columns[0].z, columns[1].z, columns[2].z)
+		);
+	}
+
+	__host__ __device__ Matrix3x3 inverse() const {
+		// Compute the determinant
+		const float3& c0 = columns[0];
+		const float3& c1 = columns[1];
+		const float3& c2 = columns[2];
+
+		float det = c0.x * (c1.y * c2.z - c1.z * c2.y) -
+			c1.x * (c0.y * c2.z - c0.z * c2.y) +
+			c2.x * (c0.y * c1.z - c0.z * c1.y);
+
+		if (fabs(det) < 1e-6f) {
+			return Matrix3x3::getIdentity();  // Not invertible, return identity (or handle differently)
+		}
+
+		float invDet = 1.0f / det;
+
+		Matrix3x3 inv;
+
+		// Compute the inverse matrix elements
+		inv[0].x = (c1.y * c2.z - c1.z * c2.y) * invDet;
+		inv[0].y = (c0.z * c2.y - c0.y * c2.z) * invDet;
+		inv[0].z = (c0.y * c1.z - c0.z * c1.y) * invDet;
+
+		inv[1].x = (c1.z * c2.x - c1.x * c2.z) * invDet;
+		inv[1].y = (c0.x * c2.z - c0.z * c2.x) * invDet;
+		inv[1].z = (c0.z * c1.x - c0.x * c1.z) * invDet;
+
+		inv[2].x = (c1.x * c2.y - c1.y * c2.x) * invDet;
+		inv[2].y = (c0.y * c2.x - c0.x * c2.y) * invDet;
+		inv[2].z = (c0.x * c1.y - c0.y * c1.x) * invDet;
+
+		return inv;
+	}
+
+	__host__ __device__ float3 operator*(const float3& vec) const {
+		float3 result;
+
+		result.x = columns[0].x * vec.x + columns[1].x * vec.y + columns[2].x * vec.z;
+		result.y = columns[0].y * vec.x + columns[1].y * vec.y + columns[2].y * vec.z;
+		result.z = columns[0].z * vec.x + columns[1].z * vec.y + columns[2].z * vec.z;
+
+		return result;
+	}
+
+	__host__ __device__ Matrix3x3 operator*(const Matrix3x3& mat2) const {
+		Matrix3x3 res;
+		Matrix3x3 mat1 = this->transpose();  // rows enabled; interpret as columns
+
+		// Multiply each row with all columns; fill up entire rows
+		for (int rowidx = 0; rowidx < 3; rowidx++) {
+			res[rowidx].x = dot(mat1[rowidx], mat2[0]);
+			res[rowidx].y = dot(mat1[rowidx], mat2[1]);
+			res[rowidx].z = dot(mat1[rowidx], mat2[2]);
+		}
+
+		return res.transpose();  // rows back to columns
+	}
+
+	__host__ __device__ static Matrix3x3 getIdentity() {
+		return Matrix3x3(
+			make_float3(1, 0, 0),
+			make_float3(0, 1, 0),
+			make_float3(0, 0, 1)
+		);
+	}
+
+	__host__ __device__ static Matrix3x3 getZero() {
+		return Matrix3x3(
+			make_float3(0, 0, 0),
+			make_float3(0, 0, 0),
+			make_float3(0, 0, 0)
+		);
+	}
+
+	__host__ glm::mat3 toGLM() {
+		return glm::mat3(
+			columns[0].x, columns[0].y, columns[0].z,
+			columns[1].x, columns[1].y, columns[1].z,
+			columns[2].x, columns[2].y, columns[2].z
+		);
+	}
+
+	__host__ __device__ static void print_matrix(const Matrix3x3& mat) {
+		printf("\n");
+		printf("| %.3f %.3f %.3f |\n", mat[0].x, mat[1].x, mat[2].x);
+		printf("| %.3f %.3f %.3f |\n", mat[0].y, mat[1].y, mat[2].y);
+		printf("| %.3f %.3f %.3f |\n", mat[0].z, mat[1].z, mat[2].z);
+	}
+
+private:
+	float3 columns[3] = {};
+};
+
 //column major maths
 class Matrix4x4 {
 public:
@@ -180,3 +320,4 @@ private:
 
 //column major maths
 using Mat4 = Matrix4x4;
+using Mat3 = Matrix3x3;

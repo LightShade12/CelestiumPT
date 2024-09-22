@@ -136,12 +136,47 @@ __device__ RGBSpectrum SkyShading(const Ray& ray) {
 	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.2, 0.4, 1.0);
 };
 
+__device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si) {
+	surf2Dwrite(make_float4(si.w_pos, 1),
+		globals.FrameBuffer.positions_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(si.w_shading_norm, 1),
+		globals.FrameBuffer.normals_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(si.bary, 1),
+		globals.FrameBuffer.bary_debug_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(si.uv.x, si.uv.y, 0, 1),
+		globals.FrameBuffer.UV_debug_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+}
+
+__device__ void recordGBufferAny(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si) {
+	surf2Dwrite(make_float4(si.GAS_debug, 1),
+		globals.FrameBuffer.GAS_debug_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+}
+
+__device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixel) {
+	surf2Dwrite(make_float4(0, 0, 0.5, 1),
+		globals.FrameBuffer.positions_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(0, 0, 0, 1),
+		globals.FrameBuffer.normals_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(0, 0, 0, 1),
+		globals.FrameBuffer.bary_debug_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(0, 0, 0, 1),
+		globals.FrameBuffer.UV_debug_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+}
+
 __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
 {
 	Ray ray = in_ray;
 
-	RGBSpectrum throughtput = make_float3(1);
-	RGBSpectrum light = make_float3(0);
+	RGBSpectrum throughtput(1.f), light(0.f);
 
 	ShapeIntersection payload{};
 
@@ -149,53 +184,35 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		seed += bounce_depth;
 		payload = IntegratorPipeline::Intersect(globals, ray);
 
-		if (bounce_depth == 0) {
-			surf2Dwrite(make_float4(payload.GAS_debug, 1),
-				globals.FrameBuffer.GAS_debug_render_surface_object,
-				ppixel.x * (int)sizeof(float4), ppixel.y);
-		}
+		bool primary_surface = (bounce_depth == 0);
+
+		if (primary_surface) recordGBufferAny(globals, ppixel, payload);
 
 		//miss--
-		if (payload.hit_distance < 0)
+		if (payload.hit_distance < 0)//TODO: standardize invalid/miss payload definition
 		{
-			if (bounce_depth == 0) {
-				surf2Dwrite(make_float4(0, 0, 0, 1),
-					globals.FrameBuffer.normals_render_surface_object,
-					ppixel.x * (int)sizeof(float4), ppixel.y);
-				surf2Dwrite(make_float4(0, 0, 0.5, 1),
-					globals.FrameBuffer.positions_render_surface_object,
-					ppixel.x * (int)sizeof(float4), ppixel.y);
-			}
+			if (primary_surface) recordGBufferMiss(globals, ppixel);
+
 			light += SkyShading(ray) * throughtput;
 			break;
 		}
+
 		//hit--
-		if (bounce_depth == 0) {
-			//primary hit
-			surf2Dwrite(make_float4(payload.w_norm, 1),
-				globals.FrameBuffer.normals_render_surface_object,
-				ppixel.x * (int)sizeof(float4), ppixel.y);
-			surf2Dwrite(make_float4(payload.w_pos, 1),
-				globals.FrameBuffer.positions_render_surface_object,
-				ppixel.x * (int)sizeof(float4), ppixel.y);
-		}
-		//light = (payload.w_pos); break;
+		if (primary_surface) recordGBufferHit(globals, ppixel, payload);
 
 		float3 wo = -ray.getDirection();
 		light += payload.Le(wo) * throughtput;
 
 		//get BSDF
-		BSDF bsdf = payload.getBSDF();
+		BSDF bsdf = payload.getBSDF(globals);
+		BSDFSample bs = bsdf.sampleBSDF(wo, Samplers::get2D_PCGHash(seed));
 
-		//sample dir
-		float3 wi = Samplers::sampleCosineWeightedHemisphere(payload.w_norm, Samplers::get2D_PCGHash(seed));
-		//float3 wi = Samplers::sampleUniformSphere(Samplers::get2D_PCGHash(seed));
+		float3 wi = bs.wi;
 
-		RGBSpectrum fcos = bsdf.f(wo, wi) * AbsDot(wi, payload.w_norm);
+		RGBSpectrum fcos = bs.f * AbsDot(wi, payload.w_shading_norm);
 		if (!fcos)break;
 
-		float pdf = 1 / (4 * PI);
-		pdf = AbsDot(payload.w_norm, wi) / PI;
+		float pdf = bs.pdf;
 
 		throughtput *= fcos / pdf;
 
