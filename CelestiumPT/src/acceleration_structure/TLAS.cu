@@ -79,7 +79,7 @@ void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<
 }
 __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
 {
-	SceneGeometry* sceneGeo = globals.SceneDescriptor.device_geometry_aggregate;
+	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
 
 	if (m_BLASCount == 0) return;//empty scene;empty TLAS
 
@@ -92,7 +92,7 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 	float current_node_hitdist = FLT_MAX;
 
-	const TLASNode* stackTopNode = &(sceneGeo->DeviceTLASNodesBuffer[m_TLASRootIdx]);//is this in register?
+	const TLASNode* stackTopNode = &(scene_data->DeviceTLASNodesBuffer[m_TLASRootIdx]);//is this in register?
 	nodeIdxStack[stackPtr] = m_TLASRootIdx;
 	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(ray);
 
@@ -100,13 +100,13 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 	float child2_hitdist = -1;
 
 	while (stackPtr > 0) {
-		stackTopNode = &(sceneGeo->DeviceTLASNodesBuffer[nodeIdxStack[--stackPtr]]);
+		stackTopNode = &(scene_data->DeviceTLASNodesBuffer[nodeIdxStack[--stackPtr]]);
 		current_node_hitdist = nodeHitDistStack[stackPtr];
 
 		//custom ray interval culling
 		//if (!(ray.interval.surrounds(current_node_hitdist)))continue;//TODO: can put this in triangle looping part to get inner clipping working
 
-		if (current_node_hitdist >= 0)closest_hitpayload->GAS_debug += make_float3(0, 0, 1) * 0.01f;
+		if (current_node_hitdist >= 0)closest_hitpayload->GAS_debug += make_float3(0, 0, 1) * globals.IntegratorCFG.GAS_shading_brightness;
 		//skip nodes farther than closest triangle; redundant: see the ordered traversal code
 		if (closest_hitpayload->hasHit() && closest_hitpayload->hit_distance < current_node_hitdist)continue;
 
@@ -115,8 +115,8 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 		{
 			int c1id = stackTopNode->leftRight & 0xFFFF, c2id = (stackTopNode->leftRight >> 16) & 0xFFFF;
 
-			child1_hitdist = (sceneGeo->DeviceTLASNodesBuffer[c1id]).m_BoundingBox.intersect(ray);
-			child2_hitdist = (sceneGeo->DeviceTLASNodesBuffer[c2id]).m_BoundingBox.intersect(ray);
+			child1_hitdist = (scene_data->DeviceTLASNodesBuffer[c1id]).m_BoundingBox.intersect(ray);
+			child2_hitdist = (scene_data->DeviceTLASNodesBuffer[c2id]).m_BoundingBox.intersect(ray);
 			//TODO:implement early cull properly see discord for ref
 			if (child1_hitdist > child2_hitdist) {
 				if (child1_hitdist >= 0 && child1_hitdist < closest_hitpayload->hit_distance)
@@ -141,7 +141,76 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 		}
 		else//if leaf
 		{
-			sceneGeo->DeviceBLASesBuffer[stackTopNode->BLAS_idx].intersect(globals, ray, closest_hitpayload);
+			scene_data->DeviceBLASesBuffer[stackTopNode->BLAS_idx].intersect(globals, ray, closest_hitpayload);
 		}
 	}
-};
+}
+
+//TODO: optimise P methods via culling
+__device__ bool TLAS::intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax)
+{
+	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
+
+	if (m_BLASCount == 0) return;//empty scene;empty TLAS
+
+	//if (m_BoundingBox.intersect(ray) < 0)return;
+
+	const uint8_t maxStackSize = 64;//TODO: rename this var
+	int nodeIdxStack[maxStackSize];
+	float nodeHitDistStack[maxStackSize];
+	uint8_t stackPtr = 0;
+
+	const TLASNode* stackTopNode = &(scene_data->DeviceTLASNodesBuffer[m_TLASRootIdx]);//is this in register?
+	nodeIdxStack[stackPtr] = m_TLASRootIdx;
+	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(ray);
+
+	float child1_hitdist = -1;
+	float child2_hitdist = -1;
+
+	bool hit = false;
+
+	while (stackPtr > 0) {
+		stackTopNode = &(scene_data->DeviceTLASNodesBuffer[nodeIdxStack[--stackPtr]]);
+
+		//custom ray interval culling
+		//if (!(ray.interval.surrounds(current_node_hitdist)))continue;//TODO: can put this in triangle looping part to get inner clipping working
+
+		//skip nodes farther than closest triangle; redundant: see the ordered traversal code
+
+		//if interior
+		if (!stackTopNode->isleaf())
+		{
+			int c1id = stackTopNode->leftRight & 0xFFFF, c2id = (stackTopNode->leftRight >> 16) & 0xFFFF;
+
+			child1_hitdist = (scene_data->DeviceTLASNodesBuffer[c1id]).m_BoundingBox.intersect(ray);
+			child2_hitdist = (scene_data->DeviceTLASNodesBuffer[c2id]).m_BoundingBox.intersect(ray);
+			//TODO:implement early cull properly see discord for ref
+			if (child1_hitdist > child2_hitdist) {
+				if (child1_hitdist >= 0 && child1_hitdist < tmax)
+				{
+					nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = c1id;
+				}
+				if (child2_hitdist >= 0 && child2_hitdist < tmax)
+				{
+					nodeHitDistStack[stackPtr] = child2_hitdist; nodeIdxStack[stackPtr++] = c2id;
+				}
+			}
+			else {
+				if (child2_hitdist >= 0 && child2_hitdist < tmax)
+				{
+					nodeHitDistStack[stackPtr] = child2_hitdist; nodeIdxStack[stackPtr++] = c2id;
+				}
+				if (child1_hitdist >= 0 && child1_hitdist < tmax)
+				{
+					nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = c1id;
+				}
+			}
+		}
+		else//if leaf
+		{
+			hit |= scene_data->DeviceBLASesBuffer[stackTopNode->BLAS_idx].intersectP(globals, ray, tmax);
+		}
+	}
+	return hit;
+}
+;

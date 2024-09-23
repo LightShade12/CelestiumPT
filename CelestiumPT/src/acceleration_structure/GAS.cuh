@@ -17,7 +17,8 @@ public:
 	void build(HostScene* host_scene);
 	void refresh(HostScene* host_scene);
 
-	__device__ ShapeIntersection intersect(const IntegratorGlobals& globals, const Ray& ray);
+	__device__ ShapeIntersection intersect(const IntegratorGlobals& globals, const Ray& ray, float tmax = FLT_MAX);
+	__device__ bool intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax);
 
 	TLAS tlas;
 	BLASBuilder blasbuilder;

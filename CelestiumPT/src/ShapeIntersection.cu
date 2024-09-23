@@ -39,8 +39,15 @@ __device__ RGBSpectrum ShapeIntersection::Le(float3 w)
 		make_float3(0);
 }
 
-__device__ Ray ShapeIntersection::spawnRay(const float3& wi)
+__device__ Ray ShapeIntersection::spawnRay(const float3& wi) const
 {
 	float3 orig = w_pos + (w_geo_norm * HIT_EPSILON);
+	return Ray(orig, wi);
+}
+
+__device__ Ray ShapeIntersection::spawnRayTo(const float3& p) const
+{
+	float3 orig = w_pos + (w_geo_norm * HIT_EPSILON);
+	float3 wi = normalize(p - orig);
 	return Ray(orig, wi);
 }

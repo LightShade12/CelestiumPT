@@ -4,7 +4,10 @@
 #include "DeviceScene.cuh"
 #include "DeviceMesh.cuh"
 #include "BVHCache.cuh"
+
 #include <vector>
+#include <algorithm>
+#include <execution>
 
 void PreProcess(const thrust::universal_vector<Triangle>& tris, std::vector<BVHPrimitiveBounds>& primbounds) {
 	printf("Creating prim bounds cache\n");
@@ -43,10 +46,9 @@ void BLASBuilder::build(HostScene* hscene)
 	cfg.m_TargetLeafPrimitivesCount = 6;
 
 	for (int meshidx = 0; meshidx < dscene->DeviceMeshes.size(); meshidx++) {
-		
 		DeviceMesh* dmesh = thrust::raw_pointer_cast(&(dscene->DeviceMeshes[meshidx]));
 		std::string name = dmesh->name;
-		fprintf(stderr, "%d> BLAS mesh: %s\n",meshidx, name.c_str());
+		fprintf(stderr, "%d> BLAS mesh: %s\n", meshidx, name.c_str());
 		BLAS blas(dmesh, read_prims, hnodes, prim_indices, prim_bounds, cfg);//local space build
 
 		Mat4 d_inv_mat = dmesh->inverseModelMatrix;

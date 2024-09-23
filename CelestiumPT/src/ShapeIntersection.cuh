@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Light.cuh"
 #include "maths/maths_linear_algebra.cuh"
 #include <cuda_runtime.h>
 
@@ -8,6 +7,7 @@ class RGBSpectrum;
 class BSDF;
 class Ray;
 struct IntegratorGlobals;
+class Light;
 
 struct ShapeIntersection {
 	float hit_distance = -1;
@@ -28,7 +28,8 @@ struct ShapeIntersection {
 	__device__ BSDF getBSDF(const IntegratorGlobals& globals);
 	__device__ RGBSpectrum Le(float3 w);//actually wo?
 
-	__device__ Ray spawnRay(const float3& wi);
+	__device__ Ray spawnRay(const float3& wi) const;
+	__device__ Ray spawnRayTo(const float3& p) const;
 };
 
 struct CompactShapeIntersection {

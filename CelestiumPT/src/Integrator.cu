@@ -1,4 +1,5 @@
 #include "Integrator.cuh"
+#include "LightSampler.cuh"
 #include "SceneGeometry.cuh"
 #include "DeviceCamera.cuh"
 #include "Storage.cuh"
@@ -98,12 +99,12 @@ __device__ RGBSpectrum IntegratorPipeline::evaluatePixelSample(const IntegratorG
 	return L;
 }
 
-__device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGlobals& globals, const Ray& ray)
+__device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGlobals& globals, const Ray& ray, float tmax)
 {
 	ShapeIntersection payload;
-	payload.hit_distance = FLT_MAX;
+	payload.hit_distance = tmax;
 
-	payload = globals.SceneDescriptor.device_geometry_aggregate->GAS_structure.intersect(globals, ray);
+	payload = globals.SceneDescriptor.device_geometry_aggregate->GAS_structure.intersect(globals, ray, tmax);
 
 	if (payload.triangle_idx == -1) {
 		return MissStage(globals, ray, payload);
@@ -112,14 +113,16 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 	return ClosestHitStage(globals, ray, payload);
 }
 
-__device__ bool IntegratorPipeline::IntersectP(const IntegratorGlobals& globals, const Ray& ray)
+__device__ bool IntegratorPipeline::IntersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax)
 {
-	return false;
+	return globals.SceneDescriptor.device_geometry_aggregate->GAS_structure.intersectP(globals, ray, tmax);
 }
 
-__device__ bool IntegratorPipeline::Unoccluded(const IntegratorGlobals& globals, const Ray& ray)
+__device__ bool IntegratorPipeline::Unoccluded(const IntegratorGlobals& globals, const ShapeIntersection& p0, float3 p1)
 {
-	return !(IntegratorPipeline::IntersectP(globals, ray));
+	Ray ray = p0.spawnRayTo(p1);
+	float tmax = length(p1 - ray.getOrigin()) - 0.011f;
+	return !(IntegratorPipeline::IntersectP(globals, ray, tmax));
 }
 
 __device__ RGBSpectrum IntegratorPipeline::Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel)
@@ -175,8 +178,11 @@ __device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixe
 __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
 {
 	Ray ray = in_ray;
-
+	bool DI = true;
 	RGBSpectrum throughtput(1.f), light(0.f);
+	LightSampler light_sampler(
+		globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsBuffer,
+		globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsCount);
 
 	ShapeIntersection payload{};
 
@@ -193,7 +199,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += SkyShading(ray) * throughtput;
+			light += SkyShading(ray) * throughtput * 0.f;
 			break;
 		}
 
@@ -201,10 +207,46 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		if (primary_surface) recordGBufferHit(globals, ppixel, payload);
 
 		float3 wo = -ray.getDirection();
-		light += payload.Le(wo) * throughtput;
+
+		if (primary_surface || !DI)light += payload.Le(wo) * throughtput;
 
 		//get BSDF
 		BSDF bsdf = payload.getBSDF(globals);
+
+		if (DI)
+		{
+			SampledLight sampled_light = light_sampler.sample(Samplers::get1D_PCGHash(seed));
+			//handle empty buffer
+			if (sampled_light) {
+				LightLiSample ls = sampled_light.light->SampleLi(payload, Samplers::get2D_PCGHash(seed));
+				if (ls.pdf > 0) {
+					float3 wi = ls.wi;
+					RGBSpectrum f = bsdf.f(wo, wi) * AbsDot(wi, payload.w_shading_norm);
+
+					float dist = length(payload.w_pos - ls.pLight);
+					float dist_sq = dist * dist;
+					float cosTheta_emitter = AbsDot(wi, ls.n);
+					float Li_sample_pdf = (sampled_light.p * ls.pdf) * (1 / cosTheta_emitter) * dist_sq;
+					if (f && Unoccluded(globals, payload, ls.pLight)) {
+						light += throughtput * f * ls.L / Li_sample_pdf;
+					}
+				}
+			}
+		}
+		if (false) {
+			size_t light_idx = Samplers::get1D_PCGHash(seed) * globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsCount;
+			Light light_s = globals.SceneDescriptor.device_geometry_aggregate->
+				DeviceLightsBuffer[min(light_idx, globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsCount - 1)];
+			float light_s_pdf = 1.f / globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsCount;
+			Triangle* tri = light_s.m_triangle;
+			float2 u2 = Samplers::get2D_PCGHash(seed);
+			float3 p = (u2.x * tri->vertex0.position) + (u2.y * tri->vertex1.position) + ((1 - u2.x - u2.y) * tri->vertex2.position);
+			p = make_float3(1, 3.5, -1) * 100;
+			if (Unoccluded(globals, payload, p)) {
+				light += RGBSpectrum(0.2);/// light_s_pdf;
+			}
+		}
+
 		BSDFSample bs = bsdf.sampleBSDF(wo, Samplers::get2D_PCGHash(seed));
 
 		float3 wi = bs.wi;
@@ -213,7 +255,6 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		if (!fcos)break;
 
 		float pdf = bs.pdf;
-
 		throughtput *= fcos / pdf;
 
 		ray = payload.spawnRay(wi);

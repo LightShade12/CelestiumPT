@@ -130,6 +130,10 @@ void EditorSandbox::onRender(float delta_secs)
 				if (ImGui::CollapsingHeader("Debug")) {
 					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
 						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics");
+					if (curent_renderview == RenderView::GAS) {
+						ImGui::SliderFloat("GAS shading brightness", 
+							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 1.0);
+					}
 				};
 
 				if (ImGui::CollapsingHeader("Camera")) {

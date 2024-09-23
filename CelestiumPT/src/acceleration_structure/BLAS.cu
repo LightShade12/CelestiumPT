@@ -423,7 +423,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 		//skip nodes farther than closest triangle; redundant
 		if (closest_hitpayload->hasHit() && closest_hitpayload->hit_distance < current_node_hitdist)continue;
-		closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * 0.01f;
+		closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * globals.IntegratorCFG.GAS_shading_brightness;
 
 		//if interior
 		if (stackTopNode->triangle_indices_count <= 0)
@@ -474,6 +474,79 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 			}
 		}
 	}
+}
+
+__device__ bool BLAS::intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax)
+{
+	if (m_BVHNodesCount == 0) return;//empty BLAS
+	//if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
+
+	Ray local_ray = ray;
+	local_ray.setOrigin(make_float3(invModelMatrix * make_float4(local_ray.getOrigin(), 1)));
+	local_ray.setDirection(make_float3(invModelMatrix * make_float4(local_ray.getDirection(), 0)));
+
+	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
+
+	size_t nodeIdxStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];//max idx = 65,535
+	float nodeHitDistStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];
+	uint8_t stackPtr = 0;//max points to 255
+
+	float current_node_hitdist = FLT_MAX;
+
+	nodeIdxStack[stackPtr] = m_BVHRootIdx;
+	const BVHNode* stackTopNode = &(scene_data->DeviceBVHNodesBuffer[m_BVHRootIdx]);//is this in register?
+	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(local_ray);
+
+	CompactShapeIntersection workinghitpayload;
+	workinghitpayload.hit_distance = FLT_MAX;
+	float child1_hitdist = -1;
+	float child2_hitdist = -1;
+	const Triangle* primitive = nullptr;
+
+	while (stackPtr > 0) {
+		stackTopNode = &(scene_data->DeviceBVHNodesBuffer[nodeIdxStack[--stackPtr]]);
+		current_node_hitdist = nodeHitDistStack[stackPtr];
+
+		//if interior
+		if (stackTopNode->triangle_indices_count <= 0)
+		{
+			child1_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray);
+			child2_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray);
+			if (child1_hitdist > child2_hitdist) {
+				if (child1_hitdist >= 0 && child1_hitdist < tmax) {
+					nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx;
+				}
+				if (child2_hitdist >= 0 && child2_hitdist < tmax) {
+					nodeHitDistStack[stackPtr] = child2_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx + 1;
+				}
+			}
+			else {
+				if (child2_hitdist >= 0 && child2_hitdist < tmax) {
+					nodeHitDistStack[stackPtr] = child2_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx + 1;
+				}
+				if (child1_hitdist >= 0 && child1_hitdist < tmax) {
+					nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx;
+				}
+			}
+		}
+		else
+		{
+			for (int primIndiceIdx = stackTopNode->left_child_or_triangle_indices_start_idx;
+				primIndiceIdx < stackTopNode->left_child_or_triangle_indices_start_idx + stackTopNode->triangle_indices_count;
+				primIndiceIdx++)
+			{
+				int primIdx = scene_data->DeviceBVHTriangleIndicesBuffer[primIndiceIdx];
+				primitive = &(scene_data->DeviceTrianglesBuffer[primIdx]);
+				IntersectionStage(local_ray, *primitive, primIdx, &workinghitpayload);
+
+				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < tmax)
+				{
+					return true;
+				}
+			}
+		}
+	}
+	return false;
 }
 
 void BLAS::setTransform(Mat4 model_matrix)

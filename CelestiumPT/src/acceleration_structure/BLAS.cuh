@@ -40,6 +40,7 @@ public:
 		std::vector<size_t>& prim_indices, const std::vector<BVHPrimitiveBounds>& prim_bounds, BVHBuilderSettings buildercfg);
 
 	__device__ void intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload);
+	__device__ bool intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax);
 
 	void setTransform(Mat4 model_matrix);
 

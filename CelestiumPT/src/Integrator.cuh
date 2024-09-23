@@ -17,9 +17,10 @@ namespace IntegratorPipeline {
 	__device__ RGBSpectrum evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel);
 
 	//TraceRay function
-	__device__ ShapeIntersection Intersect(const IntegratorGlobals& globals, const Ray& ray);
-	__device__ bool IntersectP(const IntegratorGlobals& globals, const Ray& ray);
-	__device__ bool Unoccluded(const IntegratorGlobals& globals, const Ray& ray);
+	__device__ ShapeIntersection Intersect(const IntegratorGlobals& globals, const Ray& ray, float tmax = FLT_MAX);
+	__device__ bool IntersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax);
+
+	__device__ bool Unoccluded(const IntegratorGlobals& globals, const ShapeIntersection& p0, float3 p1);
 
 	__device__ RGBSpectrum Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel);
 	__device__ RGBSpectrum LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel);

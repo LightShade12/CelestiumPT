@@ -15,11 +15,31 @@ struct Vertex {
 	float2 UV;
 };
 
+struct ShapeSampleContext {
+	__device__ ShapeSampleContext() = default;
+	__device__ ShapeSampleContext(const float3& p, const float3& n, const float3& ns) : p(p), n(n), ns(ns) {}
+
+	float3 p, n, ns;
+};
+
+struct ShapeSample {
+	__device__ ShapeSample(const float3& p, const float3& n, float pdf) : p(p), n(n), pdf(pdf) {}
+
+	float3 p;
+	float3 n;
+	float pdf = 0;
+};
+
+//TODO:lookup docs
+__device__ float3 sampleUniformTriangle(float2 u);
+
 struct Triangle {
-	Triangle(Vertex v0, Vertex v1, Vertex v2, glm::vec3 nrm) :vertex0(v0), vertex1(v1), vertex2(v2),
-		face_normal(make_float3(nrm.x, nrm.y, nrm.z)) {
-		centroid = (vertex0.position + vertex1.position + vertex2.position) / 3;
-	};
+	Triangle(Vertex v0, Vertex v1, Vertex v2, glm::vec3 nrm);
+
+	__host__ __device__ float area();
+
+	__device__ ShapeSample sample(const ShapeSampleContext& ctx, float2 u2);
+
 	int LightIdx = -1;
 	Vertex vertex0, vertex1, vertex2;
 	float3 centroid{}; //TODO: move this out of triangle
