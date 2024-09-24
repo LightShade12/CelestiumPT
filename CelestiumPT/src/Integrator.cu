@@ -152,16 +152,24 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel
 	surf2Dwrite(make_float4(si.uv.x, si.uv.y, 0, 1),
 		globals.FrameBuffer.UV_debug_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
+	uint32_t obj_id_debug = si.object_idx;
+	float3 obj_id_color = make_float3(Samplers::get2D_PCGHash(obj_id_debug), Samplers::get1D_PCGHash(obj_id_debug));
+	surf2Dwrite(make_float4(obj_id_color, 1),
+		globals.FrameBuffer.objectID_debug_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
 }
 
 __device__ void recordGBufferAny(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si) {
 	surf2Dwrite(make_float4(si.GAS_debug, 1),
 		globals.FrameBuffer.GAS_debug_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(make_float3(si.object_idx), 1),
+		globals.FrameBuffer.objectID_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
 }
 
 __device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixel) {
-	surf2Dwrite(make_float4(0, 0, 0.5, 1),
+	surf2Dwrite(make_float4(0, 0, 0.0, 1),
 		globals.FrameBuffer.positions_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(0, 0, 0, 1),
@@ -172,6 +180,9 @@ __device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixe
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.UV_debug_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(0, 0, 0, 1),
+		globals.FrameBuffer.objectID_debug_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 }
 

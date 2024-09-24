@@ -24,6 +24,8 @@ public:
 	cudaSurfaceObject_t albedo_render_surface_object;
 	cudaSurfaceObject_t UV_debug_render_surface_object;
 	cudaSurfaceObject_t bary_debug_render_surface_object;
+	cudaSurfaceObject_t objectID_render_surface_object;
+	cudaSurfaceObject_t objectID_debug_render_surface_object;
 	float3* accumulation_framebuffer = nullptr;
 };
 

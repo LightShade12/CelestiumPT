@@ -30,8 +30,6 @@ struct ShapeSample {
 	float pdf = 0;
 };
 
-//TODO:lookup docs
-__device__ float3 sampleUniformTriangle(float2 u);
 
 struct Triangle {
 	Triangle(Vertex v0, Vertex v1, Vertex v2, glm::vec3 nrm);

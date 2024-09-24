@@ -12,6 +12,7 @@ class Light;
 struct ShapeIntersection {
 	float hit_distance = -1;
 	int triangle_idx = -1;
+	long long int object_idx = -1;
 	float3 bary{};
 	float2 uv;
 	float3 w_pos{};

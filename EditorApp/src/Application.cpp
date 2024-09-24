@@ -107,7 +107,7 @@ void Application::initialize()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	const char* glsl_version = "#version 460";
 
-	m_width = 640+16;
+	m_width = 640 + 16;
 	m_height = 700;
 	m_MainWindow = glfwCreateWindow(m_width, m_height, "MainWindow", NULL, NULL);
 
@@ -143,11 +143,10 @@ void Application::close()
 
 	m_EditorSandbox.destroy();
 
-	ImGui_ImplGlfw_Shutdown();
 	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
 	glfwDestroyWindow(m_MainWindow);
 	glfwTerminate();
-	exit(EXIT_SUCCESS);//TODO: remove this, it blocks exectution of destructor
 }

@@ -36,7 +36,7 @@ public:
 	};
 
 	BLAS() = default;
-	BLAS(DeviceMesh* mesh, const thrust::universal_vector<Triangle>& prims, std::vector<BVHNode>& nodes,
+	BLAS(DeviceMesh* mesh, size_t mesh_idx, const thrust::universal_vector<Triangle>& prims, std::vector<BVHNode>& nodes,
 		std::vector<size_t>& prim_indices, const std::vector<BVHPrimitiveBounds>& prim_bounds, BVHBuilderSettings buildercfg);
 
 	__device__ void intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload);
@@ -74,6 +74,7 @@ private:
 
 public:
 
+	size_t m_mesh_idx = 0;
 	Bounds3f m_BoundingBox;//Must be in World space
 	Bounds3f m_Original_bounding_box;//Must be in World space
 	size_t m_BVHNodesCount = 0;

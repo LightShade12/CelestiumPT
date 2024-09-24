@@ -45,11 +45,11 @@ void BLASBuilder::build(HostScene* hscene)
 	BLAS::BVHBuilderSettings cfg;
 	cfg.m_TargetLeafPrimitivesCount = 6;
 
-	for (int meshidx = 0; meshidx < dscene->DeviceMeshes.size(); meshidx++) {
+	for (size_t meshidx = 0; meshidx < dscene->DeviceMeshes.size(); meshidx++) {
 		DeviceMesh* dmesh = thrust::raw_pointer_cast(&(dscene->DeviceMeshes[meshidx]));
 		std::string name = dmesh->name;
-		fprintf(stderr, "%d> BLAS mesh: %s\n", meshidx, name.c_str());
-		BLAS blas(dmesh, read_prims, hnodes, prim_indices, prim_bounds, cfg);//local space build
+		fprintf(stderr, "%zu> BLAS mesh: %s\n", meshidx, name.c_str());
+		BLAS blas(dmesh, meshidx, read_prims, hnodes, prim_indices, prim_bounds, cfg);//local space build
 
 		Mat4 d_inv_mat = dmesh->inverseModelMatrix;
 
@@ -59,7 +59,7 @@ void BLASBuilder::build(HostScene* hscene)
 		blas.m_Original_bounding_box = blas.m_BoundingBox;
 
 		dscene->DeviceBLASes.push_back(blas);
-		dmesh->BLAS_idx = (dscene->DeviceBLASes.size() - 1);
+		dmesh->BLAS_idx = (meshidx);
 	}
 	dscene->DeviceBVHNodes = hnodes;
 	dscene->DeviceBVHTriangleIndices = prim_indices;

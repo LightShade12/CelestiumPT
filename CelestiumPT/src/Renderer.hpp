@@ -26,6 +26,7 @@ public:
 	GLuint getPositionsTargetTextureName() const;
 	GLuint getGASDebugTargetTextureName() const;
 	GLuint getUVsDebugTargetTextureName() const;
+	GLuint getObjectIDDebugTargetTextureName() const;
 	GLuint getBarycentricsDebugTargetTextureName() const;
 
 	void setCamera(int idx);

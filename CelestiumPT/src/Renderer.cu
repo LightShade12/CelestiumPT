@@ -101,6 +101,8 @@ struct CelestiumPT_API
 	FrameBuffer GASDebugRenderBuffer;
 	FrameBuffer UVsDebugRenderBuffer;
 	FrameBuffer BarycentricsDebugRenderBuffer;
+	FrameBuffer ObjectIDDebugRenderBuffer;
+	FrameBuffer ObjectIDRenderBuffer;
 	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
 
@@ -131,6 +133,8 @@ void Renderer::resizeResolution(int width, int height)
 	//m_CelestiumPTResourceAPI->VelocityRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->UVsDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->ObjectIDDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
@@ -156,6 +160,10 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.UV_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bary_debug_render_surface_object));
+	m_CelestiumPTResourceAPI->ObjectIDDebugRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_debug_render_surface_object));
+	m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_render_surface_object));
 	//m_CelestiumPTResourceAPI->VelocityRenderBuffer.beginRender(
 	//	&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
 
@@ -189,6 +197,10 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.GAS_debug_render_surface_object));
+	m_CelestiumPTResourceAPI->ObjectIDDebugRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_debug_render_surface_object));
+	m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_render_surface_object));
 }
 
 void Renderer::clearAccumulation()
@@ -226,6 +238,11 @@ GLuint Renderer::getUVsDebugTargetTextureName() const
 	return m_CelestiumPTResourceAPI->UVsDebugRenderBuffer.m_RenderTargetTextureName;
 }
 
+GLuint Renderer::getObjectIDDebugTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->ObjectIDDebugRenderBuffer.m_RenderTargetTextureName;
+}
+
 GLuint Renderer::getBarycentricsDebugTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.m_RenderTargetTextureName;
@@ -247,8 +264,9 @@ IntegratorSettings* Renderer::getIntegratorSettings()
 
 Renderer::~Renderer()
 {
-	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.active_camera);
-	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);
+	//cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.active_camera);
+	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);//TODO: non critical ownership issues with devicescene
 	delete m_CudaResourceAPI;
+	m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras.clear();
 	delete m_CelestiumPTResourceAPI;
 }

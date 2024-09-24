@@ -1,5 +1,6 @@
 #include "Triangle.cuh"
 
+//TODO:lookup docs
 __device__ float3 sampleUniformTriangle(float2 u)
 {
 	float2 bary;

@@ -80,10 +80,11 @@ float3 BLAS::get_Absolute_Extent_shallow(const thrust::universal_vector<Triangle
 	return extent;
 };
 
-BLAS::BLAS(DeviceMesh* mesh, const thrust::universal_vector<Triangle>& prims, std::vector<BVHNode>& nodes,
+BLAS::BLAS(DeviceMesh* mesh, size_t mesh_idx, const thrust::universal_vector<Triangle>& prims, std::vector<BVHNode>& nodes,
 	std::vector<size_t>& prim_indices, const std::vector<BVHPrimitiveBounds>& prim_bounds, BVHBuilderSettings buildercfg)
 {
 	m_MeshLink = mesh;
+	m_mesh_idx = mesh_idx;
 	size_t prim_start_idx = mesh->triangle_offset_idx;
 	size_t prim_end_idx = prim_start_idx + mesh->tri_count;
 	std::vector<BVHNode> bvhnodes;
@@ -466,6 +467,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 							&(globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsBuffer[primitive->LightIdx]);
 						////printf("Hit light");
 					}
+					closest_hitpayload->object_idx = m_mesh_idx;
 					closest_hitpayload->invModelMatrix = invModelMatrix;
 					closest_hitpayload->hit_distance = workinghitpayload.hit_distance;
 					closest_hitpayload->triangle_idx = workinghitpayload.triangle_idx;
