@@ -169,13 +169,11 @@ __device__ bool TLAS::intersectP(const IntegratorGlobals& globals, const Ray& ra
 
 	bool hit = false;
 
-	while (stackPtr > 0) {
+	while (stackPtr > 0 && !hit) {
 		stackTopNode = &(scene_data->DeviceTLASNodesBuffer[nodeIdxStack[--stackPtr]]);
 
 		//custom ray interval culling
 		//if (!(ray.interval.surrounds(current_node_hitdist)))continue;//TODO: can put this in triangle looping part to get inner clipping working
-
-		//skip nodes farther than closest triangle; redundant: see the ordered traversal code
 
 		//if interior
 		if (!stackTopNode->isleaf())
