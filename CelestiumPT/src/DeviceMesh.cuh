@@ -9,7 +9,10 @@ public:
 
 	char name[32];
 	long int BLAS_idx = -1;
+
 	int triangle_offset_idx = -1;
 	size_t tri_count = 0;
-	Mat4 inverseModelMatrix;//TODO: store inv transform instead
+
+	Mat4 modelMatrix, prev_modelMatrix;
+	Mat4 inverseModelMatrix;
 };

@@ -16,9 +16,13 @@ public:
 	glm::mat4 getTransform() const {
 		return modelMatrix;
 	};
+	glm::mat4 getInverseTransform() const {
+		return invModelMatrix;
+	};
 
 	void setTransform(glm::mat4 transform) {
-		modelMatrix = (transform);
+		modelMatrix = transform;
+		invModelMatrix = glm::inverse(modelMatrix);
 	};
 public:
 	std::string name;
@@ -26,5 +30,7 @@ public:
 	//TODO: guarded access to sensitive data modification
 	int triangle_offset_idx = 1;
 	size_t tri_count = 0;
+
 	glm::mat4 modelMatrix{};
+	glm::mat4 invModelMatrix{};
 };

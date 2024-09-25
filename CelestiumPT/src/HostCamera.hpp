@@ -20,26 +20,22 @@ public:
 		return m_view;
 	}
 
-	void setTransform(glm::mat4 mat) {
-		m_transform = mat;
-	}
-
-	void setView(glm::mat4 mat) {
-		m_view = mat;
-	}
-
 	glm::mat4 getProjection() const {
 		return m_projection;
 	}
+
 	glm::mat4 getInvProjection() const {
 		return m_invProjection;
 	}
 
+	void setTransform(glm::mat4 mat) {
+		m_transform = mat;
+		m_view = glm::inverse(m_transform);
+	}
+
 	void setProjection(glm::mat4 mat) {
 		m_projection = mat;
-	}
-	void setInvProjection(glm::mat4 mat) {
-		m_invProjection = mat;
+		m_invProjection = glm::inverse(m_projection);
 	}
 
 	float FOV_y_radians = glm::radians(60.f);

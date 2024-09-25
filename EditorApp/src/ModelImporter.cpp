@@ -62,8 +62,6 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 				glm::vec4(0, 0, 0, 0)
 			)
 		);
-		glm::mat4 tr = (hcam.getTransform());
-		hcam.setView(glm::inverse(tr));
 		scene_object->addCamera(hcam);
 	}
 
@@ -264,7 +262,7 @@ bool ModelImporter::parseCamera(tinygltf::Node camera_node)
 {
 	tinygltf::Camera gltf_camera = m_SceneModel.cameras[camera_node.camera];
 	printf("\nfound a camera: %s\n", gltf_camera.name.c_str());
-	glm::vec3 trans = { camera_node.translation[0] ,camera_node.translation[1] ,camera_node.translation[2] };
+
 	HostCamera hcam;
 
 	hcam.FOV_y_radians = gltf_camera.perspective.yfov;
@@ -276,9 +274,6 @@ bool ModelImporter::parseCamera(tinygltf::Node camera_node)
 		0, 0, 0, 1
 	);
 
-	//if (camera_node.translation.size() > 0) {
-	//	viewMatrix[3] = glm::vec4(camera_node.translation[0], camera_node.translation[1], camera_node.translation[2], 1);
-	//}
 	if (camera_node.rotation.size() > 0) {
 		glm::quat quaternion = glm::quat(camera_node.rotation[3], camera_node.rotation[0], camera_node.rotation[1], camera_node.rotation[2]);
 		glm::mat4 rotmat = glm::toMat4(quaternion);

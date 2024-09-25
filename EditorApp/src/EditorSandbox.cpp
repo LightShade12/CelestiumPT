@@ -26,7 +26,7 @@ void EditorSandbox::initialise()
 	//m_HostSceneHandle->LogStatus();
 
 	if (m_HostSceneHandle->getMeshesCount() > 0)
-		m_selected_mesh = Mesh(m_HostSceneHandle->getMesh(m_HostSceneHandle->getMeshesCount() - 1));
+		m_selected_mesh = Mesh(m_HostSceneHandle->getMesh(0));
 
 	for (size_t obj_idx = 0; obj_idx < m_HostSceneHandle->getMeshesCount(); obj_idx++) {
 		m_Meshes.push_back(Mesh(m_HostSceneHandle->getMesh(obj_idx)));
@@ -105,10 +105,8 @@ void EditorSandbox::onUpdate(float delta)
 			glm::vec4(m_Camera.forward, 0),
 			glm::vec4(m_Camera.position, 1)
 		);
-		glm::mat4 view = glm::inverse(inv_view);
 
 		m_Camera.host_camera_handle->setTransform(inv_view);
-		m_Camera.host_camera_handle->setView(view);
 		m_Camera.host_camera_handle->updateDevice();
 		m_Renderer.clearAccumulation();
 	};

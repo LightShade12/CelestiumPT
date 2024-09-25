@@ -30,13 +30,8 @@ struct Camera {
 	};
 
 	void recalculateProjection() {
-		//printf("Recalculaed proejction\n");
-		host_camera_handle->setProjection(glm::perspectiveFovLH(fovYrad, float(m_width), float(m_height), 1.f, 100.f));
-		glm::mat4 invmat = glm::inverse(host_camera_handle->getProjection());
-		host_camera_handle->setInvProjection(invmat);
-
-		//print_matrix(host_camera_handle->getProjection());
-		//print_matrix(host_camera_handle->getInvProjection());
+		host_camera_handle->setProjection(
+			glm::perspectiveFovLH(fovYrad, float(m_width), float(m_height), 1.f, 100.f));
 	}
 public:
 	int m_width = 0, m_height = 0;
