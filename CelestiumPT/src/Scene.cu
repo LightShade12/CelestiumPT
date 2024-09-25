@@ -79,6 +79,7 @@ void HostScene::addCamera(HostCamera camera)
 	DeviceCamera dcam;
 	dcam.FOV_y_radians = camera.FOV_y_radians;
 	dcam.invViewMatrix = Mat4(camera.m_transform);
+	dcam.prev_viewMatrix = dcam.invViewMatrix.inverse();
 
 	m_DeviceScene->DeviceCameras.push_back(dcam);
 }

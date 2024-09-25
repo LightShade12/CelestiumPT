@@ -25,6 +25,7 @@ public:
 	GLuint getNormalsTargetTextureName() const;
 	GLuint getPositionsTargetTextureName() const;
 	GLuint getLocalPositionsTargetTextureName() const;
+	GLuint getVelocityTargetTextureName() const;
 	GLuint getGASDebugTargetTextureName() const;
 	GLuint getUVsDebugTargetTextureName() const;
 	GLuint getObjectIDDebugTargetTextureName() const;

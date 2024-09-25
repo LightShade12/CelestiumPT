@@ -27,8 +27,8 @@ void HostCamera::updateDevice()
 		Mat4 projmat(m_projection);
 		Mat4 invprojmat(m_invProjection);
 
-		m_device_camera->prev_projectionMatrix = m_device_camera->projectionMatrix;
-		m_device_camera->prev_viewMatrix = m_device_camera->viewMatrix;
+		//m_device_camera->prev_projectionMatrix = m_device_camera->projectionMatrix;
+		//m_device_camera->prev_viewMatrix = m_device_camera->viewMatrix;
 
 		m_device_camera->invViewMatrix = invviewmat;
 		m_device_camera->viewMatrix = viewmat;
@@ -36,6 +36,14 @@ void HostCamera::updateDevice()
 		m_device_camera->invProjectionMatrix = invprojmat;
 
 		m_device_camera->FOV_y_radians = FOV_y_radians;
+	}
+}
+
+void HostCamera::updateCamera()
+{
+	if (m_device_camera != nullptr) {
+		m_device_camera->prev_projectionMatrix = m_device_camera->projectionMatrix;
+		m_device_camera->prev_viewMatrix = m_device_camera->viewMatrix;
 	}
 }
 

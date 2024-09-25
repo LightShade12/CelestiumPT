@@ -13,6 +13,8 @@ public:
 	//apply/construct matrix and send off to device
 	void updateDevice();
 
+	void updateCamera();//TODO: proper per frame syncing
+
 	glm::mat4 getTransform() const {
 		return m_transform;
 	}

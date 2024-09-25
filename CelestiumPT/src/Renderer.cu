@@ -104,6 +104,7 @@ struct CelestiumPT_API
 	FrameBuffer BarycentricsDebugRenderBuffer;
 	FrameBuffer ObjectIDDebugRenderBuffer;
 	FrameBuffer ObjectIDRenderBuffer;
+	FrameBuffer VelocityRenderBuffer;
 	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
 
@@ -137,6 +138,7 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->ObjectIDDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->VelocityRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
@@ -168,6 +170,8 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_render_surface_object));
+	m_CelestiumPTResourceAPI->VelocityRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
 	//m_CelestiumPTResourceAPI->VelocityRenderBuffer.beginRender(
 	//	&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
 
@@ -207,6 +211,8 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_render_surface_object));
+	m_CelestiumPTResourceAPI->VelocityRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
 }
 
 void Renderer::clearAccumulation()
@@ -237,6 +243,11 @@ GLuint Renderer::getPositionsTargetTextureName() const
 GLuint Renderer::getLocalPositionsTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->LocalPositionsRenderBuffer.m_RenderTargetTextureName;
+}
+
+GLuint Renderer::getVelocityTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->VelocityRenderBuffer.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getGASDebugTargetTextureName() const

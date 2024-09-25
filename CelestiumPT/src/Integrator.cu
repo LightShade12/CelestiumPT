@@ -1,6 +1,7 @@
 #include "Integrator.cuh"
 #include "LightSampler.cuh"
 #include "SceneGeometry.cuh"
+#include "DeviceMesh.cuh"
 #include "DeviceCamera.cuh"
 #include "Storage.cuh"
 #include "RayStages.cuh"
@@ -58,14 +59,54 @@ __host__ void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& gl
 __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals) {
 }
 
-__device__ void computeVelocity(const IntegratorGlobals& globals, float2 c_uv) {
+__device__ void computeVelocity(const IntegratorGlobals& globals, float2 c_uv, int2 ppixel) {
+	//float2 ppixel = { c_uv.x * globals.FrameBuffer.resolution.x ,
+	//	c_uv.y * globals.FrameBuffer.resolution.y };
 
+	float4 c_lpos = surf2Dread<float4>(globals.FrameBuffer.local_positions_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	float4 c_objID = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+
+	float3 l_pos = make_float3(c_lpos);
+	float objID = c_objID.x;
+
+	if (objID < 0) {
+		surf2Dwrite(make_float4(0, 0, 0, 1),
+			globals.FrameBuffer.velocity_render_surface_object,
+			ppixel.x * (int)sizeof(float4), ppixel.y);
+		return;
+	}
+
+	Mat4 c_VP = globals.SceneDescriptor.active_camera->projectionMatrix * globals.SceneDescriptor.active_camera->viewMatrix;
+	Mat4 p_VP = globals.SceneDescriptor.active_camera->prev_projectionMatrix *
+		globals.SceneDescriptor.active_camera->prev_viewMatrix;
+	Mat4 c_M = globals.SceneDescriptor.device_geometry_aggregate->DeviceMeshesBuffer[(int)objID].modelMatrix;
+	Mat4 p_M = globals.SceneDescriptor.device_geometry_aggregate->DeviceMeshesBuffer[(int)objID].prev_modelMatrix;
+
+	float4 c_inpos = c_VP * c_M * make_float4(l_pos, 1);//clipspace
+	float4 p_inpos = p_VP * p_M * make_float4(l_pos, 1);//clipspace
+
+	float3 c_ndc = make_float3(c_inpos) / c_inpos.w;
+	float3 p_ndc = make_float3(p_inpos) / p_inpos.w;
+
+	float2 vel = make_float2(c_ndc) - make_float2(p_ndc);
+
+	float3 velcol = make_float3(0);
+	velcol += (vel.x > 0) ? make_float3(vel.x, 0, 0) : make_float3(0, fabsf(vel.x), fabsf(vel.x));
+	velcol += (vel.y > 0) ? make_float3(0, vel.y, 0) : make_float3(fabsf(vel.y), 0, fabsf(vel.y));
+
+	surf2Dwrite(make_float4(velcol, 1),
+		globals.FrameBuffer.velocity_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
 }
 
 __global__ void renderKernel(IntegratorGlobals globals)
 {
 	int thread_pixel_coord_x = threadIdx.x + blockIdx.x * blockDim.x;
 	int thread_pixel_coord_y = threadIdx.y + blockIdx.y * blockDim.y;
+	int2 ppixel = make_int2(thread_pixel_coord_x, thread_pixel_coord_y);
+
 	int2 frameres = globals.FrameBuffer.resolution;
 	float2 screen_uv = { (float)thread_pixel_coord_x / (float)frameres.x, (float)thread_pixel_coord_y / (float)frameres.y };
 
@@ -73,7 +114,7 @@ __global__ void renderKernel(IntegratorGlobals globals)
 
 	RGBSpectrum sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, { (float)thread_pixel_coord_x,(float)thread_pixel_coord_y });
 
-	computeVelocity(globals, screen_uv);
+	computeVelocity(globals, screen_uv, ppixel);
 
 	if (globals.IntegratorCFG.accumulate) {
 		globals.FrameBuffer.accumulation_framebuffer
@@ -229,7 +270,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += SkyShading(ray) * throughtput * 0.f;
+			light += SkyShading(ray) * throughtput;
 			break;
 		}
 

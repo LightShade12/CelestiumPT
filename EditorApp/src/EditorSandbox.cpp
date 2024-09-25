@@ -18,7 +18,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTF("../models/moving_test.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -65,7 +65,7 @@ void EditorSandbox::onUpdate(float delta)
 				updatemesh |= true;
 			}
 			if (mesh.host_mesh_handle.name == "teapot") {
-				translation.y = mesh.translation.y + (0.15 * sinf(glfwGetTime()));
+				translation.y = mesh.translation.y + (0.15 * sinf(30 * glfwGetTime()));
 				updatemesh |= true;
 			}
 
@@ -130,7 +130,7 @@ void EditorSandbox::onRender(float delta_secs)
 			if (ImGui::BeginTabItem("Rendering")) {
 				if (ImGui::CollapsingHeader("Debug")) {
 					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0");
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0");
 					if (curent_renderview == RenderView::GAS) {
 						ImGui::SliderFloat("GAS shading brightness",
 							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 0.1);
@@ -231,17 +231,26 @@ void EditorSandbox::onRender(float delta_secs)
 			else if (curent_renderview == RenderView::BARY) {
 				if (m_Renderer.getBarycentricsDebugTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getBarycentricsDebugTargetTextureName(),
-						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 			else if (curent_renderview == RenderView::OBJECTID) {
 				if (m_Renderer.getObjectIDDebugTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getObjectIDDebugTargetTextureName(),
-						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 			else if (curent_renderview == RenderView::LOCALPOSITION) {
 				if (m_Renderer.getLocalPositionsTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getLocalPositionsTargetTextureName(),
-						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::VELOCITY) {
+				if (m_Renderer.getVelocityTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getVelocityTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 
 			ImGui::BeginChild("viewport_status", ImVec2(ImGui::GetContentRegionAvail().x, 14), 0);
@@ -264,6 +273,7 @@ void EditorSandbox::onRender(float delta_secs)
 		m_Renderer.resizeResolution((int)vpdims.x, (int)vpdims.y);
 		m_GASBuilder.refresh(m_Renderer.getCurrentScene());
 		m_Renderer.renderFrame();
+		m_Camera.host_camera_handle->updateCamera();//Must happen per frame
 	}
 }
 glm::vec2 lastmousepos = { 0,0 };
