@@ -99,13 +99,16 @@ void EditorSandbox::onUpdate(float delta)
 
 	if (s_updateCam)
 	{
-		glm::mat4 view = glm::mat4(
+		glm::mat4 inv_view = glm::mat4(
 			glm::vec4(m_Camera.right, 0),
 			glm::vec4(m_Camera.up, 0),
 			glm::vec4(m_Camera.forward, 0),
 			glm::vec4(m_Camera.position, 1)
 		);
-		m_Camera.host_camera_handle->setTransform(view);
+		glm::mat4 view = glm::inverse(inv_view);
+
+		m_Camera.host_camera_handle->setTransform(inv_view);
+		m_Camera.host_camera_handle->setView(view);
 		m_Camera.host_camera_handle->updateDevice();
 		m_Renderer.clearAccumulation();
 	};
@@ -129,7 +132,7 @@ void EditorSandbox::onRender(float delta_secs)
 			if (ImGui::BeginTabItem("Rendering")) {
 				if (ImGui::CollapsingHeader("Debug")) {
 					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0");
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0");
 					if (curent_renderview == RenderView::GAS) {
 						ImGui::SliderFloat("GAS shading brightness",
 							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 0.1);
@@ -235,6 +238,11 @@ void EditorSandbox::onRender(float delta_secs)
 			else if (curent_renderview == RenderView::OBJECTID) {
 				if (m_Renderer.getObjectIDDebugTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getObjectIDDebugTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::LOCALPOSITION) {
+				if (m_Renderer.getLocalPositionsTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getLocalPositionsTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 

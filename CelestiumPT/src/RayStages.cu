@@ -28,6 +28,7 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 
 	Mat4 model_matrix = in_payload.invModelMatrix.inverse();
 	out_payload.w_pos = ray.getOrigin() + (ray.getDirection() * in_payload.hit_distance);
+	out_payload.l_pos = make_float3(in_payload.invModelMatrix * make_float4(out_payload.w_pos, 1));
 
 	out_payload.w_geo_norm = triangle.face_normal;
 

@@ -19,6 +19,7 @@ public:
 	cudaSurfaceObject_t composite_render_surface_object;
 	cudaSurfaceObject_t normals_render_surface_object;
 	cudaSurfaceObject_t positions_render_surface_object;
+	cudaSurfaceObject_t local_positions_render_surface_object;
 	cudaSurfaceObject_t GAS_debug_render_surface_object;
 	//cudaSurfaceObject_t velocity_render_surface_object;
 	cudaSurfaceObject_t albedo_render_surface_object;

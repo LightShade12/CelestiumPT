@@ -55,21 +55,34 @@ __host__ void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& gl
 	renderKernel << < block_grid_dims, thread_block_dims >> > (globals);
 };
 
+__device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals) {
+}
+
+__device__ void computeVelocity(const IntegratorGlobals& globals, float2 c_uv) {
+
+}
+
 __global__ void renderKernel(IntegratorGlobals globals)
 {
 	int thread_pixel_coord_x = threadIdx.x + blockIdx.x * blockDim.x;
 	int thread_pixel_coord_y = threadIdx.y + blockIdx.y * blockDim.y;
 	int2 frameres = globals.FrameBuffer.resolution;
+	float2 screen_uv = { (float)thread_pixel_coord_x / (float)frameres.x, (float)thread_pixel_coord_y / (float)frameres.y };
 
 	if ((thread_pixel_coord_x >= frameres.x) || (thread_pixel_coord_y >= frameres.y)) return;
 
 	RGBSpectrum sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, { (float)thread_pixel_coord_x,(float)thread_pixel_coord_y });
+
+	computeVelocity(globals, screen_uv);
 
 	if (globals.IntegratorCFG.accumulate) {
 		globals.FrameBuffer.accumulation_framebuffer
 			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] += make_float3(sampled_radiance);
 		sampled_radiance = globals.FrameBuffer.accumulation_framebuffer
 			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] / (globals.frameidx);
+	}
+	else if (globals.IntegratorCFG.temporal_accumulation) {
+		sampled_radiance = temporalAccumulation(globals);
 	}
 
 	float4 fragcolor = { sampled_radiance.r,sampled_radiance.g,sampled_radiance.b, 1 };
@@ -143,6 +156,9 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel
 	surf2Dwrite(make_float4(si.w_pos, 1),
 		globals.FrameBuffer.positions_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(si.l_pos, 1),
+		globals.FrameBuffer.local_positions_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(si.w_shading_norm, 1),
 		globals.FrameBuffer.normals_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
@@ -153,7 +169,7 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel
 		globals.FrameBuffer.UV_debug_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	uint32_t obj_id_debug = si.object_idx;
-	float3 obj_id_color = make_float3(Samplers::get2D_PCGHash(obj_id_debug), Samplers::get1D_PCGHash(obj_id_debug));
+	float3 obj_id_color = make_float3(Samplers::get2D_PCGHash(obj_id_debug), Samplers::get1D_PCGHash(++obj_id_debug));
 	surf2Dwrite(make_float4(obj_id_color, 1),
 		globals.FrameBuffer.objectID_debug_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
@@ -171,6 +187,9 @@ __device__ void recordGBufferAny(const IntegratorGlobals& globals, float2 ppixel
 __device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixel) {
 	surf2Dwrite(make_float4(0, 0, 0.0, 1),
 		globals.FrameBuffer.positions_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(0, 0, 0.0, 1),
+		globals.FrameBuffer.local_positions_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.normals_render_surface_object,

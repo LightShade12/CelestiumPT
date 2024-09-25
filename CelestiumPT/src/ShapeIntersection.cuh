@@ -14,8 +14,9 @@ struct ShapeIntersection {
 	int triangle_idx = -1;
 	long long int object_idx = -1;
 	float3 bary{};
-	float2 uv;
+	float2 uv{};
 	float3 w_pos{};
+	float3 l_pos{};
 	float3 w_geo_norm{};
 	float3 w_shading_norm{};
 	//Material material;
@@ -25,7 +26,8 @@ struct ShapeIntersection {
 	bool front_face = true;
 	float3 GAS_debug = make_float3(0);
 
-	__device__ inline bool hasHit() { return triangle_idx != 1; };
+public:
+	__device__ inline bool hasHit() const { return triangle_idx != 1; };
 	__device__ BSDF getBSDF(const IntegratorGlobals& globals);
 	__device__ RGBSpectrum Le(float3 w);//actually wo?
 

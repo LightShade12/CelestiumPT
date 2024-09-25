@@ -29,7 +29,8 @@ public:
 		GAS = 3,
 		UVs = 4,
 		BARY = 5,
-		OBJECTID = 6
+		OBJECTID = 6,
+		LOCALPOSITION = 7
 	};
 
 	constexpr static uint32_t minimum_viewport_height_threshold = 5;//any lower than this is prone to invalid render buffer sizes

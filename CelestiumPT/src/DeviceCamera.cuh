@@ -15,7 +15,8 @@ public:
 	__device__ Ray generateRay(int frame_width, int frame_height, float2 screen_uv);
 
 	float FOV_y_radians = 1.0472f;
-	Mat4 viewMatrix;
-	Mat4 projectionMatrix;
+	Mat4 viewMatrix, prev_viewMatrix;
+	Mat4 invViewMatrix;
+	Mat4 projectionMatrix, prev_projectionMatrix;
 	Mat4 invProjectionMatrix;
 };

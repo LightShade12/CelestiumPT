@@ -62,6 +62,8 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 				glm::vec4(0, 0, 0, 0)
 			)
 		);
+		glm::mat4 tr = (hcam.getTransform());
+		hcam.setView(glm::inverse(tr));
 		scene_object->addCamera(hcam);
 	}
 
