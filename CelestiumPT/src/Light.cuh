@@ -33,7 +33,7 @@ public:
 		area = triangle->area();
 	};
 
-	__device__ RGBSpectrum PhiPower() { return make_float3(0); }
+	__device__ RGBSpectrum PhiPower() { return RGBSpectrum(0); }
 	__device__ RGBSpectrum L(float3 p, float3 n, float3 w) const { return scale * Lemit; };
 	__device__ LightLiSample SampleLi(LightSampleContext ctx, float2 u2);
 	__device__ float PDF_Li(LightSampleContext ctx, float3 wi) { return 0; };

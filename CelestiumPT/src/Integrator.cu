@@ -17,6 +17,7 @@
 
 #include <device_launch_parameters.h>
 #define __CUDACC__
+#include <device_functions.h>
 #include <surface_indirect_functions.h>
 #include <float.h>
 
@@ -36,7 +37,7 @@ __device__ static RGBSpectrum uncharted2_filmic(RGBSpectrum v, float exposure)
 	float exposure_bias = exposure;
 	RGBSpectrum curr = uncharted2_tonemap_partial(v * exposure_bias);
 
-	RGBSpectrum W = make_float3(11.2f);
+	RGBSpectrum W(11.2f);
 	RGBSpectrum white_scale = RGBSpectrum(1.0f) / uncharted2_tonemap_partial(W);
 	return curr * white_scale;
 }
@@ -56,7 +57,86 @@ __host__ void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& gl
 	renderKernel << < block_grid_dims, thread_block_dims >> > (globals);
 };
 
-__device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals) {
+__device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_pix, int2 cur_px) {
+	float4 p_depth = surf2Dread<float4>(globals.FrameBuffer.history_depth_render_surface_object,
+		prev_pix.x * (int)sizeof(float4), prev_pix.y);
+	float p_sampled_depth = p_depth.x;
+
+	float3 p_cpos = make_float3(globals.SceneDescriptor.active_camera->prev_viewMatrix.inverse() * make_float4(0, 0, 0, 1));
+
+	//-------
+	float4 c_lpos = surf2Dread<float4>(globals.FrameBuffer.local_positions_render_surface_object,
+		cur_px.x * (int)sizeof(float4), cur_px.y);
+	float4 c_objID = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
+		cur_px.x * (int)sizeof(float4), cur_px.y);
+	float3 l_pos = make_float3(c_lpos);
+	int objID = c_objID.x;
+
+	Mat4 p_M = globals.SceneDescriptor.device_geometry_aggregate->DeviceMeshesBuffer[objID].prev_modelMatrix;
+	float3 p_wpos = make_float3(p_M * make_float4(l_pos, 1));//clipspace
+
+	float estimated_depth = length(p_cpos - p_wpos);
+
+	float rejection_threshold = 0.0001f;
+
+	if (fabsf(estimated_depth - p_sampled_depth) > rejection_threshold) {
+		return true;
+	}
+	return false;
+}
+
+__device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RGBSpectrum c_col, float2 c_uv, int2 ppixel) {
+	RGBSpectrum final_color = c_col;
+	float4 c_objID = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	int objID = c_objID.x;
+
+	//void sample/ miss/ sky
+	if (objID < 0) {
+		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
+			ppixel.x * (int)sizeof(float4), ppixel.y);
+		return final_color;
+	}
+
+	float4 c_vel = surf2Dread<float4>(globals.FrameBuffer.velocity_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+
+	//reproject
+	float2 vel = make_float2(c_vel.x, c_vel.y);//ndc 0->+-2
+	float2 pixel_offset = (vel / 2.f) * make_float2(globals.FrameBuffer.resolution);
+	int2 prev_px = ppixel - make_int2(pixel_offset);
+
+	//new fragment
+	if (prev_px.x < 0 || prev_px.x >= globals.FrameBuffer.resolution.x ||
+		prev_px.y < 0 || prev_px.y >= globals.FrameBuffer.resolution.y) {
+		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
+			ppixel.x * (int)sizeof(float4), ppixel.y);
+		return final_color;
+	}
+
+	bool prj_success = !rejectionHeuristic(globals, prev_px, ppixel);
+	prj_success = true;
+	//printf("run");
+	//disocclusion/ reproj failure
+	if (!prj_success) {
+		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
+			ppixel.x * (int)sizeof(float4), ppixel.y);
+		return final_color;
+	}
+
+	float4 hist_col = surf2Dread<float4>(globals.FrameBuffer.history_color_render_back_surface_object,
+		prev_px.x * (int)sizeof(float4), prev_px.y);
+	float hist_len = hist_col.w;
+
+	float3 cur_col = make_float3(c_col);
+	final_color = RGBSpectrum(lerp(make_float3(hist_col), cur_col, 1.f / fminf(float(hist_len + 1), 32.f)));
+
+	__syncthreads();
+
+	//feedback
+	surf2Dwrite<float4>(make_float4(final_color, hist_len + 1), globals.FrameBuffer.history_color_render_back_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	return final_color;
 }
 
 __device__ void computeVelocity(const IntegratorGlobals& globals, float2 c_uv, int2 ppixel) {
@@ -93,8 +173,9 @@ __device__ void computeVelocity(const IntegratorGlobals& globals, float2 c_uv, i
 	float2 vel = make_float2(c_ndc) - make_float2(p_ndc);
 
 	float3 velcol = make_float3(0);
-	velcol += (vel.x > 0) ? make_float3(vel.x, 0, 0) : make_float3(0, fabsf(vel.x), fabsf(vel.x));
-	velcol += (vel.y > 0) ? make_float3(0, vel.y, 0) : make_float3(fabsf(vel.y), 0, fabsf(vel.y));
+	//velcol += (vel.x > 0) ? make_float3(vel.x, 0, 0) : make_float3(0, fabsf(vel.x), fabsf(vel.x));
+	//velcol += (vel.y > 0) ? make_float3(0, vel.y, 0) : make_float3(fabsf(vel.y), 0, fabsf(vel.y));
+	velcol = make_float3(vel, 0);
 
 	surf2Dwrite(make_float4(velcol, 1),
 		globals.FrameBuffer.velocity_render_surface_object,
@@ -116,22 +197,21 @@ __global__ void renderKernel(IntegratorGlobals globals)
 
 	computeVelocity(globals, screen_uv, ppixel);
 
-	if (globals.IntegratorCFG.accumulate) {
+	if (!globals.IntegratorCFG.temporal_accumulation) {
+		sampled_radiance = temporalAccumulation(globals, sampled_radiance, screen_uv, ppixel);
+	}
+	else if (globals.IntegratorCFG.accumulate) {
 		globals.FrameBuffer.accumulation_framebuffer
 			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] += make_float3(sampled_radiance);
-		sampled_radiance = globals.FrameBuffer.accumulation_framebuffer
-			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] / (globals.frameidx);
-	}
-	else if (globals.IntegratorCFG.temporal_accumulation) {
-		sampled_radiance = temporalAccumulation(globals);
+		sampled_radiance = RGBSpectrum(globals.FrameBuffer.accumulation_framebuffer
+			[thread_pixel_coord_x + thread_pixel_coord_y * globals.FrameBuffer.resolution.x] / (globals.frameidx));
 	}
 
 	float4 fragcolor = { sampled_radiance.r,sampled_radiance.g,sampled_radiance.b, 1 };
 
 	//EOTF
-	fragcolor = make_float4(gammaCorrection(make_float3(fragcolor)), 1);
-	fragcolor = make_float4(toneMapping(make_float3(fragcolor), 8), 1);
-	//fragcolor = make_float4(sqrtf(sampled_radiance.x), sqrtf(sampled_radiance.y), sqrtf(sampled_radiance.z), 1);
+	fragcolor = make_float4(gammaCorrection(RGBSpectrum(fragcolor)), 1);
+	fragcolor = make_float4(toneMapping(RGBSpectrum(fragcolor), 8), 1);
 
 	surf2Dwrite(fragcolor, globals.FrameBuffer.composite_render_surface_object, thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
 }
@@ -190,12 +270,15 @@ __device__ RGBSpectrum SkyShading(const Ray& ray) {
 	float3 unit_direction = normalize(ray.getDirection());
 	float a = 0.5f * (unit_direction.y + 1.0);
 	//return make_float3(0.2f, 0.3f, 0.4f);
-	return (1.0f - a) * make_float3(1.0, 1.0, 1.0) + a * make_float3(0.2, 0.4, 1.0);
+	return (1.0f - a) * RGBSpectrum(1.0, 1.0, 1.0) + a * RGBSpectrum(0.2, 0.4, 1.0);
 };
 
 __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si) {
 	surf2Dwrite(make_float4(si.w_pos, 1),
 		globals.FrameBuffer.positions_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(make_float3(si.hit_distance), 1),
+		globals.FrameBuffer.depth_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(si.l_pos, 1),
 		globals.FrameBuffer.local_positions_render_surface_object,
@@ -228,6 +311,9 @@ __device__ void recordGBufferAny(const IntegratorGlobals& globals, float2 ppixel
 __device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixel) {
 	surf2Dwrite(make_float4(0, 0, 0.0, 1),
 		globals.FrameBuffer.positions_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(make_float3(FLT_MAX), 1),
+		globals.FrameBuffer.depth_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(0, 0, 0.0, 1),
 		globals.FrameBuffer.local_positions_render_surface_object,

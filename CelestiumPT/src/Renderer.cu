@@ -86,7 +86,6 @@ public:
 
 struct CudaAPI
 {
-	//cudaGraphicsResource_t m_CompositeRenderTargetTextureCudaResource;
 	dim3 m_BlockGridDimensions;
 	dim3 m_ThreadBlockDimensions;
 };
@@ -98,6 +97,7 @@ struct CelestiumPT_API
 	FrameBuffer CompositeRenderBuffer;
 	FrameBuffer NormalsRenderBuffer;
 	FrameBuffer PositionsRenderBuffer;
+	FrameBuffer DepthRenderBuffer;
 	FrameBuffer LocalPositionsRenderBuffer;
 	FrameBuffer GASDebugRenderBuffer;
 	FrameBuffer UVsDebugRenderBuffer;
@@ -105,9 +105,15 @@ struct CelestiumPT_API
 	FrameBuffer ObjectIDDebugRenderBuffer;
 	FrameBuffer ObjectIDRenderBuffer;
 	FrameBuffer VelocityRenderBuffer;
+
+	FrameBuffer HistoryColorRenderFrontBuffer;//read
+	FrameBuffer HistoryColorRenderBackBuffer;//write
+	FrameBuffer HistoryDepthRenderBuffer;
+
 	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
 
+static GLenum fboStatus = GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT;;
 Renderer::Renderer()
 {
 	m_CudaResourceAPI = new CudaAPI();
@@ -120,6 +126,26 @@ Renderer::Renderer()
 
 	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);
 	m_CurrentScene = HostScene(&(m_CelestiumPTResourceAPI->DeviceScene));
+
+	//Init BLIT attachments
+	//m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.initialize(10, 10);
+	//m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.initialize(10, 10);
+
+	//---------------
+	//glGenFramebuffers(1, &m_blit_mediator_FBO_name);
+	//// enable this frame buffer as the current frame buffer
+	//glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO_name);
+	//// attach the textures to the frame buffer
+	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+	//	m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.m_RenderTargetTextureName, 0);
+	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+	//	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.m_RenderTargetTextureName, 0);
+	//fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	//if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
+	//	printf(">[FRAMEBUFFER INCOMPLETE: 0x%x ]\n", fboStatus);
+	//	//exit(1);
+	//}
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::resizeResolution(int width, int height)
@@ -131,9 +157,12 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->NormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->DepthRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->LocalPositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
-	//m_CelestiumPTResourceAPI->VelocityRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->UVsDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->ObjectIDDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -158,6 +187,14 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.normals_render_surface_object));
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
+	m_CelestiumPTResourceAPI->DepthRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.depth_render_surface_object));
+	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_front_surface_object));
+	m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_back_surface_object));
+	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_render_surface_object));
 	m_CelestiumPTResourceAPI->LocalPositionsRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.local_positions_render_surface_object));
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.beginRender(
@@ -172,8 +209,6 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_render_surface_object));
 	m_CelestiumPTResourceAPI->VelocityRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
-	//m_CelestiumPTResourceAPI->VelocityRenderBuffer.beginRender(
-	//	&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
 
 	//prepare globals--------------------
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.frameidx = g_frameIndex;
@@ -197,10 +232,16 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.UV_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bary_debug_render_surface_object));
-	//m_CelestiumPTResourceAPI->VelocityRenderBuffer.endRender(
-	//	&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
 	m_CelestiumPTResourceAPI->NormalsRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.normals_render_surface_object));
+	m_CelestiumPTResourceAPI->DepthRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.depth_render_surface_object));
+	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_front_surface_object));
+	m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_back_surface_object));
+	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_render_surface_object));
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
 	m_CelestiumPTResourceAPI->LocalPositionsRenderBuffer.endRender(
@@ -213,6 +254,17 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_render_surface_object));
 	m_CelestiumPTResourceAPI->VelocityRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
+
+	//do blit
+	if (fboStatus == GL_FRAMEBUFFER_COMPLETE) {
+		glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO_name);
+		glReadBuffer(GL_COLOR_ATTACHMENT0); // Prepare reading from this texture
+		glDrawBuffers(1, &m_blit_target_attachment); // Prepare drawing into buffer 2.
+		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
+			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
+			GL_COLOR_BUFFER_BIT, GL_NEAREST); // This will now copy from GL_COLOR_ATTACHMENT0 to GL_COLOR_ATTACHMENT2
+		glBindFramebuffer(GL_FRAMEBUFFER, 0); // Disable FBO when done
+	}
 }
 
 void Renderer::clearAccumulation()
@@ -255,6 +307,11 @@ GLuint Renderer::getGASDebugTargetTextureName() const
 	return m_CelestiumPTResourceAPI->GASDebugRenderBuffer.m_RenderTargetTextureName;
 }
 
+GLuint Renderer::getDepthTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->DepthRenderBuffer.m_RenderTargetTextureName;
+}
+
 GLuint Renderer::getUVsDebugTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->UVsDebugRenderBuffer.m_RenderTargetTextureName;
@@ -286,7 +343,7 @@ IntegratorSettings* Renderer::getIntegratorSettings()
 
 Renderer::~Renderer()
 {
-	//cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.active_camera);
+	glDeleteFramebuffers(1, &m_blit_mediator_FBO_name);
 	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);//TODO: non critical ownership issues with devicescene
 	delete m_CudaResourceAPI;
 	m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras.clear();

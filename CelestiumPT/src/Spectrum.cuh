@@ -7,10 +7,10 @@ public:
 	__device__ __host__ RGBSpectrum() : r(0.f), g(0.f), b(0.f) {};
 	__device__ __host__ RGBSpectrum(float r, float g, float b) : r(r), g(g), b(b) {};
 
-	__device__ __host__ RGBSpectrum(float s) : r(s), g(s), b(s) {};
+	__device__ __host__ explicit RGBSpectrum(float s) : r(s), g(s), b(s) {};
 
-	__device__ __host__ RGBSpectrum(const float4& s) : r(s.x), g(s.y), b(s.z) {};
-	__device__ __host__ RGBSpectrum(float3 s) : r(s.x), g(s.y), b(s.z) {};
+	__device__ __host__ explicit RGBSpectrum(float4 s) : r(s.x), g(s.y), b(s.z) {};
+	__device__ __host__ explicit RGBSpectrum(float3 s) : r(s.x), g(s.y), b(s.z) {};
 
 	__device__ __host__ bool operator!() const
 	{

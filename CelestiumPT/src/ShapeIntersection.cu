@@ -36,7 +36,7 @@ __device__ RGBSpectrum ShapeIntersection::Le(float3 w)
 	//if(arealight!=nullptr)printf("light scale: %.3f | ", arealight->scale);
 	return (arealight != nullptr) ?
 		arealight->L(w_pos, w_geo_norm, w) :
-		make_float3(0);
+		RGBSpectrum(0);
 }
 
 __device__ Ray ShapeIntersection::spawnRay(const float3& wi) const

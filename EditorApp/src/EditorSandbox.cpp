@@ -18,7 +18,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/moving_test.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -130,7 +130,7 @@ void EditorSandbox::onRender(float delta_secs)
 			if (ImGui::BeginTabItem("Rendering")) {
 				if (ImGui::CollapsingHeader("Debug")) {
 					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0");
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0");
 					if (curent_renderview == RenderView::GAS) {
 						ImGui::SliderFloat("GAS shading brightness",
 							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 0.1);
@@ -249,6 +249,12 @@ void EditorSandbox::onRender(float delta_secs)
 			else if (curent_renderview == RenderView::VELOCITY) {
 				if (m_Renderer.getVelocityTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getVelocityTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::DEPTH) {
+				if (m_Renderer.getDepthTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getDepthTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(),
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}

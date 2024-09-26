@@ -1,7 +1,7 @@
 #include "BSDF.cuh"
 #include "samplers.cuh"
 
-__device__ float3 BSDF::f(float3 r_wo, float3 r_wi)
+__device__ RGBSpectrum BSDF::f(float3 r_wo, float3 r_wi)
 {
 	//float3 wo = tangentMatrix.inverse() * r_wo;
 	float3 wi = tangentMatrix.inverse() * r_wi;
@@ -28,14 +28,14 @@ __device__ BSDFSample BSDF::sampleBSDF(float3 r_wo, float2 u2)
 __device__ BSDFSample BSDF::sampleOpaqueDielectric(float3 wo, float2 u2)
 {
 	float3 wi = Samplers::sampleCosineWeightedHemisphere(u2);
-	float3 f = fOpaqueDielectric(wo, wi);
+	RGBSpectrum f = fOpaqueDielectric(wo, wi);
 	float pdf = pdfOpaqueDielectric(wo, wi);
 	return BSDFSample(f, wi, pdf);
 }
 
-__device__ float3 BSDF::fOpaqueDielectric(float3 wo, float3 wi)
+__device__ RGBSpectrum BSDF::fOpaqueDielectric(float3 wo, float3 wi)
 {
-	return make_float3(0.8f) / PI;
+	return (RGBSpectrum(0.8f) / PI);
 }
 
 __device__ float BSDF::pdfOpaqueDielectric(float3 wo, float3 wi)

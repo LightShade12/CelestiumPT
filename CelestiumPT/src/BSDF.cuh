@@ -1,12 +1,13 @@
 #pragma once
 
 #include "maths/matrix.cuh"
+#include "Spectrum.cuh"
 #include "maths/constants.cuh"
 
 struct BSDFSample {
 	__device__ BSDFSample() = default;
-	__device__ BSDFSample(float3 f, float3 wi, float pdf) :f(f), wi(wi), pdf(pdf) {};
-	float3 f{};
+	__device__ BSDFSample(RGBSpectrum f, float3 wi, float pdf) :f(f), wi(wi), pdf(pdf) {};
+	RGBSpectrum f{};
 	float3 wi{};
 	float pdf = 0;
 };
@@ -20,7 +21,7 @@ public:
 
 	__device__ BSDF(const Mat3& tangent_matrix) :tangentMatrix(tangent_matrix) {};
 
-	__device__ float3 f(float3 r_wo, float3 r_wi);
+	__device__ RGBSpectrum f(float3 r_wo, float3 r_wi);
 
 	__device__ float pdf(float3 r_wo, float3 r_wi);
 
@@ -28,7 +29,7 @@ public:
 
 	__device__ BSDFSample sampleOpaqueDielectric(float3 wo, float2 u2);
 
-	__device__ float3 fOpaqueDielectric(float3 wo, float3 wi);
+	__device__ RGBSpectrum fOpaqueDielectric(float3 wo, float3 wi);
 
 	__device__ float pdfOpaqueDielectric(float3 wo, float3 wi);
 
