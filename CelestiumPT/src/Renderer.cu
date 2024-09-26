@@ -113,7 +113,9 @@ struct CelestiumPT_API
 	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
 
-static GLenum fboStatus = GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT;;
+static GLenum fboStatus = GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT;
+static bool blit_fbo_init = false;
+
 Renderer::Renderer()
 {
 	m_CudaResourceAPI = new CudaAPI();
@@ -126,26 +128,6 @@ Renderer::Renderer()
 
 	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);
 	m_CurrentScene = HostScene(&(m_CelestiumPTResourceAPI->DeviceScene));
-
-	//Init BLIT attachments
-	//m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.initialize(10, 10);
-	//m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.initialize(10, 10);
-
-	//---------------
-	//glGenFramebuffers(1, &m_blit_mediator_FBO_name);
-	//// enable this frame buffer as the current frame buffer
-	//glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO_name);
-	//// attach the textures to the frame buffer
-	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-	//	m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.m_RenderTargetTextureName, 0);
-	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-	//	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.m_RenderTargetTextureName, 0);
-	//fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	//if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
-	//	printf(">[FRAMEBUFFER INCOMPLETE: 0x%x ]\n", fboStatus);
-	//	//exit(1);
-	//}
-	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::resizeResolution(int width, int height)
@@ -173,6 +155,25 @@ void Renderer::resizeResolution(int width, int height)
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
 	m_CelestiumPTResourceAPI->AccumulationFrameBuffer.resize(m_NativeRenderResolutionHeight * m_NativeRenderResolutionWidth);
+
+	//TODO: workaround for error in constructor execution
+	if (!blit_fbo_init) {
+		glGenFramebuffers(1, &m_blit_mediator_FBO_name);
+		// enable this frame buffer as the current frame buffer
+		glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO_name);
+		// attach the textures to the frame buffer
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+			m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.m_RenderTargetTextureName, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+			m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.m_RenderTargetTextureName, 0);
+		fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
+			printf(">[FRAMEBUFFER INCOMPLETE: 0x%x ]\n", fboStatus);
+			//exit(1);
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		blit_fbo_init = true;
+	}
 }
 
 static uint32_t g_frameIndex = 1;
@@ -259,7 +260,7 @@ void Renderer::renderFrame()
 	if (fboStatus == GL_FRAMEBUFFER_COMPLETE) {
 		glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO_name);
 		glReadBuffer(GL_COLOR_ATTACHMENT0); // Prepare reading from this texture
-		glDrawBuffers(1, &m_blit_target_attachment); // Prepare drawing into buffer 2.
+		glDrawBuffers(1, &m_blit_target_attachment); // Prepare drawing into buffer 1.
 		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			GL_COLOR_BUFFER_BIT, GL_NEAREST); // This will now copy from GL_COLOR_ATTACHMENT0 to GL_COLOR_ATTACHMENT2

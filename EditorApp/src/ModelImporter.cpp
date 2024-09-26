@@ -181,9 +181,9 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 		glm::vec3 emcol = glm::vec3(mat.emissiveFactor[0], mat.emissiveFactor[1], mat.emissiveFactor[2]);
 		float scale = 2;
 
-		//if (!(emcol.x == 0 && emcol.y == 0 && emcol.z == 0)) {
-		//	m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1, emcol, scale);
-		//}
+		if (!(emcol.x == 0 && emcol.y == 0 && emcol.z == 0)) {
+			m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1, emcol, scale);
+		}
 	}
 
 	//printf("\rloaded mesh:%zu/%zu", nodeIdx + 1, m_SceneModel.nodes.size());

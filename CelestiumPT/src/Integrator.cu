@@ -116,7 +116,7 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 
 	bool prj_success = !rejectionHeuristic(globals, prev_px, ppixel);
 	prj_success = true;
-	//printf("run");
+
 	//disocclusion/ reproj failure
 	if (!prj_success) {
 		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
@@ -124,14 +124,13 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 		return final_color;
 	}
 
-	float4 hist_col = surf2Dread<float4>(globals.FrameBuffer.history_color_render_back_surface_object,
+	float4 hist_col = surf2Dread<float4>(globals.FrameBuffer.history_color_render_front_surface_object,
 		prev_px.x * (int)sizeof(float4), prev_px.y);
 	float hist_len = hist_col.w;
 
+	const int MAX_ACCUMULATION_FRAMES = 16;
 	float3 cur_col = make_float3(c_col);
-	final_color = RGBSpectrum(lerp(make_float3(hist_col), cur_col, 1.f / fminf(float(hist_len + 1), 32.f)));
-
-	__syncthreads();
+	final_color = RGBSpectrum(lerp(make_float3(hist_col), cur_col, 1.f / fminf(float(hist_len + 1), MAX_ACCUMULATION_FRAMES)));
 
 	//feedback
 	surf2Dwrite<float4>(make_float4(final_color, hist_len + 1), globals.FrameBuffer.history_color_render_back_surface_object,
@@ -356,7 +355,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += SkyShading(ray) * throughtput;
+			light += SkyShading(ray) * throughtput * 0.f;
 			break;
 		}
 
