@@ -30,13 +30,12 @@ struct ShapeSample {
 	float pdf = 0;
 };
 
-
 struct Triangle {
 	Triangle(Vertex v0, Vertex v1, Vertex v2, glm::vec3 nrm);
 
-	__host__ __device__ float area();
-
-	__device__ ShapeSample sample(const ShapeSampleContext& ctx, float2 u2);
+	__host__ __device__ float area() const;
+	__device__ ShapeSample sample(const ShapeSampleContext& ctx, float2 u2) const;
+	__device__ float PDF(const ShapeSampleContext& ctx, float3 wi) const;
 
 	int LightIdx = -1;
 	Vertex vertex0, vertex1, vertex2;

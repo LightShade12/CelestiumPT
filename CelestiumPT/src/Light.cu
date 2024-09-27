@@ -9,7 +9,7 @@ __device__ LightSampleContext::LightSampleContext(const ShapeIntersection& si)
 	norm = si.w_geo_norm;
 	s_norm = si.w_shading_norm;
 }
-__device__ LightLiSample Light::SampleLi(LightSampleContext ctx, float2 u2)
+__device__ LightLiSample Light::SampleLi(LightSampleContext ctx, float2 u2) const
 {
 	ShapeSampleContext shape_ctx{};
 	ShapeSample ss = m_triangle->sample(shape_ctx, u2);
@@ -18,4 +18,9 @@ __device__ LightLiSample Light::SampleLi(LightSampleContext ctx, float2 u2)
 	RGBSpectrum Le = L(ss.p, ss.n, -wi);
 	if (!Le)return {};
 	return LightLiSample(Le, wi, ss.p, m_triangle->face_normal, ss.pdf);
+}
+
+__device__ float Light::PDF_Li(LightSampleContext ctx, float3 wi) const
+{
+	return 1.f / area;
 }

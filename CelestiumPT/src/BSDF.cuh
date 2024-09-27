@@ -21,17 +21,17 @@ public:
 
 	__device__ BSDF(const Mat3& tangent_matrix) :tangentMatrix(tangent_matrix) {};
 
-	__device__ RGBSpectrum f(float3 r_wo, float3 r_wi);
+	__device__ RGBSpectrum f(float3 r_wo, float3 r_wi) const;
 
-	__device__ float pdf(float3 r_wo, float3 r_wi);
+	__device__ float pdf(float3 r_wo, float3 r_wi) const;
 
-	__device__ BSDFSample sampleBSDF(float3 r_wo, float2 u2);
+	__device__ BSDFSample sampleBSDF(float3 r_wo, float2 u2) const;
 
-	__device__ BSDFSample sampleOpaqueDielectric(float3 wo, float2 u2);
+	__device__ BSDFSample sampleOpaqueDielectric(float3 wo, float2 u2) const;
 
-	__device__ RGBSpectrum fOpaqueDielectric(float3 wo, float3 wi);
+	__device__ RGBSpectrum fOpaqueDielectric(float3 wo, float3 wi) const;
 
-	__device__ float pdfOpaqueDielectric(float3 wo, float3 wi);
+	__device__ float pdfOpaqueDielectric(float3 wo, float3 wi) const;
 
 public:
 

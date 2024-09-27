@@ -6,6 +6,7 @@
 struct ShapeIntersection;
 
 struct LightSampleContext {
+	__device__ LightSampleContext() = default;
 	__device__ LightSampleContext(const ShapeIntersection& si);
 	float3 pos;
 	float3 norm;
@@ -33,10 +34,10 @@ public:
 		area = triangle->area();
 	};
 
-	__device__ RGBSpectrum PhiPower() { return RGBSpectrum(0); }
+	__device__ RGBSpectrum PhiPower() const { return RGBSpectrum(0); }
 	__device__ RGBSpectrum L(float3 p, float3 n, float3 w) const { return scale * Lemit; };
-	__device__ LightLiSample SampleLi(LightSampleContext ctx, float2 u2);
-	__device__ float PDF_Li(LightSampleContext ctx, float3 wi) { return 0; };
+	__device__ LightLiSample SampleLi(LightSampleContext ctx, float2 u2) const;
+	__device__ float PDF_Li(LightSampleContext ctx, float3 wi) const;//TODO:call tri pdf
 
 	//Mat4 m_transform;
 	RGBSpectrum Lemit;

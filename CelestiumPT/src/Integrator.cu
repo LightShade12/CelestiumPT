@@ -77,9 +77,9 @@ __device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_p
 
 	float estimated_depth = length(p_cpos - p_wpos);
 
-	float rejection_threshold = 0.1f;
+	float rejection_threshold = 0.08f;
 
-	if (fabsf(estimated_depth - p_sampled_depth) < rejection_threshold) {
+	if (fabsf(estimated_depth - p_sampled_depth) > rejection_threshold) {
 		return true;
 	}
 	return false;
@@ -116,7 +116,6 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 	}
 
 	bool prj_success = !rejectionHeuristic(globals, prev_px, ppixel);
-	prj_success = true;
 
 	//disocclusion/ reproj failure
 	if (!prj_success) {
@@ -203,7 +202,7 @@ __global__ void renderKernel(IntegratorGlobals globals)
 
 	computeVelocity(globals, screen_uv, ppixel);
 
-	if (globals.IntegratorCFG.temporal_accumulation) {
+	if (!globals.IntegratorCFG.temporal_accumulation) {
 		sampled_radiance = temporalAccumulation(globals, sampled_radiance, screen_uv, ppixel);
 	}
 	else if (globals.IntegratorCFG.accumulate) {
@@ -341,19 +340,44 @@ __device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixe
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 }
 
+__device__ float balanceHeuristic(int nf, float fPdf, int ng, float gPdf) {
+	return (nf * fPdf) / (nf * fPdf + ng * gPdf);
+}
+
+__device__ float powerHeuristic(int nf, float fPdf, int ng, float gPdf) {
+	float f = nf * fPdf, g = ng * gPdf;
+	return Sqr(f) / (Sqr(f) + Sqr(g));
+}
+
+__device__ static bool checkNaN(const float3& vec) {
+	return isnan(vec.x) || isnan(vec.y) || isnan(vec.z);
+}
+__device__ static bool checkINF(const float3& vec) {
+	return isinf(vec.x) || isinf(vec.y) || isinf(vec.z);
+}
+
+__device__ RGBSpectrum clampOutput(const RGBSpectrum& rgb) {
+	if ((checkNaN(make_float3(rgb))) || (checkINF(make_float3(rgb))))
+		return RGBSpectrum(0);
+	else
+		return RGBSpectrum(clamp(make_float3(rgb), 0, 1000));
+}
+
 __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
 {
 	Ray ray = in_ray;
-	bool DI = true;
+	//bool DI = false;
 	RGBSpectrum throughtput(1.f), light(0.f);
 	LightSampler light_sampler(
 		globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsBuffer,
 		globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsCount);
-
+	float p_b = 1;
+	LightSampleContext prev_ctx{};
 	ShapeIntersection payload{};
 
-	for (int bounce_depth = 0; bounce_depth <= globals.IntegratorCFG.bounces; bounce_depth++) {
+	for (int bounce_depth = 0; bounce_depth <= globals.IntegratorCFG.max_bounces; bounce_depth++) {
 		seed += bounce_depth;
+
 		payload = IntegratorPipeline::Intersect(globals, ray);
 
 		bool primary_surface = (bounce_depth == 0);
@@ -374,57 +398,69 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 
 		float3 wo = -ray.getDirection();
 
-		if (primary_surface || !DI)light += payload.Le(wo) * throughtput;
+		RGBSpectrum Le = payload.Le(wo);
+
+		if (Le) {
+			if (primary_surface)
+				light += Le * throughtput;
+			else {
+				const Light* arealight = payload.arealight;
+				float light_pdf = light_sampler.PMF(arealight) * arealight->PDF_Li(prev_ctx, ray.getDirection());
+				float dist = length(prev_ctx.pos - payload.w_pos);
+				float cosTheta_emitter = AbsDot(-ray.getDirection(), payload.w_geo_norm);
+				light_pdf = light_pdf * (1.f / cosTheta_emitter) * Sqr(dist);
+				float w_l = powerHeuristic(1, p_b, 1, light_pdf);
+				light += Le * throughtput * w_l;
+			}
+		}
 
 		//get BSDF
 		BSDF bsdf = payload.getBSDF(globals);
 
-		if (DI)
-		{
-			SampledLight sampled_light = light_sampler.sample(Samplers::get1D_PCGHash(seed));
-			//handle empty buffer
-			if (sampled_light) {
-				LightLiSample ls = sampled_light.light->SampleLi(payload, Samplers::get2D_PCGHash(seed));
-				if (ls.pdf > 0) {
-					float3 wi = ls.wi;
-					RGBSpectrum f = bsdf.f(wo, wi) * AbsDot(wi, payload.w_shading_norm);
-
-					float dist = length(payload.w_pos - ls.pLight);
-					float dist_sq = dist * dist;
-					float cosTheta_emitter = AbsDot(wi, ls.n);
-					float Li_sample_pdf = (sampled_light.p * ls.pdf) * (1 / cosTheta_emitter) * dist_sq;
-					if (f && Unoccluded(globals, payload, ls.pLight)) {
-						light += throughtput * f * ls.L / Li_sample_pdf;
-					}
-				}
-			}
-		}
-		if (false) {
-			size_t light_idx = Samplers::get1D_PCGHash(seed) * globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsCount;
-			Light light_s = globals.SceneDescriptor.device_geometry_aggregate->
-				DeviceLightsBuffer[min(light_idx, globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsCount - 1)];
-			float light_s_pdf = 1.f / globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsCount;
-			Triangle* tri = light_s.m_triangle;
-			float2 u2 = Samplers::get2D_PCGHash(seed);
-			float3 p = (u2.x * tri->vertex0.position) + (u2.y * tri->vertex1.position) + ((1 - u2.x - u2.y) * tri->vertex2.position);
-			p = make_float3(1, 3.5, -1) * 100;
-			if (Unoccluded(globals, payload, p)) {
-				light += RGBSpectrum(0.2);/// light_s_pdf;
-			}
-		}
+		RGBSpectrum Ld = SampleLd(globals, ray, payload, bsdf, light_sampler, seed);
+		light += Ld * throughtput;
 
 		BSDFSample bs = bsdf.sampleBSDF(wo, Samplers::get2D_PCGHash(seed));
-
 		float3 wi = bs.wi;
-
+		float pdf = bs.pdf;
 		RGBSpectrum fcos = bs.f * AbsDot(wi, payload.w_shading_norm);
 		if (!fcos)break;
-
-		float pdf = bs.pdf;
 		throughtput *= fcos / pdf;
+
+		p_b = bs.pdf;
+		prev_ctx = LightSampleContext(payload);
 
 		ray = payload.spawnRay(wi);
 	}
 
-	return light;
+	return clampOutput(light);
+}
+__device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& payload,
+	const BSDF& bsdf, const LightSampler& light_sampler, uint32_t& seed)
+{
+	RGBSpectrum Ld(0.f);
+	SampledLight sampled_light = light_sampler.sample(Samplers::get1D_PCGHash(seed));
+
+	//handle empty buffer
+	if (!sampled_light)return Ld;
+
+	LightLiSample ls = sampled_light.light->SampleLi(payload, Samplers::get2D_PCGHash(seed));
+
+	if (ls.pdf <= 0)return Ld;
+
+	float3 wi = ls.wi;
+	float3 wo = -ray.getDirection();
+	RGBSpectrum f = bsdf.f(wo, wi) * AbsDot(wi, payload.w_shading_norm);
+	if (!f || !Unoccluded(globals, payload, ls.pLight)) return Ld;
+
+	float dist = length(payload.w_pos - ls.pLight);
+	float dist_sq = dist * dist;
+	float cosTheta_emitter = AbsDot(wi, ls.n);
+	float Li_sample_pdf = (sampled_light.p * ls.pdf) * (1 / cosTheta_emitter) * dist_sq;
+	float p_l = Li_sample_pdf;
+	float p_b = bsdf.pdf(wo, wi);
+	float w_l = powerHeuristic(1, p_l, 1, p_b);
+
+	Ld = w_l * f * ls.L / p_l;
+	return Ld;
 };

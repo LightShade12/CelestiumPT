@@ -325,6 +325,11 @@ GLuint Renderer::getDepthTargetTextureName() const
 	return m_CelestiumPTResourceAPI->DepthRenderBuffer.m_RenderTargetTextureName;
 }
 
+GLuint Renderer::getHistoryDepthTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.m_RenderTargetTextureName;
+}
+
 GLuint Renderer::getUVsDebugTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->UVsDebugRenderBuffer.m_RenderTargetTextureName;

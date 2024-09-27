@@ -7,6 +7,8 @@
 //struct IntegratorGlobals;
 class Ray;
 class RGBSpectrum;
+class BSDF;
+class LightSampler;
 
 __global__ void renderKernel(IntegratorGlobals globals);
 
@@ -24,4 +26,7 @@ namespace IntegratorPipeline {
 
 	__device__ RGBSpectrum Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel);
 	__device__ RGBSpectrum LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel);
+
+	__device__ RGBSpectrum SampleLd(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& payload,
+		const BSDF& bsdf, const LightSampler& light_sampler, uint32_t& seed);
 }
