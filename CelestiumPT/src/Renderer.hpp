@@ -44,7 +44,8 @@ public:
 
 private:
 	GLuint m_blit_mediator_FBO_name = NULL;
-	GLenum m_blit_target_attachment = GL_COLOR_ATTACHMENT1;
+	GLenum m_blit_target0_attachment = GL_COLOR_ATTACHMENT1;
+	GLenum m_blit_target1_attachment = GL_COLOR_ATTACHMENT3;
 
 	uint32_t m_NativeRenderResolutionWidth = NULL;
 	uint32_t m_NativeRenderResolutionHeight = NULL;

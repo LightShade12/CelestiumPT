@@ -166,6 +166,10 @@ void Renderer::resizeResolution(int width, int height)
 			m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.m_RenderTargetTextureName, 0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
 			m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.m_RenderTargetTextureName, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
+			m_CelestiumPTResourceAPI->DepthRenderBuffer.m_RenderTargetTextureName, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D,
+			m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.m_RenderTargetTextureName, 0);
 		fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
 			printf(">[FRAMEBUFFER INCOMPLETE: 0x%x ]\n", fboStatus);
@@ -259,12 +263,20 @@ void Renderer::renderFrame()
 	//do blit
 	if (fboStatus == GL_FRAMEBUFFER_COMPLETE) {
 		glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO_name);
-		glReadBuffer(GL_COLOR_ATTACHMENT0); // Prepare reading from this texture
-		glDrawBuffers(1, &m_blit_target_attachment); // Prepare drawing into buffer 1.
+		//color
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		glDrawBuffers(1, &m_blit_target0_attachment);
 		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
-			GL_COLOR_BUFFER_BIT, GL_NEAREST); // This will now copy from GL_COLOR_ATTACHMENT0 to GL_COLOR_ATTACHMENT2
-		glBindFramebuffer(GL_FRAMEBUFFER, 0); // Disable FBO when done
+			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		//depth
+		glReadBuffer(GL_COLOR_ATTACHMENT2);
+		glDrawBuffers(1, &m_blit_target1_attachment);
+		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
+			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
+			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 }
 
