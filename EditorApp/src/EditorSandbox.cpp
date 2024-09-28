@@ -65,7 +65,7 @@ void EditorSandbox::onUpdate(float delta)
 				updatemesh |= true;
 			}
 			if (mesh.host_mesh_handle.name == "teapot") {
-				translation.y = mesh.translation.y + (0.15 * sinf(30 * glfwGetTime()));
+				translation.y = mesh.translation.y + (0.15 * sinf( glfwGetTime()));
 				updatemesh |= true;
 			}
 
@@ -78,7 +78,7 @@ void EditorSandbox::onUpdate(float delta)
 				glm::mat4 model = mesh.original_tranform * trans * rot_x * rot_y * rot_z * scale;
 				mesh.host_mesh_handle.setTransform(model);
 				mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
-				m_Renderer.clearAccumulation();
+				//m_Renderer.clearAccumulation();
 			}
 		}
 	}

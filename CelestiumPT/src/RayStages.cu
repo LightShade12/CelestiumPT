@@ -42,6 +42,7 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 		(triangle.vertex1.normal * out_payload.bary.y) +
 		(triangle.vertex2.normal * out_payload.bary.z)
 	);
+	out_payload.l_shading_norm = out_payload.w_shading_norm;
 
 	if (dot(
 		normalize(make_float3(model_matrix * make_float4(out_payload.w_geo_norm, 0))),

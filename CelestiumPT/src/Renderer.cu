@@ -95,7 +95,8 @@ struct CelestiumPT_API
 	DeviceScene DeviceScene;
 	IntegratorGlobals m_IntegratorGlobals;
 	FrameBuffer CompositeRenderBuffer;
-	FrameBuffer NormalsRenderBuffer;
+	FrameBuffer WorldNormalsRenderBuffer;
+	FrameBuffer LocalNormalsRenderBuffer;
 	FrameBuffer PositionsRenderBuffer;
 	FrameBuffer DepthRenderBuffer;
 	FrameBuffer LocalPositionsRenderBuffer;
@@ -109,6 +110,7 @@ struct CelestiumPT_API
 	FrameBuffer HistoryColorRenderFrontBuffer;//read
 	FrameBuffer HistoryColorRenderBackBuffer;//write
 	FrameBuffer HistoryDepthRenderBuffer;
+	FrameBuffer HistoryWorldNormalsRenderBuffer;
 
 	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
@@ -137,12 +139,14 @@ void Renderer::resizeResolution(int width, int height)
 	m_NativeRenderResolutionWidth = width;
 
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
-	m_CelestiumPTResourceAPI->NormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->WorldNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->LocalNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->DepthRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->LocalPositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->UVsDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -170,6 +174,10 @@ void Renderer::resizeResolution(int width, int height)
 			m_CelestiumPTResourceAPI->DepthRenderBuffer.m_RenderTargetTextureName, 0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D,
 			m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.m_RenderTargetTextureName, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D,
+			m_CelestiumPTResourceAPI->WorldNormalsRenderBuffer.m_RenderTargetTextureName, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D,
+			m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.m_RenderTargetTextureName, 0);
 		fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
 			printf(">[FRAMEBUFFER INCOMPLETE: 0x%x ]\n", fboStatus);
@@ -188,8 +196,10 @@ void Renderer::renderFrame()
 
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object));
-	m_CelestiumPTResourceAPI->NormalsRenderBuffer.beginRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.normals_render_surface_object));
+	m_CelestiumPTResourceAPI->WorldNormalsRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.world_normals_render_surface_object));
+	m_CelestiumPTResourceAPI->LocalNormalsRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.local_normals_render_surface_object));
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
 	m_CelestiumPTResourceAPI->DepthRenderBuffer.beginRender(
@@ -200,6 +210,8 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_back_surface_object));
 	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_render_surface_object));
+	m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_world_normals_render_surface_object));
 	m_CelestiumPTResourceAPI->LocalPositionsRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.local_positions_render_surface_object));
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.beginRender(
@@ -237,8 +249,10 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.UV_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bary_debug_render_surface_object));
-	m_CelestiumPTResourceAPI->NormalsRenderBuffer.endRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.normals_render_surface_object));
+	m_CelestiumPTResourceAPI->WorldNormalsRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.world_normals_render_surface_object));
+	m_CelestiumPTResourceAPI->LocalNormalsRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.local_normals_render_surface_object));
 	m_CelestiumPTResourceAPI->DepthRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.depth_render_surface_object));
 	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.endRender(
@@ -247,6 +261,8 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_back_surface_object));
 	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_render_surface_object));
+	m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_world_normals_render_surface_object));
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
 	m_CelestiumPTResourceAPI->LocalPositionsRenderBuffer.endRender(
@@ -260,7 +276,7 @@ void Renderer::renderFrame()
 	m_CelestiumPTResourceAPI->VelocityRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
 
-	//do blit
+	//blit
 	if (fboStatus == GL_FRAMEBUFFER_COMPLETE) {
 		glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO_name);
 		//color
@@ -272,6 +288,13 @@ void Renderer::renderFrame()
 		//depth
 		glReadBuffer(GL_COLOR_ATTACHMENT2);
 		glDrawBuffers(1, &m_blit_target1_attachment);
+		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
+			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
+			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		//normals
+		glReadBuffer(GL_COLOR_ATTACHMENT4);
+		glDrawBuffers(1, &m_blit_target2_attachment);
 		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -297,7 +320,7 @@ GLuint Renderer::getCompositeRenderTargetTextureName() const
 
 GLuint Renderer::getNormalsTargetTextureName() const
 {
-	return m_CelestiumPTResourceAPI->NormalsRenderBuffer.m_RenderTargetTextureName;
+	return m_CelestiumPTResourceAPI->WorldNormalsRenderBuffer.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getPositionsTargetTextureName() const

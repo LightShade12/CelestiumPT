@@ -18,7 +18,9 @@ struct ShapeIntersection {
 	float3 w_pos{};
 	float3 l_pos{};
 	float3 w_geo_norm{};
+
 	float3 w_shading_norm{};
+	float3 l_shading_norm{};
 	//Material material;
 	const Light* arealight = nullptr;
 	Mat4 invModelMatrix;

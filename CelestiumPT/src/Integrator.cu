@@ -67,21 +67,41 @@ __device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_p
 	//-------
 	float4 c_lpos = surf2Dread<float4>(globals.FrameBuffer.local_positions_render_surface_object,
 		cur_px.x * (int)sizeof(float4), cur_px.y);
+
 	float4 c_objID = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
 		cur_px.x * (int)sizeof(float4), cur_px.y);
 	float3 l_pos = make_float3(c_lpos);
 	int objID = c_objID.x;
 
 	Mat4 p_M = globals.SceneDescriptor.device_geometry_aggregate->DeviceMeshesBuffer[objID].prev_modelMatrix;
+
+	//-------------
 	float3 p_wpos = make_float3(p_M * make_float4(l_pos, 1));//clipspace
 
 	float estimated_depth = length(p_cpos - p_wpos);
 
-	float rejection_threshold = 0.08f;
+	float TEMP_DEPTH_REJECT_THRESHOLD = 0.01f;
 
-	if (fabsf(estimated_depth - p_sampled_depth) > rejection_threshold) {
+	if (fabsf(estimated_depth - p_sampled_depth) > (p_sampled_depth * TEMP_DEPTH_REJECT_THRESHOLD)) {
 		return true;
 	}
+	//------------
+	float4 p_wnorm = surf2Dread<float4>(globals.FrameBuffer.history_world_normals_render_surface_object,
+		prev_pix.x * (int)sizeof(float4), prev_pix.y);
+	float3 p_sampled_wnorm = normalize(make_float3(p_wnorm));
+
+	float4 c_lnorm = surf2Dread<float4>(globals.FrameBuffer.local_normals_render_surface_object,
+		prev_pix.x * (int)sizeof(float4), prev_pix.y);
+	float3 c_sampled_lnorm = make_float3(c_lnorm);
+
+	float3 estimated_wnorm = normalize(make_float3(p_M * make_float4(c_sampled_lnorm, 0)));
+
+	float TEMP_NORMALS_REJECT_THRESHOLD = fabsf(cosf(deg2rad(45)));//TODO:make consexpr
+
+	if (AbsDot(p_sampled_wnorm, estimated_wnorm) < TEMP_NORMALS_REJECT_THRESHOLD) {
+		return true;
+	}
+
 	return false;
 }
 
@@ -289,7 +309,10 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel
 		globals.FrameBuffer.local_positions_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(si.w_shading_norm, 1),
-		globals.FrameBuffer.normals_render_surface_object,
+		globals.FrameBuffer.world_normals_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(si.l_shading_norm, 1),
+		globals.FrameBuffer.local_normals_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(si.bary, 1),
 		globals.FrameBuffer.bary_debug_render_surface_object,
@@ -327,7 +350,10 @@ __device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixe
 		globals.FrameBuffer.local_positions_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(0, 0, 0, 1),
-		globals.FrameBuffer.normals_render_surface_object,
+		globals.FrameBuffer.world_normals_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(0, 0, 0, 1),
+		globals.FrameBuffer.local_normals_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.bary_debug_render_surface_object,
