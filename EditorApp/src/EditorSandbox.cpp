@@ -18,7 +18,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTF("../models/cs16_dust.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -94,7 +94,7 @@ void EditorSandbox::onUpdate(float delta)
 		//print_matrix(model);
 		m_selected_mesh.host_mesh_handle.setTransform(model);
 		m_selected_mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
-		m_Renderer.clearAccumulation();
+		//m_Renderer.clearAccumulation();
 	}
 
 	if (s_updateCam)
@@ -108,7 +108,7 @@ void EditorSandbox::onUpdate(float delta)
 
 		m_Camera.host_camera_handle->setTransform(inv_view);
 		m_Camera.host_camera_handle->updateDevice();
-		m_Renderer.clearAccumulation();
+		//m_Renderer.clearAccumulation();
 	};
 
 	s_updateCam = false;

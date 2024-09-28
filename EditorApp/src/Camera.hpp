@@ -37,7 +37,7 @@ public:
 	int m_width = 0, m_height = 0;
 	float fovYrad = 0;
 	HostCamera* host_camera_handle = nullptr;//non-owning
-	float movement_speed = 4;
+	float movement_speed = 8;
 	float rot_speed = 0.8;
 
 	glm::vec3 position;

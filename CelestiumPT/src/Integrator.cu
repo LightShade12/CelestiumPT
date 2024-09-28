@@ -80,7 +80,7 @@ __device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_p
 
 	float estimated_depth = length(p_cpos - p_wpos);
 
-	float TEMP_DEPTH_REJECT_THRESHOLD = 0.01f;
+	float TEMP_DEPTH_REJECT_THRESHOLD = 0.1f;
 
 	if (fabsf(estimated_depth - p_sampled_depth) > (p_sampled_depth * TEMP_DEPTH_REJECT_THRESHOLD)) {
 		return true;
@@ -415,7 +415,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += SkyShading(ray) * throughtput * 0.f;
+			light += SkyShading(ray) * throughtput;
 			break;
 		}
 
