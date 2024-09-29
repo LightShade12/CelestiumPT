@@ -13,12 +13,12 @@
 #include "imgui/imgui.h"
 
 bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts);
-
+//TODO: investigate deprecated cuda library include warning
 void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTF("../models/moving_test.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -65,7 +65,7 @@ void EditorSandbox::onUpdate(float delta)
 				updatemesh |= true;
 			}
 			if (mesh.host_mesh_handle.name == "teapot") {
-				translation.y = mesh.translation.y + (0.15 * sinf( glfwGetTime()));
+				translation.y = mesh.translation.y + (0.15 * sinf(glfwGetTime()));
 				updatemesh |= true;
 			}
 
@@ -78,7 +78,8 @@ void EditorSandbox::onUpdate(float delta)
 				glm::mat4 model = mesh.original_tranform * trans * rot_x * rot_y * rot_z * scale;
 				mesh.host_mesh_handle.setTransform(model);
 				mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
-				//m_Renderer.clearAccumulation();
+				if (m_Renderer.getIntegratorSettings()->accumulate && !m_Renderer.getIntegratorSettings()->temporal_accumulation)
+					m_Renderer.clearAccumulation();
 			}
 		}
 	}
@@ -94,7 +95,8 @@ void EditorSandbox::onUpdate(float delta)
 		//print_matrix(model);
 		m_selected_mesh.host_mesh_handle.setTransform(model);
 		m_selected_mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
-		//m_Renderer.clearAccumulation();
+		if (m_Renderer.getIntegratorSettings()->accumulate && !m_Renderer.getIntegratorSettings()->temporal_accumulation)
+			m_Renderer.clearAccumulation();
 	}
 
 	if (s_updateCam)
@@ -108,7 +110,8 @@ void EditorSandbox::onUpdate(float delta)
 
 		m_Camera.host_camera_handle->setTransform(inv_view);
 		m_Camera.host_camera_handle->updateDevice();
-		//m_Renderer.clearAccumulation();
+		if (m_Renderer.getIntegratorSettings()->accumulate && !m_Renderer.getIntegratorSettings()->temporal_accumulation)
+			m_Renderer.clearAccumulation();
 	};
 
 	s_updateCam = false;
@@ -147,6 +150,7 @@ void EditorSandbox::onRender(float delta_secs)
 				};
 				if (ImGui::CollapsingHeader("Pathtracing")) {
 					ImGui::Checkbox("Accumulation", &(m_Renderer.getIntegratorSettings()->accumulate));
+					ImGui::Checkbox("Temporal accumulation", &(m_Renderer.getIntegratorSettings()->temporal_accumulation));
 					ImGui::InputInt("Ray bounces", &(m_Renderer.getIntegratorSettings()->max_bounces));
 				};
 				if (ImGui::CollapsingHeader("Geometry")) {

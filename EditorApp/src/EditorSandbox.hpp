@@ -9,7 +9,7 @@
 #include <vector>
 
 struct PhsyicsSettings {
-	bool enabled = true;
+	bool enabled = false;
 };
 
 //TODO: rename; its like between a client project runtime and game procesing

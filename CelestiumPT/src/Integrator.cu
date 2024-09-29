@@ -264,7 +264,7 @@ __global__ void renderKernel(IntegratorGlobals globals)
 
 	computeVelocity(globals, screen_uv, ppixel);
 
-	if (!globals.IntegratorCFG.temporal_accumulation) {
+	if (globals.IntegratorCFG.temporal_accumulation) {
 		sampled_radiance = temporalAccumulation(globals, sampled_radiance, screen_uv, ppixel);
 	}
 	else if (globals.IntegratorCFG.accumulate) {
@@ -459,7 +459,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += SkyShading(ray) * throughtput * 0.f;
+			light += SkyShading(ray) * throughtput;
 			break;
 		}
 

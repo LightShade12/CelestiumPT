@@ -465,8 +465,10 @@ __device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 					if (primitive->LightIdx >= 0) {
 						closest_hitpayload->arealight =
 							&(globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsBuffer[primitive->LightIdx]);
-						////printf("Hit light");
 					}
+					else
+						closest_hitpayload->arealight = nullptr;
+
 					closest_hitpayload->object_idx = m_mesh_idx;
 					closest_hitpayload->invModelMatrix = invModelMatrix;
 					closest_hitpayload->hit_distance = workinghitpayload.hit_distance;
