@@ -1,6 +1,6 @@
 #include "Light.cuh"
 #include "ShapeIntersection.cuh"
-
+#include "maths/constants.cuh"
 //#include "Spectrum.cuh"
 
 __device__ LightSampleContext::LightSampleContext(const ShapeIntersection& si)
@@ -8,6 +8,10 @@ __device__ LightSampleContext::LightSampleContext(const ShapeIntersection& si)
 	pos = si.w_pos;
 	norm = si.w_geo_norm;
 	s_norm = si.w_shading_norm;
+}
+__device__ RGBSpectrum Light::PhiPower() const
+{
+	return scale * Lemit * area * PI * 2.f;
 }
 __device__ LightLiSample Light::SampleLi(LightSampleContext ctx, float2 u2) const
 {

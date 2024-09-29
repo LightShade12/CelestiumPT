@@ -17,6 +17,10 @@ public:
 		return (r == 0.f && g == 0.f && b == 0.f);
 	}
 
+	__device__ __host__ float maxComponentValue() {
+		return fmaxf(r, fmaxf(g, b));
+	}
+
 	__device__ __host__ operator bool() const
 	{
 		return (r != 0.f || g != 0.f || b != 0.f);

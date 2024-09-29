@@ -58,106 +58,92 @@ __host__ void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& gl
 };
 
 __device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_pix, int2 cur_px) {
-	float4 p_depth = surf2Dread<float4>(globals.FrameBuffer.history_depth_render_surface_object,
+	float4 c_lpos_sample = surf2Dread<float4>(globals.FrameBuffer.local_positions_render_surface_object,
+		cur_px.x * (int)sizeof(float4), cur_px.y);
+	float3 c_lpos = make_float3(c_lpos_sample);
+
+	float4 c_objID_sample = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
+		cur_px.x * (int)sizeof(float4), cur_px.y);
+	int c_objID = c_objID_sample.x;
+
+	Mat4 p_model = globals.SceneDescriptor.device_geometry_aggregate->DeviceMeshesBuffer[c_objID].prev_modelMatrix;
+
+	//DEPTH HEURISTIC-------------
+	float4 p_depth_sample = surf2Dread<float4>(globals.FrameBuffer.history_depth_render_surface_object,
 		prev_pix.x * (int)sizeof(float4), prev_pix.y);
-	float p_sampled_depth = p_depth.x;
+	float p_depth = p_depth_sample.x;
 
 	float3 p_cpos = make_float3(globals.SceneDescriptor.active_camera->prev_viewMatrix.inverse() * make_float4(0, 0, 0, 1));
+	float3 p_wpos = make_float3(p_model * make_float4(c_lpos, 1));//clipspace
 
-	//-------
-	float4 c_lpos = surf2Dread<float4>(globals.FrameBuffer.local_positions_render_surface_object,
-		cur_px.x * (int)sizeof(float4), cur_px.y);
+	float estimated_p_depth = length(p_cpos - p_wpos);
 
-	float4 c_objID = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
-		cur_px.x * (int)sizeof(float4), cur_px.y);
-	float3 l_pos = make_float3(c_lpos);
-	int objID = c_objID.x;
+	float TEMPORAL_DEPTH_REJECT_THRESHOLD = 0.045f;
 
-	Mat4 p_M = globals.SceneDescriptor.device_geometry_aggregate->DeviceMeshesBuffer[objID].prev_modelMatrix;
-
-	//-------------
-	float3 p_wpos = make_float3(p_M * make_float4(l_pos, 1));//clipspace
-
-	float estimated_depth = length(p_cpos - p_wpos);
-
-	float TEMP_DEPTH_REJECT_THRESHOLD = 0.1f;
-
-	if (fabsf(estimated_depth - p_sampled_depth) > (p_sampled_depth * TEMP_DEPTH_REJECT_THRESHOLD)) {
+	if (fabsf(estimated_p_depth - p_depth) > (p_depth * TEMPORAL_DEPTH_REJECT_THRESHOLD)) {
 		return true;
 	}
-	//------------
-	float4 p_wnorm = surf2Dread<float4>(globals.FrameBuffer.history_world_normals_render_surface_object,
+	return false;
+
+	//NORMALS HEURISTIC------------
+	float4 p_wnorm_sample = surf2Dread<float4>(globals.FrameBuffer.history_world_normals_render_surface_object,
 		prev_pix.x * (int)sizeof(float4), prev_pix.y);
-	float3 p_sampled_wnorm = normalize(make_float3(p_wnorm));
+	float3 p_wnorm = normalize(make_float3(p_wnorm_sample));
 
-	float4 c_lnorm = surf2Dread<float4>(globals.FrameBuffer.local_normals_render_surface_object,
+	float4 c_lnorm_sample = surf2Dread<float4>(globals.FrameBuffer.local_normals_render_surface_object,
 		prev_pix.x * (int)sizeof(float4), prev_pix.y);
-	float3 c_sampled_lnorm = make_float3(c_lnorm);
+	float3 c_lnorm = make_float3(c_lnorm_sample);
 
-	float3 estimated_wnorm = normalize(make_float3(p_M * make_float4(c_sampled_lnorm, 0)));
+	float3 estimated_p_wnorm = normalize(make_float3(p_model * make_float4(c_lnorm, 0)));
 
-	float TEMP_NORMALS_REJECT_THRESHOLD = fabsf(cosf(deg2rad(45)));//TODO:make consexpr
+	float TEMPORAL_NORMALS_REJECT_THRESHOLD = fabsf(cosf(deg2rad(45)));//TODO:make consexpr
 
-	if (AbsDot(p_sampled_wnorm, estimated_wnorm) < TEMP_NORMALS_REJECT_THRESHOLD) {
+	if (AbsDot(p_wnorm, estimated_p_wnorm) < TEMPORAL_NORMALS_REJECT_THRESHOLD) {
 		return true;
 	}
 
 	return false;
 }
 
-__device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RGBSpectrum c_col, float2 c_uv, int2 ppixel) {
-	RGBSpectrum final_color = c_col;
-	float4 c_objID = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
-		ppixel.x * (int)sizeof(float4), ppixel.y);
-	int objID = c_objID.x;
+__device__ float4 sampleBilinear(const IntegratorGlobals& globals, const cudaSurfaceObject_t& tex_surface, float2 fpix, bool lerp_alpha)
+{
+	//TODO:consider half pixel for centre smapling
+	// Integer pixel coordinates
+	int2 pix = make_int2(fpix);
+	int x = pix.x;
+	int y = pix.y;
 
-	//void sample/ miss/ sky
-	if (objID < 0) {
-		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
-			ppixel.x * (int)sizeof(float4), ppixel.y);
-		return final_color;
+	// Get resolution
+	int2 res = globals.FrameBuffer.resolution;
+
+	// Clamp pixel indices to be within bounds
+	int s0 = clamp(x, 0, res.x - 1);
+	int s1 = clamp(x + 1, 0, res.x - 1);
+	int t0 = clamp(y, 0, res.y - 1);
+	int t1 = clamp(y + 1, 0, res.y - 1);
+
+	// Compute fractional parts for interpolation weights
+	float ws = fpix.x - s0;
+	float wt = fpix.y - t0;
+
+	// Sample 2x2 texel neighborhood
+	float4 cp0 = surf2Dread<float4>(tex_surface, s0 * (int)sizeof(float4), t0);
+	float4 cp1 = surf2Dread<float4>(tex_surface, s1 * (int)sizeof(float4), t0);
+	float4 cp2 = surf2Dread<float4>(tex_surface, s0 * (int)sizeof(float4), t1);
+	float4 cp3 = surf2Dread<float4>(tex_surface, s1 * (int)sizeof(float4), t1);
+
+	// Perform bilinear interpolation
+	float4 tc0 = cp0 + (cp1 - cp0) * ws;
+	float4 tc1 = cp2 + (cp3 - cp2) * ws;
+	float4 fc = tc0 + (tc1 - tc0) * wt;
+
+	// Handle alpha channel based on lerp_alpha flag
+	if (!lerp_alpha) {
+		// Nearest neighbor for alpha
+		fc.w = (ws > 0.5f ? (wt > 0.5f ? cp3.w : cp1.w) : (wt > 0.5f ? cp2.w : cp0.w));
 	}
 
-	float4 c_vel = surf2Dread<float4>(globals.FrameBuffer.velocity_render_surface_object,
-		ppixel.x * (int)sizeof(float4), ppixel.y);
-
-	//reproject
-	float2 vel = make_float2(c_vel.x, c_vel.y);//ndc 0->+-2
-	//float2 pixel_offset = (vel / 2.f) * make_float2(globals.FrameBuffer.resolution);
-	float2 pixel_offset = (vel)*make_float2(globals.FrameBuffer.resolution);
-	int2 prev_px = ppixel - make_int2(pixel_offset);
-
-	//new fragment
-	if (prev_px.x < 0 || prev_px.x >= globals.FrameBuffer.resolution.x ||
-		prev_px.y < 0 || prev_px.y >= globals.FrameBuffer.resolution.y) {
-		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
-			ppixel.x * (int)sizeof(float4), ppixel.y);
-		return final_color;
-	}
-
-	bool prj_success = !rejectionHeuristic(globals, prev_px, ppixel);
-
-	//disocclusion/ reproj failure
-	if (!prj_success) {
-		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
-			ppixel.x * (int)sizeof(float4), ppixel.y);
-		return final_color;
-	}
-
-	//TODO: try to use 3x3 bilinear texel sampling
-	float4 hist_col = surf2Dread<float4>(globals.FrameBuffer.history_color_render_front_surface_object,
-		prev_px.x * (int)sizeof(float4), prev_px.y);
-	float hist_len = hist_col.w;
-
-	const int MAX_ACCUMULATION_FRAMES = 16;
-	final_color = RGBSpectrum(lerp(make_float3(hist_col), make_float3(c_col),
-		1.f / fminf(float(hist_len + 1), MAX_ACCUMULATION_FRAMES)));
-
-	//feedback
-	surf2Dwrite<float4>(make_float4(final_color, hist_len + 1),
-		globals.FrameBuffer.history_color_render_back_surface_object,
-		ppixel.x * (int)sizeof(float4), ppixel.y);
-	return final_color;
+	return fc;
 }
 
 __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, int2 ppixel) {
@@ -194,7 +180,7 @@ __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, 
 	float2 c_uv = (make_float2(c_ndc) + 1.f) / 2.f;//0->1
 	float2 p_uv = (make_float2(p_ndc) + 1.f) / 2.f;
 
-	float2 vel = (c_uv)-(p_uv);
+	float2 vel = c_uv - p_uv;
 
 	float3 velcol = make_float3(0);
 
@@ -205,6 +191,62 @@ __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, 
 	surf2Dwrite(make_float4(velcol, 1),
 		globals.FrameBuffer.velocity_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
+}
+
+__device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RGBSpectrum c_col, float2 c_uv, int2 c_pix) {
+	RGBSpectrum final_color = c_col;
+	float4 c_objID = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
+		c_pix.x * (int)sizeof(float4), c_pix.y);
+	int objID = c_objID.x;
+
+	//void sample/ miss/ sky
+	if (objID < 0) {
+		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
+			c_pix.x * (int)sizeof(float4), c_pix.y);
+		return final_color;
+	}
+
+	float4 c_vel = surf2Dread<float4>(globals.FrameBuffer.velocity_render_surface_object,
+		c_pix.x * (int)sizeof(float4), c_pix.y);
+
+	//reproject
+	float2 vel = make_float2(c_vel.x, c_vel.y);
+	float2 pixel_offset = (vel)*make_float2(globals.FrameBuffer.resolution);
+	int2 prev_px = c_pix - make_int2(pixel_offset);
+	float2 prev_pxf = make_float2(c_pix) - pixel_offset;
+
+	//new fragment
+	if (prev_px.x < 0 || prev_px.x >= globals.FrameBuffer.resolution.x ||
+		prev_px.y < 0 || prev_px.y >= globals.FrameBuffer.resolution.y) {
+		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
+			c_pix.x * (int)sizeof(float4), c_pix.y);
+		return final_color;
+	}
+
+	bool prj_success = !rejectionHeuristic(globals, prev_px, c_pix);
+
+	//disocclusion/ reproj failure
+	if (!prj_success) {
+		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
+			c_pix.x * (int)sizeof(float4), c_pix.y);
+		return final_color;
+	}
+
+	float4 hist_col = sampleBilinear(globals,
+		globals.FrameBuffer.history_color_render_front_surface_object, prev_pxf, false);
+	//float4 hist_col = surf2Dread<float4>(globals.FrameBuffer.history_color_render_front_surface_object,
+	//	prev_px.x * (int)sizeof(float4), prev_px.y);
+	float hist_len = hist_col.w;
+
+	const int MAX_ACCUMULATION_FRAMES = 16;
+	final_color = RGBSpectrum(lerp(make_float3(hist_col), make_float3(c_col),
+		1.f / fminf(float(hist_len + 1), MAX_ACCUMULATION_FRAMES)));
+
+	//feedback
+	surf2Dwrite<float4>(make_float4(final_color, hist_len + 1),
+		globals.FrameBuffer.history_color_render_back_surface_object,
+		c_pix.x * (int)sizeof(float4), c_pix.y);
+	return final_color;
 }
 
 __global__ void renderKernel(IntegratorGlobals globals)
@@ -375,6 +417,7 @@ __device__ float powerHeuristic(int nf, float fPdf, int ng, float gPdf) {
 	return Sqr(f) / (Sqr(f) + Sqr(g));
 }
 
+//TODO: move these to maths headers
 __device__ static bool checkNaN(const float3& vec) {
 	return isnan(vec.x) || isnan(vec.y) || isnan(vec.z);
 }
@@ -389,10 +432,10 @@ __device__ RGBSpectrum clampOutput(const RGBSpectrum& rgb) {
 		return RGBSpectrum(clamp(make_float3(rgb), 0, 1000));
 }
 
+//TODO: remove LiRW
 __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
 {
 	Ray ray = in_ray;
-	//bool DI = false;
 	RGBSpectrum throughtput(1.f), light(0.f);
 	LightSampler light_sampler(
 		globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsBuffer,
@@ -400,6 +443,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 	float p_b = 1;
 	LightSampleContext prev_ctx{};
 	ShapeIntersection payload{};
+	float eta_scale = 1;//TODO: look up russian roulette
 
 	for (int bounce_depth = 0; bounce_depth <= globals.IntegratorCFG.max_bounces; bounce_depth++) {
 		seed += bounce_depth;
@@ -415,7 +459,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += SkyShading(ray) * throughtput;
+			light += SkyShading(ray) * throughtput * 0.f;
 			break;
 		}
 
@@ -440,7 +484,6 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 			}
 		}
 
-		//get BSDF
 		BSDF bsdf = payload.getBSDF(globals);
 
 		RGBSpectrum Ld = SampleLd(globals, ray, payload, bsdf, light_sampler, seed);
@@ -457,6 +500,14 @@ __device__ RGBSpectrum IntegratorPipeline::LiRandomWalk(const IntegratorGlobals&
 		prev_ctx = LightSampleContext(payload);
 
 		ray = payload.spawnRay(wi);
+
+		RGBSpectrum RR_beta = throughtput * eta_scale;
+		if (RR_beta.maxComponentValue() < 1 && bounce_depth > 1) {
+			float q = fmaxf(0.f, 1.f - RR_beta.maxComponentValue());
+			if (Samplers::get1D_PCGHash(seed) < q)
+				break;
+			throughtput /= 1 - q;
+		}
 	}
 
 	return clampOutput(light);

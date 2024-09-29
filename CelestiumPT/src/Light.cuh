@@ -34,7 +34,7 @@ public:
 		area = triangle->area();
 	};
 
-	__device__ RGBSpectrum PhiPower() const { return RGBSpectrum(0); }
+	__device__ RGBSpectrum PhiPower() const;
 	__device__ RGBSpectrum L(float3 p, float3 n, float3 w) const { return scale * Lemit; };
 	__device__ LightLiSample SampleLi(LightSampleContext ctx, float2 u2) const;
 	__device__ float PDF_Li(LightSampleContext ctx, float3 wi) const;//TODO:call tri pdf
