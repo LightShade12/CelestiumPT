@@ -1,5 +1,12 @@
 #include "BSDF.cuh"
+#include "DeviceMaterial.cuh"
 #include "samplers.cuh"
+
+BSDF::BSDF(const Mat3& tangent_matrix, const DeviceMaterial& material)
+{
+	tangentMatrix = tangent_matrix;
+	albedo_factor = material.albedo_color_factor;
+}
 
 __device__ RGBSpectrum BSDF::f(float3 r_wo, float3 r_wi) const
 {
@@ -35,7 +42,7 @@ __device__ BSDFSample BSDF::sampleOpaqueDielectric(float3 wo, float2 u2) const
 
 __device__ RGBSpectrum BSDF::fOpaqueDielectric(float3 wo, float3 wi) const
 {
-	return (RGBSpectrum(0.8f) / PI);
+	return (albedo_factor / PI);
 }
 
 __device__ float BSDF::pdfOpaqueDielectric(float3 wo, float3 wi) const

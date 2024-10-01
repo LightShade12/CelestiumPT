@@ -1,7 +1,15 @@
 #include "Light.cuh"
 #include "ShapeIntersection.cuh"
 #include "maths/constants.cuh"
-//#include "Spectrum.cuh"
+#include "Ray.cuh"
+
+__device__ RGBSpectrum SkyShading(const Ray& ray) {
+	//return make_float3(0);
+	float3 unit_direction = normalize(ray.getDirection());
+	float a = 0.5f * (unit_direction.y + 1.0);
+	//return make_float3(0.2f, 0.3f, 0.4f);
+	return (1.0f - a) * RGBSpectrum(1.0, 1.0, 1.0) + a * RGBSpectrum(0.2, 0.4, 1.0);
+};
 
 __device__ LightSampleContext::LightSampleContext(const ShapeIntersection& si)
 {

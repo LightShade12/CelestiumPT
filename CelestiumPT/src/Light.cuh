@@ -1,9 +1,10 @@
 #pragma once
 #include "Triangle.cuh"
-#include "maths/matrix.cuh"
+//#include "maths/matrix.cuh"
 #include "Spectrum.cuh"
 
 struct ShapeIntersection;
+class Ray;
 
 struct LightSampleContext {
 	__device__ LightSampleContext() = default;
@@ -23,6 +24,15 @@ struct LightLiSample {
 	float pdf = 0;
 	float3 pLight{};//TODO: maybe consider SurfaceInteraction struct
 	float3 n;//i think geo
+};
+
+class InfiniteLight {
+public:
+	__host__ __device__ InfiniteLight() { Lemit = { 0.4,0.7,1.f }; scale = 1.f; };
+	__host__ __device__ InfiniteLight(float3 color, float power) : Lemit(color), scale(power) {};
+	__device__ RGBSpectrum Le(const Ray& ray) const { return scale * Lemit; };
+	RGBSpectrum Lemit;
+	float scale = 1;
 };
 
 class Light {

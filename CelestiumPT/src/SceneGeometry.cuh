@@ -1,15 +1,16 @@
 #pragma once
-
-//#include "ShapeIntersection.cuh"
+//TODO:This file is stupid
+#include "Light.cuh"
 #include "acceleration_structure/GAS.cuh"
 
-class Light;
+//class Light;
 class DeviceMesh;
 class Ray;
 struct Triangle;
 struct BVHNode;
 class BLAS;
 class TLASNode;
+struct DeviceMaterial;
 
 //Raw Buffer Data
 struct SceneGeometry {
@@ -17,6 +18,7 @@ struct SceneGeometry {
 	//__device__ bool intersectP(const Ray& ray) { return false; };
 
 	GAS GAS_structure;
+	InfiniteLight SkyLight;
 
 	Light* DeviceLightsBuffer = nullptr;
 	size_t DeviceLightsCount = 0;
@@ -35,6 +37,9 @@ struct SceneGeometry {
 
 	DeviceMesh* DeviceMeshesBuffer = nullptr;
 	size_t DeviceMeshesCount = 0;
+
+	DeviceMaterial* DeviceMaterialBuffer = nullptr;
+	size_t DeviceMaterialsCount = 0;
 
 	Triangle* DeviceTrianglesBuffer = nullptr;
 	size_t DeviceTrianglesCount = 0;

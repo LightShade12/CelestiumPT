@@ -28,3 +28,23 @@ __device__ bool refract(const float3& wi, float3 normal, float ior, float3& wt)
 	wt = (-1.f * wi) / ior + (cosTheta / ior - cosTheta_t) * normal;
 	return true;
 }
+
+__device__ bool checkNaN(const float3& vec)
+{
+	return isnan(vec.x) || isnan(vec.y) || isnan(vec.z);
+}
+
+__device__ bool checkINF(const float3& vec)
+{
+	return isinf(vec.x) || isinf(vec.y) || isinf(vec.z);
+}
+
+__device__ float3 log2f(const float3 a)
+{
+	return make_float3(log2f(a.x), log2f(a.y), log2f(a.z));
+}
+
+__device__ float3 powf(const float3 a, const float3 b)
+{
+	return make_float3(powf(a.x, b.x), powf(a.y, b.y), powf(a.z, b.z));
+}

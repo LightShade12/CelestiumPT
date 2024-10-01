@@ -15,8 +15,8 @@ __device__ float3 sampleUniformTriangle(float2 u)
 	return { bary.x, bary.y, 1 - bary.x - bary.y };
 }
 
-Triangle::Triangle(Vertex v0, Vertex v1, Vertex v2, glm::vec3 nrm) :vertex0(v0), vertex1(v1), vertex2(v2),
-face_normal(make_float3(nrm.x, nrm.y, nrm.z))
+Triangle::Triangle(Vertex v0, Vertex v1, Vertex v2, glm::vec3 nrm, int matidx) :vertex0(v0), vertex1(v1), vertex2(v2),
+face_normal(make_float3(nrm.x, nrm.y, nrm.z)), mat_idx(matidx)
 {
 	centroid = (vertex0.position + vertex1.position + vertex2.position) / 3;
 }

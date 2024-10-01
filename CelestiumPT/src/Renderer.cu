@@ -94,23 +94,29 @@ struct CelestiumPT_API
 {
 	DeviceScene DeviceScene;
 	IntegratorGlobals m_IntegratorGlobals;
-	FrameBuffer CompositeRenderBuffer;
-	FrameBuffer WorldNormalsRenderBuffer;
-	FrameBuffer LocalNormalsRenderBuffer;
-	FrameBuffer PositionsRenderBuffer;
-	FrameBuffer DepthRenderBuffer;
-	FrameBuffer LocalPositionsRenderBuffer;
-	FrameBuffer GASDebugRenderBuffer;
-	FrameBuffer UVsDebugRenderBuffer;
-	FrameBuffer BarycentricsDebugRenderBuffer;
-	FrameBuffer ObjectIDDebugRenderBuffer;
-	FrameBuffer ObjectIDRenderBuffer;
-	FrameBuffer VelocityRenderBuffer;
 
+	FrameBuffer CompositeRenderBuffer;
+
+	FrameBuffer LocalNormalsRenderBuffer;//used for normals reject
+	FrameBuffer DepthRenderBuffer;//used for rejection
+	FrameBuffer LocalPositionsRenderBuffer;//used for reproj & depth reject
+	FrameBuffer ObjectIDRenderBuffer; //used for reproj & reject
+
+	FrameBuffer VelocityRenderBuffer;//used for reproj
+
+	//history
 	FrameBuffer HistoryColorRenderFrontBuffer;//read
 	FrameBuffer HistoryColorRenderBackBuffer;//write
 	FrameBuffer HistoryDepthRenderBuffer;
 	FrameBuffer HistoryWorldNormalsRenderBuffer;
+
+	//DEBUG
+	FrameBuffer WorldNormalsRenderBuffer;//debug
+	FrameBuffer PositionsRenderBuffer;//debug
+	FrameBuffer ObjectIDDebugRenderBuffer;
+	FrameBuffer GASDebugRenderBuffer; 
+	FrameBuffer UVsDebugRenderBuffer; 
+	FrameBuffer BarycentricsDebugRenderBuffer;
 
 	thrust::device_vector<float3>AccumulationFrameBuffer;
 };
@@ -127,6 +133,8 @@ Renderer::Renderer()
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
 	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate, sizeof(SceneGeometry));
+
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate->SkyLight = InfiniteLight();
 
 	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);
 	m_CurrentScene = HostScene(&(m_CelestiumPTResourceAPI->DeviceScene));

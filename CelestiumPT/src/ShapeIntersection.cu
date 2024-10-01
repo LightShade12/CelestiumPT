@@ -1,5 +1,6 @@
 #include "ShapeIntersection.cuh"
 #include "BSDF.cuh"
+#include "DeviceMaterial.cuh"
 #include "Ray.cuh"
 #include "Spectrum.cuh"
 #include "SceneGeometry.cuh"
@@ -28,7 +29,8 @@ __device__ Mat3 getTBNMatrix(float3 ns, const Triangle& triangle)
 __device__ BSDF ShapeIntersection::getBSDF(const IntegratorGlobals& globals)
 {
 	const Triangle& triangle = globals.SceneDescriptor.device_geometry_aggregate->DeviceTrianglesBuffer[triangle_idx];
-	return BSDF(getTBNMatrix(w_shading_norm, triangle));
+	DeviceMaterial material = globals.SceneDescriptor.device_geometry_aggregate->DeviceMaterialBuffer[triangle.mat_idx];
+	return BSDF(getTBNMatrix(w_shading_norm, triangle), material);
 }
 
 __device__ RGBSpectrum ShapeIntersection::Le(float3 w)

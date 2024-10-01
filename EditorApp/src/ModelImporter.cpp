@@ -11,6 +11,8 @@ static std::string GetFilePathExtension(const std::string& FileName) {
 	return "";
 }
 
+//TODO:more coordinated loading
+
 bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 {
 	m_WorkingScene = scene_object;
@@ -20,6 +22,7 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 
 	//load textures
 	//load materials
+	loadMaterials(m_SceneModel);
 
 	for (std::string extensionname : m_SceneModel.extensionsUsed) {
 		printf("using: %s\n", extensionname.c_str());
@@ -149,7 +152,7 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 	}
 	mesh.setTransform(modelMatrix);
 
-	m_WorkingScene->AddMesh(mesh);
+	m_WorkingScene->addMesh(mesh);
 
 	//TODO: error handling
 	//Positions.size() and vertex_normals.size() must be equal!
@@ -168,21 +171,20 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 		float shn_gn_dot = dot(geo_norm, avgVertexNormal);
 		glm::vec3 geometric_normal = (shn_gn_dot < 0.0f) ? -geo_norm : geo_norm;
 
-		uint32_t mtidx = loadedMeshPrimitiveMatIdx[i / 3];
+		int mtidx = loadedMeshPrimitiveMatIdx[i / 3];
 
 		m_WorkingScene->AddTriangle(
 			loadedMeshPositions[i], loadedMeshNormals[i], loadedMeshUVs[i],
 			loadedMeshPositions[i + 1], loadedMeshNormals[i + 1], loadedMeshUVs[i + 1],
 			loadedMeshPositions[i + 2], loadedMeshNormals[i + 2], loadedMeshUVs[i + 2],
-			normalize(geometric_normal)
+			normalize(geometric_normal), mtidx
 		);
 
-		tinygltf::Material mat = m_SceneModel.materials[mtidx];
-		glm::vec3 emcol = glm::vec3(mat.emissiveFactor[0], mat.emissiveFactor[1], mat.emissiveFactor[2]);
-		float scale = 2;
+		HostMaterial mat = m_WorkingScene->getMaterial(mtidx);
 
-		if (!(emcol.x == 0 && emcol.y == 0 && emcol.z == 0)) {
-			m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1, emcol, scale);
+		if (!(mat.emission_color_factor.x == 0 && mat.emission_color_factor.y == 0 && mat.emission_color_factor.z == 0)) {
+			m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1,
+				mat.emission_color_factor, mat.emission_strength);
 		}
 	}
 
@@ -255,7 +257,41 @@ bool ModelImporter::extractVertices(tinygltf::Mesh mesh,
 
 bool ModelImporter::loadMaterials(const tinygltf::Model& model)
 {
-	return false;
+	printf("detected materials count in file: %zu\n", model.materials.size());
+
+	for (size_t matIdx = 0; matIdx < model.materials.size(); matIdx++)
+	{
+		tinygltf::Material gltf_material = model.materials[matIdx];
+		printf("loading material: %s\n", gltf_material.name.c_str());
+		tinygltf::PbrMetallicRoughness PBR_data = gltf_material.pbrMetallicRoughness;
+		//setName(drt_material.getNamePtr(), gltf_material.name.c_str());
+		glm::vec3 albedo_factor = glm::vec3(PBR_data.baseColorFactor[0], PBR_data.baseColorFactor[1], PBR_data.baseColorFactor[2]);//TODO: We just use RGB material albedo for now
+		glm::vec3 emission_factor = glm::vec3(gltf_material.emissiveFactor[0], gltf_material.emissiveFactor[1], gltf_material.emissiveFactor[2]);
+		float emission_strength = 0.f;
+		//if (PBR_data.baseColorTexture.index >= 0)drt_material.setAlbedoTextureIndex(model.textures[PBR_data.baseColorTexture.index].source);
+		//if (PBR_data.metallicRoughnessTexture.index >= 0)drt_material.setRoughnessTextureIndex(model.textures[PBR_data.metallicRoughnessTexture.index].source);
+		//if (gltf_material.normalTexture.index >= 0)drt_material.setNormalTextureIndex(model.textures[gltf_material.normalTexture.index].source);
+		//drt_material.setNormalMapScale(gltf_material.normalTexture.scale);
+		//if (gltf_material.emissiveTexture.index >= 0)drt_material.setEmissionTextureIndex(model.textures[gltf_material.emissiveTexture.index].source);
+		//drt_material.setMetallicity((PBR_data.metallicRoughnessTexture.index >= 0) ? 1.f : PBR_data.metallicFactor);
+		//drt_material.setRoughness((PBR_data.metallicRoughnessTexture.index >= 0) ? 1.f : PBR_data.roughnessFactor);
+
+		//if (gltf_material.extensions.find("KHR_materials_transmission") != gltf_material.extensions.end()) {
+		//	drt_material.setTransmission(gltf_material.extensions["KHR_materials_transmission"].Get("transmissionFactor").GetNumberAsDouble());
+		//};
+		//if (gltf_material.extensions.find("KHR_materials_ior") != gltf_material.extensions.end()) {
+		//	drt_material.setIOR(gltf_material.extensions["KHR_materials_ior"].Get("ior").GetNumberAsDouble());
+		//};
+		if (gltf_material.extensions.find("KHR_materials_emissive_strength") != gltf_material.extensions.end()) {
+			emission_strength = (gltf_material.extensions["KHR_materials_emissive_strength"].Get("emissiveStrength").GetNumberAsDouble());
+		};
+
+		//printToConsole("albedo texture idx: %d\n", drt_material.AlbedoTextureIndex);
+		m_WorkingScene->addMaterial(albedo_factor, emission_factor, emission_strength);
+	}
+	printf("loaded materials count: %zu \n\n", m_WorkingScene->getMaterialsCount());
+
+	return true;
 }
 
 bool ModelImporter::parseCamera(tinygltf::Node camera_node)

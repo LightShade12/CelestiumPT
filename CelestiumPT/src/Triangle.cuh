@@ -31,7 +31,7 @@ struct ShapeSample {
 };
 
 struct Triangle {
-	Triangle(Vertex v0, Vertex v1, Vertex v2, glm::vec3 nrm);
+	Triangle(Vertex v0, Vertex v1, Vertex v2, glm::vec3 nrm, int matidx);
 
 	__host__ __device__ float area() const;
 	__device__ ShapeSample sample(const ShapeSampleContext& ctx, float2 u2) const;
@@ -41,4 +41,5 @@ struct Triangle {
 	Vertex vertex0, vertex1, vertex2;
 	float3 centroid{}; //TODO: move this out of triangle
 	float3 face_normal{};
+	int mat_idx = -1;
 };

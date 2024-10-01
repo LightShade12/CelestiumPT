@@ -123,8 +123,11 @@
     <CudaCompile Include="src\BSDF.cu" />
     <CudaCompile Include="src\Camera.cu" />
     <CudaCompile Include="src\ErrorCheck.cu" />
+    <CudaCompile Include="src\Film.cu" />
     <CudaCompile Include="src\Integrator.cu" />
+    <CudaCompile Include="src\Material.cu" />
     <CudaCompile Include="src\maths\maths_linear_algebra.cu" />
+    <CudaCompile Include="src\maths\Sampling.cu" />
     <CudaCompile Include="src\maths\vector_maths.cu" />
     <CudaCompile Include="src\Mesh.cu" />
     <CudaCompile Include="src\RayStages.cu" />
@@ -146,7 +149,11 @@
     <ClInclude Include="src\acceleration_structure\TLASNode.cuh" />
     <ClInclude Include="src\Bounds.cuh" />
     <ClInclude Include="src\BSDF.cuh" />
+    <ClInclude Include="src\DeviceMaterial.cuh" />
+    <ClInclude Include="src\Film.cuh" />
+    <ClInclude Include="src\HostMaterial.hpp" />
     <ClInclude Include="src\LightSampler.cuh" />
+    <ClInclude Include="src\maths\Sampling.cuh" />
     <ClInclude Include="src\Spectrum.cuh" />
     <ClInclude Include="src\DeviceCamera.cuh" />
     <ClInclude Include="src\DeviceScene.cuh" />

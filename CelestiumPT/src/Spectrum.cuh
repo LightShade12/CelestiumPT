@@ -143,9 +143,15 @@ public:
 	float r = 0, g = 0, b = 0;
 };
 
+//operators
+//__device__ __host__ RGBSpectrum operator*(float a, RGBSpectrum b);
+
 //vector types extension
 __device__ __host__ float3 make_float3(const RGBSpectrum& rgb);
 
 __device__ __host__ float4 make_float4(const RGBSpectrum& rgb);
 
 __device__ __host__ float4 make_float4(const RGBSpectrum& rgb, float s);
+
+//utility
+__device__ RGBSpectrum clampOutput(const RGBSpectrum& rgb);

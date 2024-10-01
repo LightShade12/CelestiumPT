@@ -2,6 +2,7 @@
 
 #include "Triangle.cuh"
 #include "DeviceMesh.cuh"
+#include "DeviceMaterial.cuh"
 #include "DeviceCamera.cuh"
 #include "Light.cuh"
 #include "acceleration_structure/BVHNode.cuh"
@@ -32,5 +33,6 @@ public:
 	thrust::universal_vector<TLASNode>DeviceTLASNodes;
 	thrust::universal_vector<size_t>DeviceBVHTriangleIndices;
 	thrust::universal_vector<DeviceMesh>DeviceMeshes;
+	thrust::universal_vector<DeviceMaterial>DeviceMaterials;
 	thrust::universal_vector<DeviceCamera>DeviceCameras;
 };

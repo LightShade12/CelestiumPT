@@ -25,7 +25,7 @@ namespace IntegratorPipeline {
 	__device__ bool Unoccluded(const IntegratorGlobals& globals, const ShapeIntersection& p0, float3 p1);
 
 	__device__ RGBSpectrum Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel);
-	__device__ RGBSpectrum LiRandomWalk(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel);
+	__device__ RGBSpectrum LiPathIntegrator(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel);
 
 	__device__ RGBSpectrum SampleLd(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& payload,
 		const BSDF& bsdf, const LightSampler& light_sampler, uint32_t& seed);

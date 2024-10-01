@@ -49,6 +49,9 @@ void DeviceScene::syncDeviceGeometry()
 
 	DeviceSceneGeometry->DeviceMeshesBuffer = thrust::raw_pointer_cast(DeviceMeshes.data());
 	DeviceSceneGeometry->DeviceMeshesCount = DeviceMeshes.size();
+
+	DeviceSceneGeometry->DeviceMaterialBuffer = thrust::raw_pointer_cast(DeviceMaterials.data());
+	DeviceSceneGeometry->DeviceMaterialsCount = DeviceMaterials.size();
 };
 
 HostScene::HostScene(DeviceScene* device_scene)
@@ -67,6 +70,10 @@ size_t HostScene::getTrianglesCount() {
 
 size_t HostScene::getMeshesCount() {
 	return m_DeviceScene->DeviceMeshes.size();
+}
+
+size_t HostScene::getMaterialsCount() {
+	return m_DeviceScene->DeviceMaterials.size();
 }
 
 size_t HostScene::getCamerasCount()
@@ -88,19 +95,29 @@ void HostScene::AddTriangle(
 	glm::vec3 v0p, glm::vec3 v0n, glm::vec2 v0uv,
 	glm::vec3 v1p, glm::vec3 v1n, glm::vec2 v1uv,
 	glm::vec3 v2p, glm::vec3 v2n, glm::vec2 v2uv,
-	glm::vec3 f_nrm, bool skip_sync)
+	glm::vec3 f_nrm, int mat_idx, bool skip_sync)
 {
 	Triangle tri(
 		Vertex(v0p, v0n, v0uv),
 		Vertex(v1p, v1n, v1uv),
 		Vertex(v2p, v2n, v2uv),
-		f_nrm
+		f_nrm, mat_idx
 	);
 	m_DeviceScene->DeviceTriangles.push_back(tri);
 
 	if (!skip_sync) {
 		m_DeviceScene->syncDeviceGeometry();
 	}
+}
+
+void HostScene::addMaterial(glm::vec3 albedo_factor, glm::vec3 emission_factor, float emission_strength)
+{
+	DeviceMaterial dev_material;
+	dev_material.albedo_color_factor = RGBSpectrum(albedo_factor.r, albedo_factor.g, albedo_factor.b);
+	dev_material.emission_color_factor = RGBSpectrum(emission_factor.r, emission_factor.g, emission_factor.b);
+	dev_material.emission_strength = emission_strength;
+	m_DeviceScene->DeviceMaterials.push_back(dev_material);
+	m_DeviceScene->syncDeviceGeometry();
 }
 
 void HostScene::addLight(int triangle_idx, glm::vec3 color, float scale)
@@ -110,7 +127,7 @@ void HostScene::addLight(int triangle_idx, glm::vec3 color, float scale)
 	m_DeviceScene->DeviceLights.push_back(dlight);
 }
 
-void HostScene::AddMesh(HostMesh hmesh)
+void HostScene::addMesh(HostMesh hmesh)
 {
 	DeviceMesh dmesh;
 	setName(dmesh.name, hmesh.name.c_str());
@@ -172,8 +189,14 @@ void HostScene::LogStatus()
 HostMesh HostScene::getMesh(size_t mesh_idx)
 {
 	assert(mesh_idx < m_DeviceScene->DeviceMeshes.size(), "DeviceMesh access Out Of Bounds");//TODO:fix
-
 	DeviceMesh* dmeshptr = thrust::raw_pointer_cast(&m_DeviceScene->DeviceMeshes[mesh_idx]);
 	HostMesh hmesh(dmeshptr);
 	return hmesh;
+}
+
+HostMaterial HostScene::getMaterial(size_t mat_idx)
+{
+	DeviceMaterial* dmatptr = thrust::raw_pointer_cast(&m_DeviceScene->DeviceMaterials[mat_idx]);
+	HostMaterial hmat(dmatptr);
+	return hmat;
 }
