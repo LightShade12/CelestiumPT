@@ -28,9 +28,9 @@ struct LightLiSample {
 
 class InfiniteLight {
 public:
-	__host__ __device__ InfiniteLight() { Lemit = { 0.4,0.7,1.f }; scale = 1.f; };
+	__host__ __device__ InfiniteLight() { /*Lemit = {0.4,0.7,1.f};*/ scale = 1.f; Lemit = RGBSpectrum(1.f); };
 	__host__ __device__ InfiniteLight(float3 color, float power) : Lemit(color), scale(power) {};
-	__device__ RGBSpectrum Le(const Ray& ray) const { return scale * Lemit; };
+	__device__ RGBSpectrum Le(const Ray& ray) const;
 	RGBSpectrum Lemit;
 	float scale = 1;
 };

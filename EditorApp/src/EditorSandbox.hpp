@@ -36,6 +36,9 @@ public:
 		HIST_DEPTH = 10
 	};
 
+private:
+	void saveImagePNG();
+public:
 	constexpr static uint32_t minimum_viewport_height_threshold = 5;//any lower than this is prone to invalid render buffer sizes
 	constexpr static uint32_t minimum_viewport_height = 10;
 	constexpr static uint32_t viewport_vertical_scrolloverdraw_compensation_offset = 12;

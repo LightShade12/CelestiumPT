@@ -11,6 +11,10 @@ __device__ RGBSpectrum SkyShading(const Ray& ray) {
 	return (1.0f - a) * RGBSpectrum(1.0, 1.0, 1.0) + a * RGBSpectrum(0.2, 0.4, 1.0);
 };
 
+__device__ RGBSpectrum InfiniteLight::Le(const Ray& ray) const
+{
+	return SkyShading(ray) * scale * Lemit;
+}
 __device__ LightSampleContext::LightSampleContext(const ShapeIntersection& si)
 {
 	pos = si.w_pos;

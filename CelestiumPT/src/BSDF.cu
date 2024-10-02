@@ -42,7 +42,8 @@ __device__ BSDFSample BSDF::sampleOpaqueDielectric(float3 wo, float2 u2) const
 
 __device__ RGBSpectrum BSDF::fOpaqueDielectric(float3 wo, float3 wi) const
 {
-	return (albedo_factor / PI);
+	//return (albedo_factor / PI);
+	return (RGBSpectrum(0.8) / PI);
 }
 
 __device__ float BSDF::pdfOpaqueDielectric(float3 wo, float3 wi) const

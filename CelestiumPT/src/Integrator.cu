@@ -102,7 +102,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += globals.SceneDescriptor.device_geometry_aggregate->SkyLight.Le(ray) * throughtput;
+			//light += globals.SceneDescriptor.device_geometry_aggregate->SkyLight.Le(ray) * throughtput;
 			break;
 		}
 

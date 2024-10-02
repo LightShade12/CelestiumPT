@@ -1,7 +1,9 @@
 #include "EditorSandbox.hpp"
 #include "Application.hpp"
 
-#include "glm/glm.hpp"
+#include <stb/stb_image_write.h>
+
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
@@ -13,7 +15,7 @@
 #include "imgui/imgui.h"
 
 bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts);
-//TODO: investigate deprecated cuda library include warning
+//TODO: investigate deprecated cuda library include warning: device_functions.cuh?
 void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
@@ -37,6 +39,21 @@ void EditorSandbox::initialise()
 
 void EditorSandbox::destroy()
 {
+}
+
+void EditorSandbox::saveImagePNG()
+{
+	size_t w = m_Renderer.getFrameWidth(), h = m_Renderer.getFrameHeight();
+	std::vector<GLubyte> frame_data(w * h * 4);//RGBA8
+	glBindTexture(GL_TEXTURE_2D, m_Renderer.getCompositeRenderTargetTextureName());
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, frame_data.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
+	stbi_flip_vertically_on_write(true);
+	if (stbi_write_png("test_img.png",
+		w, h, 4, frame_data.data(), 4 * sizeof(GLubyte) * w) != 0)
+		printf("\nImage saved!\n");
+	else
+		printf("\nImage save failed\n");
 }
 
 static bool s_updateCam = false;
@@ -172,6 +189,9 @@ void EditorSandbox::onRender(float delta_secs)
 				if (ImGui::CollapsingHeader("Denoising")) {
 				};
 				if (ImGui::CollapsingHeader("General")) {
+					if (ImGui::Button("Save Frame as PNG")) {
+						saveImagePNG();
+					}
 				};
 
 				ImGui::EndTabItem();
