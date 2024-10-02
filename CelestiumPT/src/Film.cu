@@ -175,7 +175,8 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel
 	DeviceMaterial& material = globals.SceneDescriptor.device_geometry_aggregate->DeviceMaterialBuffer[triangle.mat_idx];
 
 	surf2Dwrite((material.emission_color_factor) ?
-		make_float4(material.emission_color_factor * material.emission_strength, 1)
+		//make_float4(material.emission_color_factor * material.emission_strength, 1)
+		make_float4(1)
 		: make_float4(make_float3(material.albedo_color_factor) / PI, 1),
 		globals.FrameBuffer.albedo_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);

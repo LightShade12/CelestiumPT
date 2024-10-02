@@ -416,7 +416,7 @@ __global__ void renderKernel(IntegratorGlobals globals)
 	float4 sampled_albedo = surf2Dread<float4>(globals.FrameBuffer.albedo_render_surface_object,
 		thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);
 
-	sampled_radiance *= RGBSpectrum(sampled_albedo);
+	sampled_radiance *= RGBSpectrum(sampled_albedo);//MODULATE
 
 	RGBSpectrum frag_spectrum = sampled_radiance;
 	//EOTF
