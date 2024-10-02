@@ -39,6 +39,7 @@ void EditorSandbox::initialise()
 
 void EditorSandbox::destroy()
 {
+	printf("\ndestroy(): Sandbox closed\n");
 }
 
 void EditorSandbox::saveImagePNG()
@@ -150,7 +151,7 @@ void EditorSandbox::onRender(float delta_secs)
 			if (ImGui::BeginTabItem("Rendering")) {
 				if (ImGui::CollapsingHeader("Debug")) {
 					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0HistoryDepth\0");
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0HistoryDepth\0Albedo\0");
 					if (curent_renderview == RenderView::GAS) {
 						ImGui::SliderFloat("GAS shading brightness",
 							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 0.1);
@@ -285,6 +286,12 @@ void EditorSandbox::onRender(float delta_secs)
 			else if (curent_renderview == RenderView::HIST_DEPTH) {
 				if (m_Renderer.getHistoryDepthTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getHistoryDepthTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::ALBEDO) {
+				if (m_Renderer.getAlbedoTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getAlbedoTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(),
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}

@@ -28,5 +28,5 @@ namespace IntegratorPipeline {
 	__device__ RGBSpectrum LiPathIntegrator(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel);
 
 	__device__ RGBSpectrum SampleLd(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& payload,
-		const BSDF& bsdf, const LightSampler& light_sampler, uint32_t& seed);
+		const BSDF& bsdf, const LightSampler& light_sampler, uint32_t& seed, bool primary_surface);
 }

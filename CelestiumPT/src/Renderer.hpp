@@ -32,6 +32,7 @@ public:
 	GLuint getUVsDebugTargetTextureName() const;
 	GLuint getObjectIDDebugTargetTextureName() const;
 	GLuint getBarycentricsDebugTargetTextureName() const;
+	GLuint getAlbedoTargetTextureName() const;
 
 	void setCamera(int idx);
 	IntegratorSettings* getIntegratorSettings();//TODO: make this safer and more robust

@@ -29,8 +29,8 @@ public:
 	cudaSurfaceObject_t objectID_render_surface_object;
 	cudaSurfaceObject_t velocity_render_surface_object;
 	cudaSurfaceObject_t objectID_debug_render_surface_object;
-	cudaSurfaceObject_t history_color_render_front_surface_object;//read only
-	cudaSurfaceObject_t history_color_render_back_surface_object;//write only
+	cudaSurfaceObject_t history_integrated_irradiance_front_surfobj;//read only
+	cudaSurfaceObject_t history_integrated_irradiance_back_surfobj;//write only
 	cudaSurfaceObject_t history_depth_render_surface_object;
 	cudaSurfaceObject_t history_world_normals_render_surface_object;
 	float3* accumulation_framebuffer = nullptr;

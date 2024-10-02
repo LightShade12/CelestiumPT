@@ -1,5 +1,7 @@
 #include "Film.cuh"
 #include "ShapeIntersection.cuh"
+#include "SceneGeometry.cuh"
+#include "DeviceMaterial.cuh"
 #include "Storage.cuh"
 #include "Samplers.cuh"
 #include "maths/matrix.cuh"
@@ -169,6 +171,14 @@ __device__ RGBSpectrum gammaCorrection(const RGBSpectrum linear_color)
 
 __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si)
 {
+	const Triangle& triangle = globals.SceneDescriptor.device_geometry_aggregate->DeviceTrianglesBuffer[si.triangle_idx];
+	DeviceMaterial& material = globals.SceneDescriptor.device_geometry_aggregate->DeviceMaterialBuffer[triangle.mat_idx];
+
+	surf2Dwrite((material.emission_color_factor) ?
+		make_float4(material.emission_color_factor * material.emission_strength, 1)
+		: make_float4(make_float3(material.albedo_color_factor) / PI, 1),
+		globals.FrameBuffer.albedo_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(si.w_pos, 1),
 		globals.FrameBuffer.positions_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
@@ -214,6 +224,9 @@ __device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixe
 {
 	surf2Dwrite(make_float4(0, 0, 0.0, 1),
 		globals.FrameBuffer.positions_render_surface_object,
+		ppixel.x * (int)sizeof(float4), ppixel.y);
+	surf2Dwrite(make_float4(1.f),
+		globals.FrameBuffer.albedo_render_surface_object,
 		ppixel.x * (int)sizeof(float4), ppixel.y);
 	surf2Dwrite(make_float4(make_float3(FLT_MAX), 1),
 		globals.FrameBuffer.depth_render_surface_object,
