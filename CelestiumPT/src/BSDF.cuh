@@ -23,11 +23,11 @@ public:
 
 	__device__ BSDF(const Mat3& tangent_matrix, const DeviceMaterial& material);
 
-	__device__ RGBSpectrum f(float3 r_wo, float3 r_wi) const;
+	__device__ RGBSpectrum f(float3 r_wo, float3 r_wi, bool primary_surface) const;
 
 	__device__ float pdf(float3 r_wo, float3 r_wi) const;
 
-	__device__ BSDFSample sampleBSDF(float3 r_wo, float2 u2) const;
+	__device__ BSDFSample sampleBSDF(float3 r_wo, float2 u2, bool primary_surface) const;
 
 	__device__ BSDFSample sampleOpaqueDielectric(float3 wo, float2 u2) const;
 

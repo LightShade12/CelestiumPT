@@ -8,12 +8,14 @@ BSDF::BSDF(const Mat3& tangent_matrix, const DeviceMaterial& material)
 	albedo_factor = material.albedo_color_factor;
 }
 
-__device__ RGBSpectrum BSDF::f(float3 r_wo, float3 r_wi) const
+__device__ RGBSpectrum BSDF::f(float3 r_wo, float3 r_wi, bool primary_surface) const
 {
 	//float3 wo = tangentMatrix.inverse() * r_wo;
 	float3 wi = tangentMatrix.inverse() * r_wi;
 	float3 wo = r_wo;
 	//float3 wi = r_wi;
+	if (primary_surface)return RGBSpectrum(1.f);
+
 	return fOpaqueDielectric(wo, wi);
 }
 
@@ -24,10 +26,11 @@ __device__ float BSDF::pdf(float3 r_wo, float3 r_wi) const
 	return pdfOpaqueDielectric(wo, wi);
 }
 
-__device__ BSDFSample BSDF::sampleBSDF(float3 r_wo, float2 u2) const
+__device__ BSDFSample BSDF::sampleBSDF(float3 r_wo, float2 u2, bool primary_surface) const
 {
 	float3 wo = tangentMatrix.inverse() * r_wo;
 	BSDFSample bs = sampleOpaqueDielectric(wo, u2);
+	if (primary_surface)bs.f = RGBSpectrum(1.f);
 	bs.wi = tangentMatrix * bs.wi;
 	return bs;
 }

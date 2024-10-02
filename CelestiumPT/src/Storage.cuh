@@ -17,20 +17,20 @@ struct FrameBufferStorage {
 public:
 	int2 resolution;
 	cudaSurfaceObject_t composite_render_surface_object;
+	cudaSurfaceObject_t albedo_render_surface_object;
 	cudaSurfaceObject_t world_normals_render_surface_object;
 	cudaSurfaceObject_t local_normals_render_surface_object;
 	cudaSurfaceObject_t positions_render_surface_object;
 	cudaSurfaceObject_t local_positions_render_surface_object;
 	cudaSurfaceObject_t GAS_debug_render_surface_object;
-	cudaSurfaceObject_t albedo_render_surface_object;
 	cudaSurfaceObject_t depth_render_surface_object;
 	cudaSurfaceObject_t UV_debug_render_surface_object;
 	cudaSurfaceObject_t bary_debug_render_surface_object;
 	cudaSurfaceObject_t objectID_render_surface_object;
 	cudaSurfaceObject_t velocity_render_surface_object;
 	cudaSurfaceObject_t objectID_debug_render_surface_object;
-	cudaSurfaceObject_t history_color_render_front_surface_object;//read only
-	cudaSurfaceObject_t history_color_render_back_surface_object;//write only
+	cudaSurfaceObject_t history_integrated_irradiance_front_surfobj;//read only
+	cudaSurfaceObject_t history_integrated_irradiance_back_surfobj;//write only
 	cudaSurfaceObject_t history_depth_render_surface_object;
 	cudaSurfaceObject_t history_world_normals_render_surface_object;
 	float3* accumulation_framebuffer = nullptr;

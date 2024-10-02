@@ -95,8 +95,9 @@ struct CelestiumPT_API
 	DeviceScene DeviceScene;
 	IntegratorGlobals m_IntegratorGlobals;
 
-	FrameBuffer CompositeRenderBuffer;
+	FrameBuffer CompositeRenderBuffer;//srgb view transformed
 
+	FrameBuffer AlbedoRenderBuffer;
 	FrameBuffer LocalNormalsRenderBuffer;//used for normals reject
 	FrameBuffer DepthRenderBuffer;//used for rejection
 	FrameBuffer LocalPositionsRenderBuffer;//used for reproj & depth reject
@@ -105,8 +106,9 @@ struct CelestiumPT_API
 	FrameBuffer VelocityRenderBuffer;//used for reproj
 
 	//history
-	FrameBuffer HistoryColorRenderFrontBuffer;//read
-	FrameBuffer HistoryColorRenderBackBuffer;//write
+	FrameBuffer HistoryIntegratedIrradianceRenderFrontBuffer;//read
+	FrameBuffer HistoryIntegratedIrradianceRenderBackBuffer;//write
+
 	FrameBuffer HistoryDepthRenderBuffer;
 	FrameBuffer HistoryWorldNormalsRenderBuffer;
 
@@ -114,8 +116,8 @@ struct CelestiumPT_API
 	FrameBuffer WorldNormalsRenderBuffer;//debug
 	FrameBuffer PositionsRenderBuffer;//debug
 	FrameBuffer ObjectIDDebugRenderBuffer;
-	FrameBuffer GASDebugRenderBuffer; 
-	FrameBuffer UVsDebugRenderBuffer; 
+	FrameBuffer GASDebugRenderBuffer;
+	FrameBuffer UVsDebugRenderBuffer;
 	FrameBuffer BarycentricsDebugRenderBuffer;
 
 	thrust::device_vector<float3>AccumulationFrameBuffer;
@@ -147,12 +149,13 @@ void Renderer::resizeResolution(int width, int height)
 	m_NativeRenderResolutionWidth = width;
 
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->AlbedoRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->WorldNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->LocalNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->PositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->DepthRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
-	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
-	m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->LocalPositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -175,9 +178,9 @@ void Renderer::resizeResolution(int width, int height)
 		glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO_name);
 		// attach the textures to the frame buffer
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-			m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.m_RenderTargetTextureName, 0);
+			m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer.m_RenderTargetTextureName, 0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-			m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.m_RenderTargetTextureName, 0);
+			m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer.m_RenderTargetTextureName, 0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
 			m_CelestiumPTResourceAPI->DepthRenderBuffer.m_RenderTargetTextureName, 0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D,
@@ -204,6 +207,8 @@ void Renderer::renderFrame()
 
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object));
+	m_CelestiumPTResourceAPI->AlbedoRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.albedo_render_surface_object));
 	m_CelestiumPTResourceAPI->WorldNormalsRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.world_normals_render_surface_object));
 	m_CelestiumPTResourceAPI->LocalNormalsRenderBuffer.beginRender(
@@ -212,10 +217,10 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.positions_render_surface_object));
 	m_CelestiumPTResourceAPI->DepthRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.depth_render_surface_object));
-	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.beginRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_front_surface_object));
-	m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.beginRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_back_surface_object));
+	m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_integrated_irradiance_front_surfobj));
+	m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_integrated_irradiance_back_surfobj));
 	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_render_surface_object));
 	m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.beginRender(
@@ -253,6 +258,8 @@ void Renderer::renderFrame()
 	//post render cuda---------------------------------------------------------------------------------
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object));
+	m_CelestiumPTResourceAPI->AlbedoRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.albedo_render_surface_object));
 	m_CelestiumPTResourceAPI->UVsDebugRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.UV_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.endRender(
@@ -263,10 +270,10 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.local_normals_render_surface_object));
 	m_CelestiumPTResourceAPI->DepthRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.depth_render_surface_object));
-	m_CelestiumPTResourceAPI->HistoryColorRenderFrontBuffer.endRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_front_surface_object));
-	m_CelestiumPTResourceAPI->HistoryColorRenderBackBuffer.endRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_color_render_back_surface_object));
+	m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_integrated_irradiance_front_surfobj));
+	m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_integrated_irradiance_back_surfobj));
 	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_render_surface_object));
 	m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.endRender(
@@ -324,6 +331,11 @@ void Renderer::clearAccumulation()
 GLuint Renderer::getCompositeRenderTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->CompositeRenderBuffer.m_RenderTargetTextureName;
+}
+
+GLuint Renderer::getAlbedoRenderTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->AlbedoRenderBuffer.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getNormalsTargetTextureName() const

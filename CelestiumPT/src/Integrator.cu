@@ -129,10 +129,11 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 
 		BSDF bsdf = payload.getBSDF(globals);
 
-		RGBSpectrum Ld = SampleLd(globals, ray, payload, bsdf, light_sampler, seed);
+		RGBSpectrum Ld = SampleLd(globals, ray, payload, bsdf,
+			light_sampler, seed, primary_surface);
 		light += Ld * throughtput;
 
-		BSDFSample bs = bsdf.sampleBSDF(wo, Samplers::get2D_PCGHash(seed));
+		BSDFSample bs = bsdf.sampleBSDF(wo, Samplers::get2D_PCGHash(seed), primary_surface);
 		float3 wi = bs.wi;
 		float pdf = bs.pdf;
 		RGBSpectrum fcos = bs.f * AbsDot(wi, payload.w_shading_norm);
@@ -157,7 +158,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 }
 
 __device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& payload,
-	const BSDF& bsdf, const LightSampler& light_sampler, uint32_t& seed)
+	const BSDF& bsdf, const LightSampler& light_sampler, uint32_t& seed, bool primary_surface)
 {
 	RGBSpectrum Ld(0.f);
 	SampledLight sampled_light = light_sampler.sample(Samplers::get1D_PCGHash(seed));
@@ -171,7 +172,7 @@ __device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& glo
 
 	float3 wi = ls.wi;
 	float3 wo = -ray.getDirection();
-	RGBSpectrum f = bsdf.f(wo, wi) * AbsDot(wi, payload.w_shading_norm);
+	RGBSpectrum f = bsdf.f(wo, wi, primary_surface) * AbsDot(wi, payload.w_shading_norm);
 	if (!f || !Unoccluded(globals, payload, ls.pLight)) return Ld;
 
 	float dist = length(payload.w_pos - ls.pLight);
@@ -332,7 +333,7 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 
 	//void sample/ miss/ sky
 	if (objID < 0) {
-		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
+		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 			c_pix.x * (int)sizeof(float4), c_pix.y);
 		return final_color;
 	}
@@ -349,7 +350,7 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 	//new fragment
 	if (prev_px.x < 0 || prev_px.x >= globals.FrameBuffer.resolution.x ||
 		prev_px.y < 0 || prev_px.y >= globals.FrameBuffer.resolution.y) {
-		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
+		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 			c_pix.x * (int)sizeof(float4), c_pix.y);
 		return final_color;
 	}
@@ -358,14 +359,16 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 
 	//disocclusion/ reproj failure
 	if (!prj_success) {
-		surf2Dwrite<float4>(make_float4(final_color, 0), globals.FrameBuffer.history_color_render_back_surface_object,
+		surf2Dwrite<float4>(make_float4(final_color, 0),
+			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 			c_pix.x * (int)sizeof(float4), c_pix.y);
 		return final_color;
 	}
 
 	float4 hist_col = sampleBilinear(globals,
-		globals.FrameBuffer.history_color_render_front_surface_object, prev_pxf, false);
-	//float4 hist_col = surf2Dread<float4>(globals.FrameBuffer.history_color_render_front_surface_object,
+		globals.FrameBuffer.history_integrated_irradiance_front_surfobj,
+		prev_pxf, false);
+	//float4 hist_col = surf2Dread<float4>(globals.FrameBuffer.history_integrated_irradiance_front_surfobj,
 	//	prev_px.x * (int)sizeof(float4), prev_px.y);
 	float hist_len = hist_col.w;
 
@@ -375,7 +378,7 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 
 	//feedback
 	surf2Dwrite<float4>(make_float4(final_color, hist_len + 1),
-		globals.FrameBuffer.history_color_render_back_surface_object,
+		globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 		c_pix.x * (int)sizeof(float4), c_pix.y);
 	return final_color;
 }
@@ -410,19 +413,29 @@ __global__ void renderKernel(IntegratorGlobals globals)
 		sampled_radiance = staticAccumulation(globals, sampled_radiance, ppixel);
 	}
 
+	//modulation
+	float4 sampled_albedo = surf2Dread<float4>(globals.FrameBuffer.albedo_render_surface_object,
+		thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);
+	RGBSpectrum albedo = RGBSpectrum(sampled_albedo);
+	sampled_radiance *= albedo;
+
 	RGBSpectrum frag_spectrum = sampled_radiance;
-	//EOTF
-	frag_spectrum = gammaCorrection(frag_spectrum);
+	{
+		//EOTF
+		frag_spectrum = gammaCorrection(frag_spectrum);
 
-	frag_spectrum = toneMapping(frag_spectrum, 8);
+		frag_spectrum = toneMapping(frag_spectrum, 8);
 
-	//frag_spectrum *= 3.3f;
-	//frag_spectrum = agx_fitted(frag_spectrum);
-	//frag_spectrum = agx_fitted_Eotf(frag_spectrum);
+		//frag_spectrum *= 3.0f;
+		//frag_spectrum = agx_fitted(frag_spectrum);
+		//frag_spectrum = agx_fitted_Eotf(frag_spectrum);
 
-	//frag_spectrum = agx_tonemapping(frag_spectrum);
+		//frag_spectrum *= 1.f;
+		//frag_spectrum = agx_tonemapping(frag_spectrum);
+	}
 
 	float4 frag_color = make_float4(frag_spectrum, 1);
 
-	surf2Dwrite(frag_color, globals.FrameBuffer.composite_render_surface_object, thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
+	surf2Dwrite(frag_color, globals.FrameBuffer.composite_render_surface_object,
+		thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
 }

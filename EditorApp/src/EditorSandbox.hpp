@@ -33,7 +33,8 @@ public:
 		LOCALPOSITION = 7,
 		VELOCITY = 8,
 		DEPTH = 9,
-		HIST_DEPTH = 10
+		HIST_DEPTH = 10,
+		ALBEDO = 11
 	};
 
 	constexpr static uint32_t minimum_viewport_height_threshold = 5;//any lower than this is prone to invalid render buffer sizes

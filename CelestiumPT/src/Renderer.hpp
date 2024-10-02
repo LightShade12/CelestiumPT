@@ -22,6 +22,7 @@ public:
 	void clearAccumulation();
 
 	GLuint getCompositeRenderTargetTextureName() const;
+	GLuint getAlbedoRenderTargetTextureName() const;
 	GLuint getNormalsTargetTextureName() const;
 	GLuint getPositionsTargetTextureName() const;
 	GLuint getLocalPositionsTargetTextureName() const;
