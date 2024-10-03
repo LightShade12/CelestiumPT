@@ -178,6 +178,7 @@
     <ClInclude Include="src\SceneGeometry.cuh" />
     <ClInclude Include="src\ShapeIntersection.cuh" />
     <ClInclude Include="src\acceleration_structure\TLAS.cuh" />
+    <ClInclude Include="src\svgf.cuh" />
     <ClInclude Include="src\Triangle.cuh" />
     <ClInclude Include="src\utility.hpp" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
