@@ -11,6 +11,12 @@ class BSDF;
 class LightSampler;
 
 __global__ void renderKernel(IntegratorGlobals globals);
+__device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, int2 ppixel);
+__device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBSpectrum radiance_sample, int2 c_pix);
+__device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RGBSpectrum c_col, float2 c_uv, int2 c_pix);
+__device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_pix, int2 cur_px);
+__device__ float4 sampleBilinear(const IntegratorGlobals& globals, const cudaSurfaceObject_t& tex_surface,
+	float2 fpix, bool lerp_alpha);
 
 namespace IntegratorPipeline {
 	//wrapper for kernel launch

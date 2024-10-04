@@ -239,7 +239,8 @@ __device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_p
 	return false;
 }
 
-__device__ float4 sampleBilinear(const IntegratorGlobals& globals, const cudaSurfaceObject_t& tex_surface, float2 fpix, bool lerp_alpha)
+__device__ float4 sampleBilinear(const IntegratorGlobals& globals, const cudaSurfaceObject_t& tex_surface,
+	float2 fpix, bool lerp_alpha)
 {
 	//TODO:consider half pixel for centre smapling
 	// Integer pixel coordinates
