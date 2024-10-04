@@ -136,6 +136,7 @@
     <CudaCompile Include="src\ShapeIntersection.cu" />
     <CudaCompile Include="src\Light.cu" />
     <CudaCompile Include="src\Spectrum.cu" />
+    <CudaCompile Include="src\svgf.cu" />
     <CudaCompile Include="src\Triangle.cu" />
   </ItemGroup>
   <ItemGroup>

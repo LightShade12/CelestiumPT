@@ -2,6 +2,7 @@
 #include "ErrorCheck.cuh"
 #include "Storage.cuh"
 #include "Integrator.cuh"
+#include "svgf.cuh"
 
 #include "SceneGeometry.cuh"
 #include "DeviceScene.cuh"
@@ -297,21 +298,26 @@ void Renderer::blitMomentsBackToFront() {
 		printf("Attempting to BLIT via incomplete FrameBufferObject!\n");
 }
 
-void Renderer::blitFilteredIrradianceToHistory() {
-
+void Renderer::blitFilteredIrradianceToHistory(bool read_from_back) {
 	if (fboStatus == GL_FRAMEBUFFER_COMPLETE) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_blit_mediator_FBO1_name);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_blit_mediator_FBO0_name);
 
-		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		if (read_from_back)
+			glReadBuffer(GL_COLOR_ATTACHMENT0);
+		else
+			glReadBuffer(GL_COLOR_ATTACHMENT1);
+
 		glDrawBuffers(1, &m_blit_target3_attachment);
 
 		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 	else
@@ -382,8 +388,50 @@ void Renderer::renderFrame()
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.accumulation_framebuffer =
 		thrust::raw_pointer_cast(m_CelestiumPTResourceAPI->AccumulationFrameBuffer.data());
 
-	IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-		m_CudaResourceAPI->m_BlockGridDimensions, m_CudaResourceAPI->m_ThreadBlockDimensions);
+	//IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+	//	m_CudaResourceAPI->m_BlockGridDimensions, m_CudaResourceAPI->m_ThreadBlockDimensions);
+
+	//Launch RenderChain
+	renderPathTraceRaw << < m_CudaResourceAPI->m_BlockGridDimensions,
+		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+	//---
+	temporalIntegrate << < m_CudaResourceAPI->m_BlockGridDimensions,
+		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+	blitMomentsBackToFront();//updates FrontIntegratedHistoryMoments for reads
+	//---
+	SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
+		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 1);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+	blitFilteredIrradianceToHistory(true);//feedback: irradiance from BackFilteredIrradiance
+	blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
+	//---
+	SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
+		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 2);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+	blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
+	//---
+	SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
+		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 4);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+	blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
+	//---
+	SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
+		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 8);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+	blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
+	//---
+	composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
+		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);//Display!
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
 	g_frameIndex++;
 
 	checkCudaErrors(cudaGetLastError());

@@ -50,7 +50,7 @@ private:
 
 	void blitMomentsBackToFront();
 
-	void blitFilteredIrradianceToHistory();
+	void blitFilteredIrradianceToHistory(bool read_from_back);
 
 	GLuint m_blit_mediator_FBO0_name = NULL;
 	GLuint m_blit_mediator_FBO1_name = NULL;
