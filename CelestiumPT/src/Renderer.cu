@@ -388,50 +388,41 @@ void Renderer::renderFrame()
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.accumulation_framebuffer =
 		thrust::raw_pointer_cast(m_CelestiumPTResourceAPI->AccumulationFrameBuffer.data());
 
-	//IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-	//	m_CudaResourceAPI->m_BlockGridDimensions, m_CudaResourceAPI->m_ThreadBlockDimensions);
-
 	//Launch RenderChain
-	renderPathTraceRaw << < m_CudaResourceAPI->m_BlockGridDimensions,
-		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
-	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
-	//---
-	temporalIntegrate << < m_CudaResourceAPI->m_BlockGridDimensions,
-		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
-	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
-	blitMomentsBackToFront();//updates FrontIntegratedHistoryMoments for reads
-	//---
-	SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
-		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 1);
-	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
-	blitFilteredIrradianceToHistory(true);//feedback: irradiance from BackFilteredIrradiance
-	blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
-	//---
-	SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
-		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 2);
-	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
-	blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
-	//---
-	SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
-		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 4);
-	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
-	blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
-	//---
-	SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
-		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 8);
-	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
-	blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
-	//---
-	composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
-		m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);//Display!
-	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
+	if (false) {
+		IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals, m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions);
+	}
+	else
+	{
+		renderPathTraceRaw << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+		//---
+		temporalIntegrate << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+		blitMomentsBackToFront();//updates FrontIntegratedHistoryMoments for reads
+		//---
+
+		float max_svgf_iter = 4;
+		for (int iter_idx = 0; iter_idx < max_svgf_iter; iter_idx++) {
+			int step_size = powf(2, iter_idx);
+			SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
+				m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, step_size);
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
+			if (iter_idx == 0)blitFilteredIrradianceToHistory(true);//feedback: irradiance from BackFilteredIrradiance
+			blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
+		}
+
+		composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);//Display!
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+	}
 	g_frameIndex++;
 
 	checkCudaErrors(cudaGetLastError());
