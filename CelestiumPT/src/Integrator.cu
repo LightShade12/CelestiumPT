@@ -414,16 +414,16 @@ __global__ void renderKernel(IntegratorGlobals globals)
 		sampled_radiance = staticAccumulation(globals, sampled_radiance, ppixel);
 	}
 
-	float4 sampled_albedo = surf2Dread<float4>(globals.FrameBuffer.albedo_render_surface_object,
-		thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);
+	//float4 sampled_albedo = surf2Dread<float4>(globals.FrameBuffer.albedo_render_surface_object,
+	//	thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);
 
-	sampled_radiance *= RGBSpectrum(sampled_albedo);//MODULATE
+	//sampled_radiance *= RGBSpectrum(sampled_albedo);//MODULATE
 
 	RGBSpectrum frag_spectrum = sampled_radiance;
 	//EOTF
-	frag_spectrum = gammaCorrection(frag_spectrum);
+	//frag_spectrum = gammaCorrection(frag_spectrum);
 
-	frag_spectrum = toneMapping(frag_spectrum, 8);
+	//frag_spectrum = toneMapping(frag_spectrum, 8);
 
 	//frag_spectrum *= 3.3f;
 	//frag_spectrum = agx_fitted(frag_spectrum);
@@ -433,6 +433,6 @@ __global__ void renderKernel(IntegratorGlobals globals)
 
 	float4 frag_color = make_float4(frag_spectrum, 1);
 
-	surf2Dwrite(frag_color, globals.FrameBuffer.composite_render_surface_object,
+	surf2Dwrite(frag_color, globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 		thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
 }

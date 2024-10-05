@@ -63,7 +63,8 @@ public:
 		cudaGraphicsMapResources(1, &m_RenderTargetTextureCudaResource);
 
 		cudaArray_t render_target_texture_sub_resource_array;
-		cudaGraphicsSubResourceGetMappedArray(&render_target_texture_sub_resource_array, m_RenderTargetTextureCudaResource, 0, 0);
+		cudaGraphicsSubResourceGetMappedArray(&render_target_texture_sub_resource_array, m_RenderTargetTextureCudaResource,
+			0, 0);
 		cudaResourceDesc render_target_texture_resource_descriptor;
 		{
 			render_target_texture_resource_descriptor.resType = cudaResourceTypeArray;
@@ -393,6 +394,10 @@ void Renderer::renderFrame()
 		IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
 			m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions);
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+		composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);//Display!
 	}
 	else
 	{
@@ -494,7 +499,7 @@ void Renderer::renderFrame()
 		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		
+
 		//depth
 		glReadBuffer(GL_COLOR_ATTACHMENT2);
 		glDrawBuffers(1, &m_blit_target1_attachment);

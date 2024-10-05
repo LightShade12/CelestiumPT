@@ -124,6 +124,7 @@
     <CudaCompile Include="src\Camera.cu" />
     <CudaCompile Include="src\ErrorCheck.cu" />
     <CudaCompile Include="src\Film.cu" />
+    <CudaCompile Include="src\FrameBuffer.cu" />
     <CudaCompile Include="src\Integrator.cu" />
     <CudaCompile Include="src\Material.cu" />
     <CudaCompile Include="src\maths\maths_linear_algebra.cu" />
@@ -152,6 +153,7 @@
     <ClInclude Include="src\BSDF.cuh" />
     <ClInclude Include="src\DeviceMaterial.cuh" />
     <ClInclude Include="src\Film.cuh" />
+    <ClInclude Include="src\FrameBuffer.hpp" />
     <ClInclude Include="src\HostMaterial.hpp" />
     <ClInclude Include="src\LightSampler.cuh" />
     <ClInclude Include="src\maths\Sampling.cuh" />
