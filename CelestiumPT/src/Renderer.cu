@@ -389,8 +389,9 @@ void Renderer::renderFrame()
 		thrust::raw_pointer_cast(m_CelestiumPTResourceAPI->AccumulationFrameBuffer.data());
 
 	//Launch RenderChain
-	if (false) {
-		IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals, m_CudaResourceAPI->m_BlockGridDimensions,
+	if (true) {
+		IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+			m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions);
 	}
 	else
@@ -483,6 +484,7 @@ void Renderer::renderFrame()
 	m_CelestiumPTResourceAPI->HistoryIntegratedMomentsBackBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_integrated_moments_back_surfobj));
 
+	//UPDATE HISTORY
 	//GBUFFER blit
 	if (fboStatus == GL_FRAMEBUFFER_COMPLETE) {
 		glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO0_name);
@@ -492,6 +494,7 @@ void Renderer::renderFrame()
 		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		
 		//depth
 		glReadBuffer(GL_COLOR_ATTACHMENT2);
 		glDrawBuffers(1, &m_blit_target1_attachment);
@@ -555,11 +558,6 @@ GLuint Renderer::getGASDebugTargetTextureName() const
 GLuint Renderer::getDepthTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->DepthRenderBuffer.m_RenderTargetTextureName;
-}
-
-GLuint Renderer::getHistoryDepthTargetTextureName() const
-{
-	return m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getUVsDebugTargetTextureName() const

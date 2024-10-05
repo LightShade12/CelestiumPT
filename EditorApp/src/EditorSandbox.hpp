@@ -33,8 +33,7 @@ public:
 		LOCALPOSITION = 7,
 		VELOCITY = 8,
 		DEPTH = 9,
-		HIST_DEPTH = 10,//TODO: get rid of this
-		ALBEDO = 11
+		ALBEDO = 10
 	};
 
 private:

@@ -28,7 +28,6 @@ public:
 	GLuint getVelocityTargetTextureName() const;
 	GLuint getGASDebugTargetTextureName() const;
 	GLuint getDepthTargetTextureName() const;
-	GLuint getHistoryDepthTargetTextureName() const;
 	GLuint getUVsDebugTargetTextureName() const;
 	GLuint getObjectIDDebugTargetTextureName() const;
 	GLuint getBarycentricsDebugTargetTextureName() const;
