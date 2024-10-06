@@ -33,7 +33,8 @@ public:
 		LOCALPOSITION = 7,
 		VELOCITY = 8,
 		DEPTH = 9,
-		ALBEDO = 10
+		ALBEDO = 10,
+		VARIANCE = 11
 	};
 
 private:

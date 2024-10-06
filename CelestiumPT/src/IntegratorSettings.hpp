@@ -1,8 +1,8 @@
 #pragma once
 
 struct IntegratorSettings {
-	bool accumulate = true;
-	bool temporal_accumulation = false;
+	bool accumulate = false;
+	bool temporal_accumulation = true;
 
 	int max_bounces = 2;
 	bool MIS = false;

@@ -32,7 +32,9 @@ public:
 	GLuint getObjectIDDebugTargetTextureName() const;
 	GLuint getBarycentricsDebugTargetTextureName() const;
 	GLuint getAlbedoTargetTextureName() const;
+	GLuint getIntegratedVarianceTargetTextureName() const;
 
+	int getSPP() const;
 	void setCamera(int idx);
 	IntegratorSettings* getIntegratorSettings();//TODO: make this safer and more robust
 	HostCamera* getCurrentCamera() { return &m_CurrentCamera; };

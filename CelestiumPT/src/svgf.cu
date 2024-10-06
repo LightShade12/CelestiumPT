@@ -51,29 +51,12 @@ __global__ void renderPathTraceRaw(IntegratorGlobals globals)
 
 	RGBSpectrum sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, make_float2(current_pix));
 
-	computeVelocity(globals, screen_uv, current_pix);//this concludes all Gbuffer data writes
-
-	//if (globals.IntegratorCFG.temporal_accumulation) {
-	//	sampled_radiance = temporalAccumulation(globals, sampled_radiance, screen_uv, current_pix);
-	//}
-	//else if (globals.IntegratorCFG.accumulate) {
-	//	sampled_radiance = staticAccumulation(globals, sampled_radiance, current_pix);
-	//}
-
-	//float4 sampled_albedo = texRead(globals.FrameBuffer.albedo_render_surface_object, current_pix);
-	//
-	//sampled_radiance *= RGBSpectrum(sampled_albedo);//MODULATE
-	//
-	//RGBSpectrum frag_spectrum = sampled_radiance;
-	//EOTF
-	//frag_spectrum = gammaCorrection(frag_spectrum);
-	//frag_spectrum = toneMapping(frag_spectrum, 8);
-	//
-	//float4 frag_color = make_float4(frag_spectrum, 1);
-
 	float s = getLuminance(sampled_radiance);
 	float s2 = s * s;
 	float4 current_moments = make_float4(s, s2, 0, 0);
+
+	computeVelocity(globals, screen_uv, current_pix);//this concludes all Gbuffer data writes
+
 	float4 current_radiance = make_float4(sampled_radiance, 1);
 
 	texWrite(current_radiance,
@@ -108,16 +91,19 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 		//no accumulate
 
 		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-		texWrite(make_float4(make_float3(variance), 0),
+		texWrite(make_float4(make_float3(variance), 1),
 			globals.FrameBuffer.variance_render_front_surfobj,
 			current_pix);
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
 			current_pix);
+		texWrite(make_float4(final_irradiance, 0),
+			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
+			current_pix);
+		//out---
 		texWrite(make_float4(final_irradiance, 1),
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
-
 		return;
 	}
 
@@ -141,6 +127,10 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
 			current_pix);
+		texWrite(make_float4(final_irradiance, 0),
+			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
+			current_pix);
+		//out---
 		texWrite(make_float4(final_irradiance, 1),
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
@@ -148,7 +138,7 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 		return;
 	}
 
-	if (prev_px.y < 0)printf(" illegal pixel!");
+	//if (prev_px.y < 0)printf(" illegal pixel!");
 
 	bool prj_success = !rejectionHeuristic(globals, prev_px, current_pix);
 
@@ -158,9 +148,13 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 		texWrite(make_float4(make_float3(variance), 0),
 			globals.FrameBuffer.variance_render_front_surfobj,
 			current_pix);
+		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
+			globals.FrameBuffer.history_integrated_moments_back_surfobj,
+			current_pix);
 		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 			current_pix);
+		//out---
 		texWrite(make_float4(final_irradiance, 1),
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
@@ -185,7 +179,8 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 		1.f / fminf(float(moments_hist_len + 1), MAX_ACCUMULATION_FRAMES));
 
 	float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-	texWrite(make_float4(make_float3(variance), 0),
+
+	texWrite(make_float4(make_float3(variance), 1),
 		globals.FrameBuffer.variance_render_front_surfobj,
 		current_pix);
 
@@ -196,6 +191,11 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 
 	//write integrated irradiance
 	texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),
+		globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
+		current_pix);
+
+	//out----
+	texWrite(make_float4(final_irradiance, 1),
 		globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 		current_pix);
 }

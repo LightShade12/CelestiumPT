@@ -45,6 +45,7 @@ public:
 	cudaSurfaceObject_t history_depth_render_surface_object;
 	cudaSurfaceObject_t history_world_normals_render_surface_object;
 	float3* accumulation_framebuffer = nullptr;
+	float3* variance_accumulation_framebuffer = nullptr;
 };
 
 struct DeviceSceneDescriptor {
