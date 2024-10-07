@@ -332,12 +332,72 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 	//void sample/ miss/ sky
 	if (current_objID < 0) {
 		//no filter
-		GBuffer g = sampleGBuffer(globals, current_pix);
-		writeGBuffer(globals, g, current_pix);
+		float4 sampled_irradiance = texRead(globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
+			current_pix);
+		//out----
+		texWrite(sampled_irradiance,
+			globals.FrameBuffer.filtered_irradiance_back_render_surface_object,
+			current_pix);
 		return;
 	}
 
-	psvgf(globals, current_pix, stepsize);
+	float4 sampled_irradiance = texRead(globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
+		current_pix);
+	float3 sampled_normal = normalize(make_float3(texRead(globals.FrameBuffer.world_normals_render_surface_object,
+		current_pix)));
+	float sampled_depth = texRead(globals.FrameBuffer.depth_render_surface_object,
+		current_pix).x;
+	// depth-gradient estimation from screen-space derivatives
+	float2 dgrad = make_float2(
+		dFdx(globals.FrameBuffer.depth_render_surface_object, current_pix, globals.FrameBuffer.resolution).x,
+		dFdy(globals.FrameBuffer.depth_render_surface_object, current_pix, globals.FrameBuffer.resolution).x);
+
+	const float filterKernel[] =
+	{
+		0.0625, 0.125, 0.0625,
+		0.125, 0.25, 0.125,
+		0.0625, 0.125, 0.0625 };
+
+	float4 avg_irradiance = make_float4(0);
+	// weights sum
+	float wsum = 0.0;
+
+	for (int y = -1; y <= 1; y++) {
+		for (int x = -1; x <= 1; x++) {
+			int2 offset = make_int2(x, y) * stepsize;
+			int2 tap_pix = current_pix + offset;
+			tap_pix = clamp(tap_pix, make_int2(0, 0), (globals.FrameBuffer.resolution - 1));
+
+			float4 tap_irradiance = texRead(globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
+				tap_pix);
+			float3 tap_normal = make_float3(texRead(globals.FrameBuffer.world_normals_render_surface_object,
+				tap_pix));
+			float tap_depth = texRead(globals.FrameBuffer.depth_render_surface_object,
+				tap_pix).x;
+
+			float nw = normalWeight((sampled_normal), normalize(tap_normal));
+			float dw = depthWeight(sampled_depth, tap_depth, dgrad, make_float2(offset));
+
+			float w = 1;
+			// combine the weights from above
+			w = clamp(dw * nw, 0.f, 1.f);
+
+			// scale by the filtering kernel
+			float h = filterKernel[(x + 1) + (y + 1) * 3];
+			float hw = h * w;
+
+			// add to total irradiance
+			avg_irradiance += tap_irradiance * hw;
+			wsum += hw;
+		}
+	}
+
+	avg_irradiance /= wsum;
+
+	//out----
+	texWrite((avg_irradiance),
+		globals.FrameBuffer.filtered_irradiance_back_render_surface_object,
+		current_pix);
 }
 
 __global__ void composeCompositeImage(const IntegratorGlobals globals) {

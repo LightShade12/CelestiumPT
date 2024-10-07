@@ -327,6 +327,18 @@ void Renderer::blitFilteredIrradianceToHistory(bool read_from_back) {
 		printf("Attempting to BLIT via incomplete FrameBufferObject!\n");
 }
 
+void texCopy(const FrameBuffer& src, const FrameBuffer& dst, int t_width, int t_height) {
+	glCopyImageSubData(
+		src.m_RenderTargetTextureName, GL_TEXTURE_2D, 0, 0, 0, 0,
+		dst.m_RenderTargetTextureName, GL_TEXTURE_2D, 0, 0, 0, 0,
+		t_width, t_height, 1);
+	glFinish();
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR) {
+		printf("%s\n", glErrorString(err));
+	}
+}
+
 void Renderer::renderFrame()
 {
 	//pre render-------------------------------------------------------------
@@ -407,19 +419,46 @@ void Renderer::renderFrame()
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
+		texCopy(m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer,
+			m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
+		//-----------1,2,4,8
+		SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 1);
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
+			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
 		//-----------
-		glCopyImageSubData(
-			m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer.m_RenderTargetTextureName, GL_TEXTURE_2D, 0, 0, 0, 0,
-			m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer.m_RenderTargetTextureName, GL_TEXTURE_2D, 0, 0, 0, 0,
-			m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight, 1);
-		glFinish();
-		GLenum err = glGetError();
-		if (err != GL_NO_ERROR) {
-			printf("%s\n", glErrorString(err));
-		}
+		SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 2);
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
+			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
+		//-----------
+		SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 4);
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
+			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
+		//-----------
+		SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 8);
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
+			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
 		//-----------
 		composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);//Display!
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
 	}
 	else
 	{
@@ -453,8 +492,6 @@ void Renderer::renderFrame()
 	}
 	g_frameIndex++;
 
-	checkCudaErrors(cudaGetLastError());
-	checkCudaErrors(cudaDeviceSynchronize());
 	//----
 
 	//post render cuda---------------------------------------------------------------------------------
