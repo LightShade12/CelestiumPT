@@ -419,9 +419,9 @@ void Renderer::renderFrame()
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
-		texCopy(m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer,
-			m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
-			m_NativeRenderResolutionHeight);
+		//texCopy(m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer,
+		//	m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
+		//	m_NativeRenderResolutionHeight);
 		//-----------1,2,4,8
 		SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 1);
@@ -429,6 +429,10 @@ void Renderer::renderFrame()
 		checkCudaErrors(cudaDeviceSynchronize());
 		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
 			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
+		//irradiance feedback: TODO: basically bo need for hist_int_irr back buffer
+		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
+			m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
 			m_NativeRenderResolutionHeight);
 		//-----------
 		SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
@@ -552,12 +556,6 @@ void Renderer::renderFrame()
 	//GBUFFER blit
 	if (fboStatus == GL_FRAMEBUFFER_COMPLETE) {
 		glBindFramebuffer(GL_FRAMEBUFFER, m_blit_mediator_FBO0_name);
-		//integrated irradiance history
-		glReadBuffer(GL_COLOR_ATTACHMENT0);
-		glDrawBuffers(1, &m_blit_target0_attachment);
-		glBlitFramebuffer(0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
-			0, 0, m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight,
-			GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 		//depth
 		glReadBuffer(GL_COLOR_ATTACHMENT2);

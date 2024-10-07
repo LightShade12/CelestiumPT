@@ -97,11 +97,11 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
 			current_pix);
-		texWrite(make_float4(final_irradiance, 0),
-			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
-			current_pix);
+		//texWrite(make_float4(final_irradiance, 0),
+		//	globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
+		//	current_pix);
 		//out---
-		texWrite(make_float4(final_irradiance, 1),
+		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
 		return;
@@ -127,11 +127,11 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
 			current_pix);
-		texWrite(make_float4(final_irradiance, 0),
-			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
-			current_pix);
+		//texWrite(make_float4(final_irradiance, 0),
+		//	globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
+		//	current_pix);
 		//out---
-		texWrite(make_float4(final_irradiance, 1),
+		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
 
@@ -151,11 +151,11 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
 			current_pix);
-		texWrite(make_float4(final_irradiance, 0),
-			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
-			current_pix);
+		//texWrite(make_float4(final_irradiance, 0),
+		//	globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
+		//	current_pix);
 		//out---
-		texWrite(make_float4(final_irradiance, 1),
+		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
 		return;
@@ -190,12 +190,12 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 		current_pix);
 
 	//write integrated irradiance
-	texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),
-		globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
-		current_pix);
+	//texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),
+	//	globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
+	//	current_pix);
 
 	//out----
-	texWrite(make_float4(final_irradiance, 1),
+	texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),
 		globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 		current_pix);
 }
@@ -393,6 +393,7 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 	}
 
 	avg_irradiance /= wsum;
+	avg_irradiance.w = sampled_irradiance.w;//restore history length
 
 	//out----
 	texWrite((avg_irradiance),
