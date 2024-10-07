@@ -440,7 +440,7 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 	f_variance /= Sqr(wsum);
 	//f_variance = sampled_variance;
 	avg_irradiance.w = sampled_irradiance.w;//restore history length for temporal feedback
-
+	 
 	//out----
 	texWrite((avg_irradiance),
 		globals.FrameBuffer.filtered_irradiance_back_render_surface_object,
