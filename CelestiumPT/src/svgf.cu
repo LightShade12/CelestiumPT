@@ -53,7 +53,7 @@ __global__ void renderPathTraceRaw(IntegratorGlobals globals)
 
 	float s = getLuminance(sampled_radiance);
 	float s2 = s * s;
-	float4 current_moments = make_float4(s, s2, 0, 0);
+	float4 current_moments = make_float4(s, s2, 0, 1);
 
 	computeVelocity(globals, screen_uv, current_pix);//this concludes all Gbuffer data writes
 
@@ -63,6 +63,10 @@ __global__ void renderPathTraceRaw(IntegratorGlobals globals)
 		globals.FrameBuffer.current_irradiance_render_surface_object, current_pix);
 	texWrite(current_moments,
 		globals.FrameBuffer.current_moments_render_surface_object, current_pix);
+}
+
+__device__ float spatialVarianceEstimate() {
+
 }
 
 //feedback only moments
@@ -90,9 +94,8 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 	if (current_objID < 0) {
 		//no accumulate
 
-		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-		texWrite(make_float4(make_float3(variance), 1),
-			globals.FrameBuffer.variance_render_front_surfobj,
+		texWrite(make_float4(make_float3(0), 0),
+			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
@@ -120,9 +123,8 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 	//new fragment; out of screen
 	if (prev_px.x < 0 || prev_px.x >= res.x ||
 		prev_px.y < 0 || prev_px.y >= res.y) {
-		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-		texWrite(make_float4(make_float3(variance), 0),
-			globals.FrameBuffer.variance_render_front_surfobj,
+		texWrite(make_float4(make_float3(0), 0),
+			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
@@ -144,9 +146,8 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 
 	//disocclusion/ reproj failure
 	if (!prj_success) {
-		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-		texWrite(make_float4(make_float3(variance), 0),
-			globals.FrameBuffer.variance_render_front_surfobj,
+		texWrite(make_float4(make_float3(0), 0),
+			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
@@ -175,25 +176,26 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 			1.f / fminf(float(irradiance_hist_len + 1), MAX_ACCUMULATION_FRAMES))
 	);
 
-	final_moments = lerp(make_float2(hist_moments.x, hist_moments.y), make_float2(final_moments.x, final_moments.y),
+	final_moments = lerp(make_float2(hist_moments.x, hist_moments.y), final_moments,
 		1.f / fminf(float(moments_hist_len + 1), MAX_ACCUMULATION_FRAMES));
-
-	float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-
-	texWrite(make_float4(make_float3(variance), 1),
-		globals.FrameBuffer.variance_render_front_surfobj,
-		current_pix);
 
 	//feedback: moments
 	texWrite(make_float4(final_moments.x, final_moments.y, 0, moments_hist_len + 1),
 		globals.FrameBuffer.history_integrated_moments_back_surfobj,
 		current_pix);
 
-	//write integrated irradiance
+	//feedback: irradiance
 	//texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),
 	//	globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 	//	current_pix);
 
+	float2 final_v = final_moments;// / (moments_hist_len);
+	float variance = fabsf(final_v.y - (Sqr(final_v.x)));
+	//variance *= (moments_hist_len + 1) / fmaxf(moments_hist_len, 1);
+
+	texWrite(make_float4(make_float3(variance), 1),
+		globals.FrameBuffer.filtered_variance_render_front_surfobj,
+		current_pix);
 	//out----
 	texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),
 		globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
@@ -224,7 +226,7 @@ __device__ float luminanceWeight(float lum0, float lum1, float variance) {
 __device__ GBuffer sampleGBuffer(const IntegratorGlobals& globals, int2 c_pix) {
 	GBuffer g;
 	g.irradiance = make_float3(texRead(globals.FrameBuffer.filtered_irradiance_front_render_surface_object, c_pix));
-	g.variance = texRead(globals.FrameBuffer.variance_render_front_surfobj, c_pix).x;
+	g.variance = texRead(globals.FrameBuffer.filtered_variance_render_front_surfobj, c_pix).x;
 	g.normal = make_float3(texRead(globals.FrameBuffer.world_normals_render_surface_object, c_pix));
 	g.depth = texRead(globals.FrameBuffer.depth_render_surface_object, c_pix).x;
 	return g;
@@ -234,7 +236,7 @@ __device__ void writeGBuffer(const IntegratorGlobals& globals, const GBuffer& gb
 	texWrite(make_float4(gbuffer.irradiance, 1),
 		globals.FrameBuffer.filtered_irradiance_back_render_surface_object, c_pix);
 	texWrite(make_float4(make_float3(gbuffer.variance), 1),
-		globals.FrameBuffer.variance_render_back_surfobj, c_pix);
+		globals.FrameBuffer.filtered_variance_render_back_surfobj, c_pix);
 }
 
 //ensure this is not oob
@@ -332,11 +334,16 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 	//void sample/ miss/ sky
 	if (current_objID < 0) {
 		//no filter
+		float sampled_variance = texRead(globals.FrameBuffer.filtered_variance_render_front_surfobj,
+			current_pix).x;
 		float4 sampled_irradiance = texRead(globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
 		//out----
 		texWrite(sampled_irradiance,
 			globals.FrameBuffer.filtered_irradiance_back_render_surface_object,
+			current_pix);
+		texWrite(make_float4(make_float3(sampled_variance), 1),
+			globals.FrameBuffer.filtered_variance_render_back_surfobj,
 			current_pix);
 		return;
 	}
@@ -346,6 +353,8 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 	float3 sampled_normal = normalize(make_float3(texRead(globals.FrameBuffer.world_normals_render_surface_object,
 		current_pix)));
 	float sampled_depth = texRead(globals.FrameBuffer.depth_render_surface_object,
+		current_pix).x;
+	float sampled_variance = texRead(globals.FrameBuffer.filtered_variance_render_front_surfobj,
 		current_pix).x;
 	// depth-gradient estimation from screen-space derivatives
 	float2 dgrad = make_float2(
@@ -359,6 +368,7 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 		0.0625, 0.125, 0.0625 };
 
 	float4 avg_irradiance = make_float4(0);
+	float f_variance = 0;
 	// weights sum
 	float wsum = 0.0;
 
@@ -374,13 +384,19 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 				tap_pix));
 			float tap_depth = texRead(globals.FrameBuffer.depth_render_surface_object,
 				tap_pix).x;
+			float tap_variance = texRead(globals.FrameBuffer.filtered_variance_render_front_surfobj,
+				tap_pix).x;
 
 			float nw = normalWeight((sampled_normal), normalize(tap_normal));
 			float dw = depthWeight(sampled_depth, tap_depth, dgrad, make_float2(offset));
+			float lw = luminanceWeight(
+				getLuminance(RGBSpectrum(sampled_irradiance)),
+				getLuminance(RGBSpectrum(tap_irradiance)), sampled_variance);
 
 			float w = 1;
+			//lw = 1;
 			// combine the weights from above
-			w = clamp(dw * nw, 0.f, 1.f);
+			w = clamp(dw * nw * lw, 0.f, 1.f);
 
 			// scale by the filtering kernel
 			float h = filterKernel[(x + 1) + (y + 1) * 3];
@@ -388,16 +404,22 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 
 			// add to total irradiance
 			avg_irradiance += tap_irradiance * hw;
+			f_variance += Sqr(hw) * tap_variance;
 			wsum += hw;
 		}
 	}
 
 	avg_irradiance /= wsum;
-	avg_irradiance.w = sampled_irradiance.w;//restore history length
+	f_variance /= Sqr(wsum);
+	//f_variance = sampled_variance;
+	avg_irradiance.w = sampled_irradiance.w;//restore history length for temporal feedback
 
 	//out----
 	texWrite((avg_irradiance),
 		globals.FrameBuffer.filtered_irradiance_back_render_surface_object,
+		current_pix);
+	texWrite(make_float4(make_float3(f_variance), 1),
+		globals.FrameBuffer.filtered_variance_render_back_surfobj,
 		current_pix);
 }
 

@@ -101,8 +101,8 @@ struct CelestiumPT_API
 
 	FrameBuffer IrradianceRenderBuffer;
 	FrameBuffer MomentsRenderBuffer;
-	FrameBuffer VarianceRenderFrontBuffer;
-	FrameBuffer VarianceRenderBackBuffer;
+	FrameBuffer FilteredVarianceRenderFrontBuffer;
+	FrameBuffer FilteredVarianceRenderBackBuffer;
 	FrameBuffer FilteredIrradianceFrontBuffer;
 	FrameBuffer FilteredIrradianceBackBuffer;
 
@@ -159,7 +159,7 @@ void Renderer::resizeResolution(int width, int height)
 	m_NativeRenderResolutionHeight = height;
 	m_NativeRenderResolutionWidth = width;
 
-	m_CelestiumPTResourceAPI->VarianceRenderFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->FilteredVarianceRenderFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->AlbedoRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->WorldNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -180,7 +180,7 @@ void Renderer::resizeResolution(int width, int height)
 
 	m_CelestiumPTResourceAPI->IrradianceRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->MomentsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
-	m_CelestiumPTResourceAPI->VarianceRenderBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->FilteredVarianceRenderBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
@@ -238,9 +238,9 @@ void Renderer::resizeResolution(int width, int height)
 
 		//Variance
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
-			m_CelestiumPTResourceAPI->VarianceRenderBackBuffer.m_RenderTargetTextureName, 0);
+			m_CelestiumPTResourceAPI->FilteredVarianceRenderBackBuffer.m_RenderTargetTextureName, 0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D,
-			m_CelestiumPTResourceAPI->VarianceRenderFrontBuffer.m_RenderTargetTextureName, 0);
+			m_CelestiumPTResourceAPI->FilteredVarianceRenderFrontBuffer.m_RenderTargetTextureName, 0);
 
 		//Moments
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D,
@@ -343,8 +343,8 @@ void Renderer::renderFrame()
 {
 	//pre render-------------------------------------------------------------
 
-	m_CelestiumPTResourceAPI->VarianceRenderFrontBuffer.beginRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.variance_render_front_surfobj));
+	m_CelestiumPTResourceAPI->FilteredVarianceRenderFrontBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.filtered_variance_render_front_surfobj));
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object));
 	m_CelestiumPTResourceAPI->AlbedoRenderBuffer.beginRender(
@@ -383,8 +383,8 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.current_irradiance_render_surface_object));
 	m_CelestiumPTResourceAPI->MomentsRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.current_moments_render_surface_object));
-	m_CelestiumPTResourceAPI->VarianceRenderBackBuffer.beginRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.variance_render_back_surfobj));
+	m_CelestiumPTResourceAPI->FilteredVarianceRenderBackBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.filtered_variance_render_back_surfobj));
 	m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.filtered_irradiance_front_render_surface_object));
 	m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer.beginRender(
@@ -419,6 +419,11 @@ void Renderer::renderFrame()
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
+		//moments
+		texCopy(m_CelestiumPTResourceAPI->HistoryIntegratedMomentsBackBuffer,
+			m_CelestiumPTResourceAPI->HistoryIntegratedMomentsFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
+
 		//texCopy(m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer,
 		//	m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
 		//	m_NativeRenderResolutionHeight);
@@ -429,6 +434,9 @@ void Renderer::renderFrame()
 		checkCudaErrors(cudaDeviceSynchronize());
 		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
 			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
+		texCopy(m_CelestiumPTResourceAPI->FilteredVarianceRenderBackBuffer,
+			m_CelestiumPTResourceAPI->FilteredVarianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
 			m_NativeRenderResolutionHeight);
 		//irradiance feedback: TODO: basically bo need for hist_int_irr back buffer
 		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
@@ -442,6 +450,9 @@ void Renderer::renderFrame()
 		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
 			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
 			m_NativeRenderResolutionHeight);
+		texCopy(m_CelestiumPTResourceAPI->FilteredVarianceRenderBackBuffer,
+			m_CelestiumPTResourceAPI->FilteredVarianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
 		//-----------
 		SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 4);
@@ -450,6 +461,9 @@ void Renderer::renderFrame()
 		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
 			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
 			m_NativeRenderResolutionHeight);
+		texCopy(m_CelestiumPTResourceAPI->FilteredVarianceRenderBackBuffer,
+			m_CelestiumPTResourceAPI->FilteredVarianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
 		//-----------
 		SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 8);
@@ -457,6 +471,9 @@ void Renderer::renderFrame()
 		checkCudaErrors(cudaDeviceSynchronize());
 		texCopy(m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer,
 			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
+		texCopy(m_CelestiumPTResourceAPI->FilteredVarianceRenderBackBuffer,
+			m_CelestiumPTResourceAPI->FilteredVarianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
 			m_NativeRenderResolutionHeight);
 		//-----------
 		composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
@@ -499,8 +516,8 @@ void Renderer::renderFrame()
 	//----
 
 	//post render cuda---------------------------------------------------------------------------------
-	m_CelestiumPTResourceAPI->VarianceRenderFrontBuffer.endRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.variance_render_front_surfobj));
+	m_CelestiumPTResourceAPI->FilteredVarianceRenderFrontBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.filtered_variance_render_front_surfobj));
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_render_surface_object));
 	m_CelestiumPTResourceAPI->AlbedoRenderBuffer.endRender(
@@ -539,8 +556,8 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.current_irradiance_render_surface_object));
 	m_CelestiumPTResourceAPI->MomentsRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.current_moments_render_surface_object));
-	m_CelestiumPTResourceAPI->VarianceRenderBackBuffer.endRender(
-		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.variance_render_back_surfobj));
+	m_CelestiumPTResourceAPI->FilteredVarianceRenderBackBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.filtered_variance_render_back_surfobj));
 	m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.filtered_irradiance_front_render_surface_object));
 	m_CelestiumPTResourceAPI->FilteredIrradianceBackBuffer.endRender(
@@ -646,7 +663,7 @@ GLuint Renderer::getAlbedoTargetTextureName() const
 
 GLuint Renderer::getIntegratedVarianceTargetTextureName() const
 {
-	return m_CelestiumPTResourceAPI->VarianceRenderFrontBuffer.m_RenderTargetTextureName;
+	return m_CelestiumPTResourceAPI->FilteredVarianceRenderFrontBuffer.m_RenderTargetTextureName;
 }
 
 int Renderer::getSPP() const

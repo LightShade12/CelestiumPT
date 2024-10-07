@@ -342,7 +342,7 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 	if (objID < 0) {
 		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
 		texWrite(make_float4(make_float3(variance), 1),
-			globals.FrameBuffer.variance_render_front_surfobj,
+			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			c_pix);
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
@@ -367,7 +367,7 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 		prev_px.y < 0 || prev_px.y >= globals.FrameBuffer.resolution.y) {
 		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
 		texWrite(make_float4(make_float3(variance), 1),
-			globals.FrameBuffer.variance_render_front_surfobj,
+			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			c_pix);
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
@@ -383,7 +383,7 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 	if (!prj_success) {
 		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
 		texWrite(make_float4(make_float3(variance), 1),
-			globals.FrameBuffer.variance_render_front_surfobj,
+			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			c_pix);
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
 			globals.FrameBuffer.history_integrated_moments_back_surfobj,
@@ -412,7 +412,7 @@ __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RG
 
 	//variamce
 	texWrite(make_float4(make_float3(variance), 1),
-		globals.FrameBuffer.variance_render_front_surfobj,
+		globals.FrameBuffer.filtered_variance_render_front_surfobj,
 		c_pix);
 
 	//feedback: moments
@@ -440,7 +440,7 @@ __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBS
 	float var = fabsf(avg_mom.y - Sqr(avg_mom.x));
 
 	texWrite(make_float4(make_float3(var), 1),
-		globals.FrameBuffer.variance_render_front_surfobj,
+		globals.FrameBuffer.filtered_variance_render_front_surfobj,
 		c_pix);
 
 	globals.FrameBuffer.accumulation_framebuffer

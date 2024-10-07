@@ -20,8 +20,8 @@ public:
 
 	cudaSurfaceObject_t current_irradiance_render_surface_object;
 	cudaSurfaceObject_t current_moments_render_surface_object;
-	cudaSurfaceObject_t variance_render_back_surfobj;
-	cudaSurfaceObject_t variance_render_front_surfobj;
+	cudaSurfaceObject_t filtered_variance_render_back_surfobj;
+	cudaSurfaceObject_t filtered_variance_render_front_surfobj;
 	cudaSurfaceObject_t filtered_irradiance_front_render_surface_object;//not to be fedback; svgf consumption only
 	cudaSurfaceObject_t filtered_irradiance_back_render_surface_object;
 
