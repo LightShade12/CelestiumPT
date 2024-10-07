@@ -65,8 +65,56 @@ __global__ void renderPathTraceRaw(IntegratorGlobals globals)
 		globals.FrameBuffer.current_moments_render_surface_object, current_pix);
 }
 
-__device__ float spatialVarianceEstimate() {
+__device__ float spatialVarianceEstimate(const IntegratorGlobals& globals, int2 t_current_pix) {
+	float3 sampled_normal = normalize(make_float3(texRead(globals.FrameBuffer.world_normals_render_surface_object,
+		t_current_pix)));
+	float sampled_depth = texRead(globals.FrameBuffer.depth_render_surface_object,
+		t_current_pix).x;
 
+	float histlen = texRead(globals.FrameBuffer.current_moments_render_surface_object, t_current_pix).w;
+
+	// depth-gradient estimation from screen-space derivatives
+	float2 dgrad = make_float2(
+		dFdx(globals.FrameBuffer.depth_render_surface_object, t_current_pix, globals.FrameBuffer.resolution).x,
+		dFdy(globals.FrameBuffer.depth_render_surface_object, t_current_pix, globals.FrameBuffer.resolution).x);
+
+	float weight_sum = 0.f;
+	float2 f_moments = make_float2(0.f);
+
+	int radius = 3; // 7x7 Gaussian Kernel
+	for (int yy = -radius; yy <= radius; ++yy)
+	{
+		for (int xx = -radius; xx <= radius; ++xx)
+		{
+			int2 offset = make_int2(xx, yy);
+			int2 tap_pix = t_current_pix + offset;
+			tap_pix = clamp(tap_pix, make_int2(0, 0), (globals.FrameBuffer.resolution - 1));
+
+			float4 tap_irradiance = texRead(globals.FrameBuffer.current_irradiance_render_surface_object,
+				tap_pix);
+			float3 tap_normal = make_float3(texRead(globals.FrameBuffer.world_normals_render_surface_object,
+				tap_pix));
+			float tap_depth = texRead(globals.FrameBuffer.depth_render_surface_object,
+				tap_pix).x;
+
+			float l = getLuminance(RGBSpectrum(tap_irradiance));
+
+			float nw = normalWeight((sampled_normal), normalize(tap_normal));
+			float dw = depthWeight(sampled_depth, tap_depth, dgrad, make_float2(offset));
+			float w = clamp((dw)*nw, 0.f, 1.f);
+
+			f_moments += make_float2(l, l * l) * w;
+			weight_sum += w;
+		}
+	}
+
+	weight_sum = fmaxf(weight_sum, 1e-6f);
+	f_moments /= weight_sum;
+
+	float variance = fabsf(f_moments.y - Sqr(f_moments.x));
+	variance *= 4.f / histlen;//boost for 1st few frames
+
+	return variance;
 }
 
 //feedback only moments
@@ -123,7 +171,8 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 	//new fragment; out of screen
 	if (prev_px.x < 0 || prev_px.x >= res.x ||
 		prev_px.y < 0 || prev_px.y >= res.y) {
-		texWrite(make_float4(make_float3(0), 0),
+		float var = spatialVarianceEstimate(globals, current_pix);
+		texWrite(make_float4(make_float3(var), 0),
 			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
@@ -146,7 +195,8 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 
 	//disocclusion/ reproj failure
 	if (!prj_success) {
-		texWrite(make_float4(make_float3(0), 0),
+		float var = spatialVarianceEstimate(globals, current_pix);
+		texWrite(make_float4(make_float3(var), 0),
 			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
@@ -189,9 +239,14 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 	//	globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 	//	current_pix);
 
-	float2 final_v = final_moments;// / (moments_hist_len);
-	float variance = fabsf(final_v.y - (Sqr(final_v.x)));
-	//variance *= (moments_hist_len + 1) / fmaxf(moments_hist_len, 1);
+	float variance;
+	if (moments_hist_len < 4) {
+		variance = spatialVarianceEstimate(globals, current_pix);
+	}
+	else {
+		float2 final_v = final_moments;// / (moments_hist_len);
+		variance = fabsf(final_v.y - (Sqr(final_v.x)));
+	}
 
 	texWrite(make_float4(make_float3(variance), 1),
 		globals.FrameBuffer.filtered_variance_render_front_surfobj,
@@ -257,66 +312,36 @@ __device__ float4 dFdy(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res) {
 	return d1 - d0;
 }
 
-//updates filtered irradiance and filtered variance
-__device__ void psvgf(const IntegratorGlobals& globals, int2 c_pix, int stepSize) {
-	// 3x3 kernel from the paper
-	const float filterKernel[] =
+// computes a 3x3 gaussian blur of the variance, centered around
+// the current pixel
+__device__ float computeVarianceCenter(const IntegratorGlobals& globals, int2 t_current_pix)
+{
+	float sum = 0.f;
+
+	const float kernel[2][2] = {
+		{ 1.0 / 4.0, 1.0 / 8.0  },
+		{ 1.0 / 8.0, 1.0 / 16.0 }
+	};
+
+	const int radius = 1;
+	for (int yy = -radius; yy <= radius; yy++)
 	{
-		0.0625, 0.125, 0.0625,
-		0.125, 0.25, 0.125,
-		0.0625, 0.125, 0.0625 };
+		for (int xx = -radius; xx <= radius; xx++)
+		{
+			int2 tap_pix = t_current_pix + make_int2(xx, yy);
+			tap_pix = clamp(tap_pix, make_int2(0, 0), (globals.FrameBuffer.resolution - 1));
 
-	GBuffer g = sampleGBuffer(globals, c_pix);
+			float k = kernel[abs(xx)][abs(yy)];
 
-	// depth-gradient estimation from screen-space derivatives
-	float2 dgrad = make_float2(
-		dFdx(globals.FrameBuffer.depth_render_surface_object, c_pix, globals.FrameBuffer.resolution).x,
-		dFdy(globals.FrameBuffer.depth_render_surface_object, c_pix, globals.FrameBuffer.resolution).x);
-
-	// total irradiance
-	float3 irradiance = make_float3(0);
-	float variance = 0;
-
-	// weights sum
-	float wsum = 0.0;
-
-	//atrous loop
-	for (int y = -1; y <= 1; y++) {
-		for (int x = -1; x <= 1; x++) {
-			int2 offset = make_int2(x, y) * stepSize;
-			int2 pix = c_pix + offset;
-			pix = clamp(pix, make_int2(0, 0), (globals.FrameBuffer.resolution - 1));
-
-			GBuffer s = sampleGBuffer(globals, pix);
-
-			// calculate the normal, depth and luminance weights
-			float nw = normalWeight(g.normal, s.normal);
-			float dw = depthWeight(g.depth, s.depth, dgrad, make_float2(offset));
-			float lw = luminanceWeight(
-				getLuminance(RGBSpectrum(g.irradiance)),
-				getLuminance(RGBSpectrum(s.irradiance)), g.variance);
-
-			// combine the weights from above
-			float w = clamp(nw * dw * lw, 0.f, 1.f);
-
-			// scale by the filtering kernel
-			float h = filterKernel[(x + 1) + (y + 1) * 3];
-			float hw = w * h;
-
-			// add to total irradiance
-			irradiance += s.irradiance * hw;
-			variance = s.variance * Sqr(h) * Sqr(w);
-			wsum += hw;
+			sum += texRead(globals.FrameBuffer.filtered_variance_render_front_surfobj,
+				tap_pix).x * k;
 		}
 	}
 
-	// scale total irradiance by the sum of the weights
-	g.irradiance = irradiance / wsum;
-	g.variance = variance / Sqr(wsum);
-	//write gbuffer
-	writeGBuffer(globals, g, c_pix);
+	return sum;
 }
 
+//updates filtered irradiance and filtered variance
 __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 	//setup threads
 	int thread_pixel_coord_x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -354,8 +379,10 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 		current_pix)));
 	float sampled_depth = texRead(globals.FrameBuffer.depth_render_surface_object,
 		current_pix).x;
-	float sampled_variance = texRead(globals.FrameBuffer.filtered_variance_render_front_surfobj,
-		current_pix).x;
+	//float sampled_variance = texRead(globals.FrameBuffer.filtered_variance_render_front_surfobj,
+	//	current_pix).x;
+	float sampled_variance = computeVarianceCenter(globals, current_pix);
+
 	// depth-gradient estimation from screen-space derivatives
 	float2 dgrad = make_float2(
 		dFdx(globals.FrameBuffer.depth_render_surface_object, current_pix, globals.FrameBuffer.resolution).x,

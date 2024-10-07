@@ -183,8 +183,8 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 		HostMaterial mat = m_WorkingScene->getMaterial(mtidx);
 
 		if (!(mat.emission_color_factor.x == 0 && mat.emission_color_factor.y == 0 && mat.emission_color_factor.z == 0)) {
-			m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1,
-				mat.emission_color_factor, mat.emission_strength * 10);
+			//			m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1,
+			//				mat.emission_color_factor, mat.emission_strength * 10);
 		}
 	}
 
