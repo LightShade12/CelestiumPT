@@ -13,13 +13,6 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-// Structure representing the G-buffer data
-struct GBuffer {
-	float3 irradiance;
-	float3 normal;
-	float  depth;
-	float  variance;
-};
 __device__ float getLuminance(const RGBSpectrum& col) {
 	// Rec. 709 luminance coefficients for linear RGB
 	return 0.2126f * col.r + 0.7152f * col.g + 0.0722f * col.b;
@@ -101,7 +94,7 @@ __device__ float spatialVarianceEstimate(const IntegratorGlobals& globals, int2 
 
 			float nw = normalWeight((sampled_normal), normalize(tap_normal));
 			float dw = depthWeight(sampled_depth, tap_depth, dgrad, make_float2(offset));
-			float w = clamp((dw)*nw, 0.f, 1.f);
+			float w = clamp(dw * nw, 0.f, 1.f);
 
 			f_moments += make_float2(l, l * l) * w;
 			weight_sum += w;
@@ -112,7 +105,7 @@ __device__ float spatialVarianceEstimate(const IntegratorGlobals& globals, int2 
 	f_moments /= weight_sum;
 
 	float variance = fabsf(f_moments.y - Sqr(f_moments.x));
-	variance *= 4.f / histlen;//boost for 1st few frames
+	variance *= fminf(4.f / histlen, 1.f);//boost for 1st few frames
 
 	return variance;
 }
@@ -172,6 +165,7 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 	if (prev_px.x < 0 || prev_px.x >= res.x ||
 		prev_px.y < 0 || prev_px.y >= res.y) {
 		float var = spatialVarianceEstimate(globals, current_pix);
+		//float var = 0;
 		texWrite(make_float4(make_float3(var), 0),
 			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
@@ -196,6 +190,7 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 	//disocclusion/ reproj failure
 	if (!prj_success) {
 		float var = spatialVarianceEstimate(globals, current_pix);
+		//float var = 0;
 		texWrite(make_float4(make_float3(var), 0),
 			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
@@ -240,7 +235,7 @@ __global__ void temporalIntegrate(IntegratorGlobals globals) {
 	//	current_pix);
 
 	float variance;
-	if (moments_hist_len < 4) {
+	if (moments_hist_len < 4 || true) {
 		variance = spatialVarianceEstimate(globals, current_pix);
 	}
 	else {
@@ -276,22 +271,6 @@ __device__ float luminanceWeight(float lum0, float lum1, float variance) {
 	const float strictness = 4.0;
 	const float eps = 0.01;
 	return exp((-abs(lum0 - lum1)) / (strictness * variance + eps));
-}
-
-__device__ GBuffer sampleGBuffer(const IntegratorGlobals& globals, int2 c_pix) {
-	GBuffer g;
-	g.irradiance = make_float3(texRead(globals.FrameBuffer.filtered_irradiance_front_render_surface_object, c_pix));
-	g.variance = texRead(globals.FrameBuffer.filtered_variance_render_front_surfobj, c_pix).x;
-	g.normal = make_float3(texRead(globals.FrameBuffer.world_normals_render_surface_object, c_pix));
-	g.depth = texRead(globals.FrameBuffer.depth_render_surface_object, c_pix).x;
-	return g;
-}
-
-__device__ void writeGBuffer(const IntegratorGlobals& globals, const GBuffer& gbuffer, int2 c_pix) {
-	texWrite(make_float4(gbuffer.irradiance, 1),
-		globals.FrameBuffer.filtered_irradiance_back_render_surface_object, c_pix);
-	texWrite(make_float4(make_float3(gbuffer.variance), 1),
-		globals.FrameBuffer.filtered_variance_render_back_surfobj, c_pix);
 }
 
 //ensure this is not oob
@@ -416,14 +395,13 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 
 			float nw = normalWeight((sampled_normal), normalize(tap_normal));
 			float dw = depthWeight(sampled_depth, tap_depth, dgrad, make_float2(offset));
-			float lw = luminanceWeight(
+			float lw = 1;
+			lw = luminanceWeight(
 				getLuminance(RGBSpectrum(sampled_irradiance)),
 				getLuminance(RGBSpectrum(tap_irradiance)), sampled_variance);
 
-			float w = 1;
-			//lw = 1;
 			// combine the weights from above
-			w = clamp(dw * nw * lw, 0.f, 1.f);
+			float w = clamp(dw * nw * lw, 0.f, 1.f);
 
 			// scale by the filtering kernel
 			float h = filterKernel[(x + 1) + (y + 1) * 3];
@@ -438,9 +416,9 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 
 	avg_irradiance /= wsum;
 	f_variance /= Sqr(wsum);
-	//f_variance = sampled_variance;
+
 	avg_irradiance.w = sampled_irradiance.w;//restore history length for temporal feedback
-	 
+
 	//out----
 	texWrite((avg_irradiance),
 		globals.FrameBuffer.filtered_irradiance_back_render_surface_object,
