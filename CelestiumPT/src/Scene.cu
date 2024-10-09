@@ -1,12 +1,12 @@
-#include "HostScene.hpp"
-#include "DeviceScene.cuh"
-#include "DeviceMesh.cuh"
+#include "host_scene.hpp"
+#include "device_scene.cuh"
+#include "device_mesh.cuh"
 
-#include "Triangle.cuh"
+#include "triangle.cuh"
 
 //#include "Ray.cuh"
 //#include "ShapeIntersection.cuh"
-#include "SceneGeometry.cuh"
+#include "scene_geometry.cuh"
 //#include "SceneGeometry.cuh"
 
 #define CLSPT_NAME_STRING_LENGTH 32

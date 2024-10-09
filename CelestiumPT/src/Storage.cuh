@@ -1,7 +1,7 @@
 #pragma once
 
-#include "IntegratorSettings.hpp"
-#include "Light.cuh"
+#include "integrator_settings.hpp"
+#include "light.cuh"
 
 #include <vector_types.h>
 #include <glad/include/glad/glad.h>//for cudagl_interop

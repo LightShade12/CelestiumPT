@@ -107,11 +107,6 @@
     <ClCompile Include="thirdparty\tinygltf\tiny_gltf.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CelestiumPT\CelestiumPT.vcxproj">
-      <Project>{7a15f594-8ef8-4ff8-889e-7503e6171302}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="src\Camera.hpp" />
     <ClInclude Include="src\Application.hpp" />
     <ClInclude Include="src\EditorSandbox.hpp" />
@@ -134,6 +129,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Mesh.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CelestiumPT\CelestiumPT.vcxproj">
+      <Project>{9b7ba236-ea40-4e46-b069-5e190827f9c5}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

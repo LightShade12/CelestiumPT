@@ -1,4 +1,4 @@
-#include "ErrorCheck.cuh"
+#include "error_check.cuh"
 #include <iostream>
 
 void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line)

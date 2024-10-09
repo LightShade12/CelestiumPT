@@ -1,5 +1,5 @@
-#include "HostMaterial.hpp"
-#include "DeviceMaterial.cuh"
+#include "host_material.hpp"
+#include "device_material.cuh"
 
 HostMaterial::HostMaterial(DeviceMaterial* dmat)
 {

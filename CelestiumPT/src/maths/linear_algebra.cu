@@ -1,4 +1,4 @@
-#include "maths_linear_algebra.cuh"
+#include "linear_algebra.cuh"
 #include "constants.cuh"
 
 __host__ __device__ float deg2rad(float degree)

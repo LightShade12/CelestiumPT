@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ErrorCheck.cuh"
+#include "error_check.cuh"
 
 #include <glad/glad.h>
 #define __CUDACC__
@@ -17,7 +17,7 @@ struct TextureBuffer {
 	__host__ TextureBuffer(cudaSurfaceObject_t t_cuda_surf, int t_width, int t_height, cudaSurfaceObject_t t_front_surf) :
 		m_cuda_surface(t_cuda_surf), m_width(t_width), m_height(t_height), m_cuda_front_surface(t_front_surf) {};
 
-	__device__ float4 texRead(int2 pix) const {
+	__device__ float4 texReadNearest(int2 pix) const {
 		float4 data;
 		if (m_cuda_front_surface != NULL)
 			data = surf2Dread<float4>(m_cuda_front_surface,
@@ -250,7 +250,6 @@ public:
 		if (local_position.m_gl_tex_name != 0) local_position.destroy();
 		if (velocity.m_gl_tex_name != 0) velocity.destroy();
 	}
-
 
 	GenericBuffer albedo;
 	GenericBuffer local_normals;

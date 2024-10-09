@@ -1,4 +1,4 @@
-#include "Sampling.cuh"
+#include "sampling.cuh"
 
 __device__ float balanceHeuristic(int nf, float fPdf, int ng, float gPdf)
 {

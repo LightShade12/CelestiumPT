@@ -1,6 +1,6 @@
 #pragma once
 //TODO:This file is stupid
-#include "Light.cuh"
+#include "light.cuh"
 #include "acceleration_structure/GAS.cuh"
 
 //class Light;

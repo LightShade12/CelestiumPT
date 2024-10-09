@@ -1,7 +1,7 @@
-#include "Light.cuh"
-#include "ShapeIntersection.cuh"
+#include "light.cuh"
+#include "shape_intersection.cuh"
 #include "maths/constants.cuh"
-#include "Ray.cuh"
+#include "ray.cuh"
 
 __device__ RGBSpectrum SkyShading(const Ray& ray) {
 	//return make_float3(0);

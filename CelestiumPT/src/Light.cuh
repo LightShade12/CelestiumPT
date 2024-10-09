@@ -1,7 +1,6 @@
 #pragma once
-#include "Triangle.cuh"
-//#include "maths/matrix.cuh"
-#include "Spectrum.cuh"
+#include "triangle.cuh"
+#include "spectrum.cuh"
 
 struct ShapeIntersection;
 class Ray;

@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/cs16_dust_unit.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -191,6 +191,12 @@ void EditorSandbox::onRender(float delta_secs)
 				if (ImGui::CollapsingHeader("Pathtracing")) {
 					ImGui::Checkbox("Accumulation", &(m_Renderer.getIntegratorSettings()->accumulate));
 					ImGui::Checkbox("Temporal accumulation", &(m_Renderer.getIntegratorSettings()->temporal_accumulation));
+					ImGui::Checkbox("SVGF denoiser", &(m_Renderer.getIntegratorSettings()->use_SVGF));
+					ImGui::Indent();
+					if (m_Renderer.getIntegratorSettings()->use_SVGF) {
+						ImGui::Checkbox("Use 5x5 filter", &(m_Renderer.getIntegratorSettings()->use_5x5_filter));
+					}
+					ImGui::Unindent();
 					ImGui::InputInt("Ray bounces", &(m_Renderer.getIntegratorSettings()->max_bounces));
 				};
 				if (ImGui::CollapsingHeader("Geometry")) {

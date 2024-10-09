@@ -1,5 +1,5 @@
 #pragma once
-#include "maths_linear_algebra.cuh"
+#include "linear_algebra.cuh"
 
 __device__ float balanceHeuristic(int nf, float fPdf, int ng, float gPdf);
 

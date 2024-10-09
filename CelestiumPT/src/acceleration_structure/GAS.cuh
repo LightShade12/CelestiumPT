@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BLASBuilder.hpp"
+#include "BLAS_builder.hpp"
 #include "TLAS.cuh"
 
 #include <cuda_runtime.h>

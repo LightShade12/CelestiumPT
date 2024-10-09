@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Bounds.cuh"
+#include "bounds.cuh"
 #include "BLAS.cuh"
-#include "TLASNode.cuh"
-#include "Bounds.cuh"
+#include "TLAS_node.cuh"
+#include "bounds.cuh"
 
 #include <cuda_runtime.h>
 #include <thrust/universal_vector.h>

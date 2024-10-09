@@ -1,12 +1,12 @@
 #include "BLAS.cuh"
 
-#include "SceneGeometry.cuh"
-#include "Storage.cuh"
-#include "RayStages.cuh"
-#include "ShapeIntersection.cuh"
-#include "Ray.cuh"
-#include "DeviceMesh.cuh"
-#include "BVHNode.cuh"
+#include "scene_geometry.cuh"
+#include "storage.cuh"
+#include "ray_stages.cuh"
+#include "shape_intersection.cuh"
+#include "ray.cuh"
+#include "device_mesh.cuh"
+#include "BVH_node.cuh"
 
 #include <algorithm>
 #include <numeric>

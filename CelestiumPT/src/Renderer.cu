@@ -1,12 +1,15 @@
-#include "Renderer.hpp"
-#include "ErrorCheck.cuh"
-#include "Storage.cuh"
-#include "Integrator.cuh"
-#include "svgf.cuh"
+#include "renderer.hpp"
+#include "error_check.cuh"
+#include "storage.cuh"
+#include "integrator.cuh"
+#include "SVGF/SVGFPasses.cuh"
+#include "SVGF/SVGFTemporalReprojection.cuh"
+#include "render_passes.cuh"
+#include "temporal_pass.cuh"
 
-#include "SceneGeometry.cuh"
-#include "DeviceScene.cuh"
-#include "DeviceCamera.cuh"
+#include "scene_geometry.cuh"
+#include "device_scene.cuh"
+#include "device_camera.cuh"
 //#include "Triangle.cuh"
 
 #include <cuda_gl_interop.h>
@@ -406,12 +409,12 @@ void Renderer::renderFrame()
 		thrust::raw_pointer_cast(m_CelestiumPTResourceAPI->VarianceAccumulationFrameBuffer.data());
 
 	//Launch RenderChain
-	if (true) {
+
+	if (m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.use_SVGF)
+	{
 		renderPathTraceRaw << < m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
-		//IntegratorPipeline::invokeRenderKernel(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-		//	m_CudaResourceAPI->m_BlockGridDimensions,
-		//	m_CudaResourceAPI->m_ThreadBlockDimensions);
+
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
 		//-----------
@@ -424,9 +427,6 @@ void Renderer::renderFrame()
 			m_CelestiumPTResourceAPI->HistoryIntegratedMomentsFrontBuffer, m_NativeRenderResolutionWidth,
 			m_NativeRenderResolutionHeight);
 
-		//texCopy(m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer,
-		//	m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
-		//	m_NativeRenderResolutionHeight);
 		//-----------1,2,4,8
 		SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, 1);
@@ -481,31 +481,39 @@ void Renderer::renderFrame()
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
 	}
-	else
+	else if (m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.temporal_accumulation)
 	{
 		renderPathTraceRaw << < m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
 		//---
-		temporalIntegrate << < m_CudaResourceAPI->m_BlockGridDimensions,
+		temporalAccumulate << < m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
-		blitMomentsBackToFront();//updates FrontIntegratedHistoryMoments for reads
+		texCopy(m_CelestiumPTResourceAPI->HistoryIntegratedMomentsBackBuffer,
+			m_CelestiumPTResourceAPI->HistoryIntegratedMomentsFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
+		texCopy(m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderBackBuffer,
+			m_CelestiumPTResourceAPI->HistoryIntegratedIrradianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
 		//---
 
-		float max_svgf_iter = 4;
-		for (int iter_idx = 0; iter_idx < max_svgf_iter; iter_idx++) {
-			int step_size = powf(2, iter_idx);
-			SVGFPass << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, step_size);
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			if (iter_idx == 0)blitFilteredIrradianceToHistory(true);//feedback: irradiance from BackFilteredIrradiance
-			blitFilteredIrradianceVarianceBackToFront();//updates FrontFiltredIrradiance and FrontIntegratedVariance
-		}
-
+		composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);//Display!
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+	}
+	else
+	{
+		renderPathTraceRaw << < m_CudaResourceAPI->m_BlockGridDimensions,
+			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+		checkCudaErrors(cudaGetLastError());
+		checkCudaErrors(cudaDeviceSynchronize());
+		texCopy(m_CelestiumPTResourceAPI->IrradianceRenderBuffer,
+			m_CelestiumPTResourceAPI->FilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
 		composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
 			m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);//Display!
 		checkCudaErrors(cudaGetLastError());

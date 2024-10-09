@@ -1,8 +1,8 @@
-#include "GASBuilder.hpp"
+#include "GAS_builder.hpp"
 
-#include "HostScene.hpp"
-#include "DeviceScene.cuh"
-#include "SceneGeometry.cuh"
+#include "host_scene.hpp"
+#include "device_scene.cuh"
+#include "scene_geometry.cuh"
 #include "GAS.cuh"
 
 void GASBuilder::build(HostScene* host_scene)

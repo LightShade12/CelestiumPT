@@ -1,8 +1,8 @@
 #pragma once
 
-#include "IntegratorSettings.hpp"
-#include "HostCamera.hpp"
-#include "HostScene.hpp"
+#include "integrator_settings.hpp"
+#include "host_camera.hpp"
+#include "host_scene.hpp"
 
 #include <glad/glad.h>
 #include <cstdint>

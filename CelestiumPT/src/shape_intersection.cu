@@ -1,10 +1,10 @@
-#include "ShapeIntersection.cuh"
-#include "BSDF.cuh"
-#include "DeviceMaterial.cuh"
-#include "Ray.cuh"
-#include "Spectrum.cuh"
-#include "SceneGeometry.cuh"
-#include "Storage.cuh"
+#include "shape_intersection.cuh"
+#include "bsdf.cuh"
+#include "device_material.cuh"
+#include "ray.cuh"
+#include "spectrum.cuh"
+#include "scene_geometry.cuh"
+#include "storage.cuh"
 
 __device__ float3 getGeometricTangent(const Triangle& triangle) {
 	float3 edge0 = triangle.vertex1.position - triangle.vertex0.position;

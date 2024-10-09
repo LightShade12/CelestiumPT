@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Bounds.cuh"
+#include "bounds.cuh"
 #include <cuda_runtime.h>
 #include <cstdint>
 

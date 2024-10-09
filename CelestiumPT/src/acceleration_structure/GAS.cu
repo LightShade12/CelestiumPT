@@ -1,8 +1,8 @@
 #include "GAS.cuh"
-#include "HostScene.hpp"
-#include "DeviceScene.cuh"
-#include "Storage.cuh"
-#include "ShapeIntersection.cuh"
+#include "host_scene.hpp"
+#include "device_scene.cuh"
+#include "storage.cuh"
+#include "shape_intersection.cuh"
 
 void GAS::build(HostScene* host_scene)
 {

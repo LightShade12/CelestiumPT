@@ -1,4 +1,4 @@
-#include "Triangle.cuh"
+#include "triangle.cuh"
 
 //TODO:lookup docs
 __device__ float3 sampleUniformTriangle(float2 u)

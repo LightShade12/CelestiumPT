@@ -1,7 +1,7 @@
-#include "HostCamera.hpp"
-#include "DeviceCamera.cuh"
-#include "Ray.cuh"
-#include "maths/maths_linear_algebra.cuh"
+#include "host_camera.hpp"
+#include "device_camera.cuh"
+#include "ray.cuh"
+#include "maths/linear_algebra.cuh"
 
 HostCamera::HostCamera(DeviceCamera* device_camera)
 {

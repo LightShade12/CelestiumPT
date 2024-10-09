@@ -1,9 +1,9 @@
-#include "BLASBuilder.hpp"
+#include "BLAS_builder.hpp"
 #include "BLAS.cuh"
-#include "HostScene.hpp"
-#include "DeviceScene.cuh"
-#include "DeviceMesh.cuh"
-#include "BVHCache.cuh"
+#include "host_scene.hpp"
+#include "device_scene.cuh"
+#include "device_mesh.cuh"
+#include "BVH_cache.cuh"
 
 #include <vector>
 #include <algorithm>

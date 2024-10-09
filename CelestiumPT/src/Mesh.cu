@@ -1,11 +1,11 @@
-#include "HostMesh.hpp"
+#include "host_mesh.hpp"
 
-#include "DeviceMesh.cuh"
+#include "device_mesh.cuh"
 
-#include "HostScene.hpp"
-#include "DeviceScene.cuh"
+#include "host_scene.hpp"
+#include "device_scene.cuh"
 
-#include "maths/maths_linear_algebra.cuh"
+#include "maths/linear_algebra.cuh"
 #include "utility.hpp"
 
 HostMesh::HostMesh(DeviceMesh* device_mesh)

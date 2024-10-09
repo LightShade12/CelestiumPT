@@ -1,8 +1,8 @@
 #include "TLAS.cuh"
-#include "Ray.cuh"
-#include "Storage.cuh"
-#include "SceneGeometry.cuh"
-#include "ShapeIntersection.cuh"
+#include "ray.cuh"
+#include "storage.cuh"
+#include "scene_geometry.cuh"
+#include "shape_intersection.cuh"
 
 TLAS::TLAS(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNode>& tlasnodes)
 {

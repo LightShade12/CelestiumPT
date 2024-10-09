@@ -1,5 +1,5 @@
 #pragma once
-#include "Light.cuh"
+#include "light.cuh"
 
 struct SampledLight {
 	__device__ SampledLight() = default;

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "HostMesh.hpp"
-#include "HostMaterial.hpp"
-#include "HostCamera.hpp"
+#include "host_mesh.hpp"
+#include "host_material.hpp"
+#include "host_camera.hpp"
+
 #include <glm/glm.hpp>
 
 class DeviceScene;

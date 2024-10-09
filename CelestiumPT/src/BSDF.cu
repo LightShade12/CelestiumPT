@@ -1,5 +1,5 @@
-#include "BSDF.cuh"
-#include "DeviceMaterial.cuh"
+#include "bsdf.cuh"
+#include "device_material.cuh"
 #include "samplers.cuh"
 
 BSDF::BSDF(const Mat3& tangent_matrix, const DeviceMaterial& material)
