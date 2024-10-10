@@ -40,7 +40,7 @@
     <CudaCompile Include="src\scene.cu" />
     <CudaCompile Include="src\shape_intersection.cu" />
     <CudaCompile Include="src\spectrum.cu" />
-    <CudaCompile Include="src\svgf\SVGF.cu" />
+    <CudaCompile Include="src\svgf\SVGF_atrous.cu" />
     <CudaCompile Include="src\svgf\SVGFEdgeStoppingFunctions.cu" />
     <CudaCompile Include="src\svgf\SVGFTemporalReprojection.cu" />
     <CudaCompile Include="src\temporal_pass.cu" />
@@ -177,6 +177,7 @@
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <Include>$(ProjectDir)src;$(ProjectDir)thirdparty;$(ProjectDir)thirdparty/glad/include;</Include>
       <FastMath>true</FastMath>
+      <CompileOut>$(SolutionDir)intermediate\$(Configuration)\$(ProjectName)\cuda\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

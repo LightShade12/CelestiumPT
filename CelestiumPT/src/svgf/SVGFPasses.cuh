@@ -6,4 +6,4 @@
 // SVGF kernel that applies spatial filtering
 __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize);
 
-__device__ float spatialVarianceEstimate(const IntegratorGlobals& globals, int2 t_current_pix);
+__device__ float4 spatialVarianceEstimate(const IntegratorGlobals& globals, int2 t_current_pix);

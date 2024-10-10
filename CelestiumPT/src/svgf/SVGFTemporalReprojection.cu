@@ -66,12 +66,11 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 			current_pix);
 
 		//out---
-		float var = spatialVarianceEstimate(globals, current_pix);
-		//float var = 0;
-		texWrite(make_float4(make_float3(var), 0),
+		float4 irr_var = spatialVarianceEstimate(globals, current_pix);
+		texWrite(make_float4(make_float3(irr_var.w), 0),
 			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
-		texWrite(make_float4(final_irradiance, 0),
+		texWrite(make_float4(make_float3(irr_var), 0),/*final_irradiance*/
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
 
@@ -89,12 +88,11 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 			current_pix);
 
 		//out---
-		float var = spatialVarianceEstimate(globals, current_pix);
-		//float var = 0;
-		texWrite(make_float4(make_float3(var), 0),
+		float4 irr_var = spatialVarianceEstimate(globals, current_pix);
+		texWrite(make_float4(make_float3(irr_var.w), 0),
 			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
-		texWrite(make_float4(final_irradiance, 0),
+		texWrite(make_float4(make_float3(irr_var), 0),/*final_irradiance*/
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
 		return;
@@ -122,20 +120,21 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 		globals.FrameBuffer.history_integrated_moments_back_surfobj,
 		current_pix);
 
-	float variance;
+	float4 variance;
 	if (moments_hist_len < 4) {
-		variance = spatialVarianceEstimate(globals, current_pix);
+		variance = spatialVarianceEstimate(globals, current_pix);//var_irr
+		final_irradiance = RGBSpectrum(variance);
 	}
 	else {
 		float2 final_v = final_moments;
-		variance = fabsf(final_v.y - (Sqr(final_v.x)));
+		variance.w = fabsf(final_v.y - (Sqr(final_v.x)));
 	}
 
-	texWrite(make_float4(make_float3(variance), 1),
+	texWrite(make_float4(make_float3(variance.w), 1),
 		globals.FrameBuffer.filtered_variance_render_front_surfobj,
 		current_pix);
 	//out----
-	texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),
+	texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),//send out hist_len to restore it after 1st filterpass
 		globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 		current_pix);
 }

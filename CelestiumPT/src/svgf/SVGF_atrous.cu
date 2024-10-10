@@ -15,12 +15,11 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-__device__ float spatialVarianceEstimate(const IntegratorGlobals& globals, int2 t_current_pix) {
+__device__ float4 spatialVarianceEstimate(const IntegratorGlobals& globals, int2 t_current_pix) {
 	float3 sampled_normal = normalize(make_float3(texReadNearest(globals.FrameBuffer.world_normals_render_surface_object,
 		t_current_pix)));
 	float sampled_depth = texReadNearest(globals.FrameBuffer.depth_render_surface_object,
 		t_current_pix).x;
-
 	float histlen = texReadNearest(globals.FrameBuffer.current_moments_render_surface_object, t_current_pix).w;
 
 	// depth-gradient estimation from screen-space derivatives
@@ -30,8 +29,11 @@ __device__ float spatialVarianceEstimate(const IntegratorGlobals& globals, int2 
 
 	float weight_sum = 0.f;
 	float2 f_moments = make_float2(0.f);
+	float3 f_irradiance = make_float3(0);
 
 	int radius = 3; // 7x7 Gaussian Kernel
+
+	//TODO:skip centre pixel?
 	for (int yy = -radius; yy <= radius; ++yy)
 	{
 		for (int xx = -radius; xx <= radius; ++xx)
@@ -51,21 +53,26 @@ __device__ float spatialVarianceEstimate(const IntegratorGlobals& globals, int2 
 
 			float nw = normalWeight((sampled_normal), normalize(tap_normal));
 			float dw = depthWeight(sampled_depth, tap_depth, dgrad, make_float2(offset));
-			float w = clamp(dw * nw, 0.f, 1.f);
+
+			//compute luminance weights?
+
+			float w = dw * nw;
 			if (isnan(w))w = 0;
 
-			f_moments += make_float2(l, l * l) * w;
+			f_irradiance += make_float3(tap_irradiance) * w;
+			f_moments += make_float2(l, l * l) * w;//possibly sample moments?
 			weight_sum += w;
 		}
 	}
 
 	weight_sum = fmaxf(weight_sum, 1e-6f);
 	f_moments /= weight_sum;
+	f_irradiance /= weight_sum;
 
 	float variance = fabsf(f_moments.y - Sqr(f_moments.x));
-	variance *= fminf(4.f / histlen, 1.f);//boost for 1st few frames
+	variance *= fmaxf(4.f / histlen, 1.f);//boost for 1st few frames
 
-	return variance;
+	return make_float4(f_irradiance, variance);
 }
 
 //updates filtered irradiance and filtered variance
@@ -135,13 +142,13 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 
 	int radius = (use_5x5filter) ? 2 : 1;
 
-	float4 avg_irradiance = make_float4(0);
-	float f_variance = 0;
-	// weights sum
-	float wsum = 0.0;
+	float4 f_irradiance = sampled_irradiance;
+	float f_variance = sampled_variance;
+	float wsum = 1.0;
 
 	for (int y = -radius; y <= radius; y++) {
 		for (int x = -radius; x <= radius; x++) {
+			if (x == 0 && y == 0)continue;
 			int2 offset = make_int2(x, y) * stepsize;
 			int2 tap_pix = current_pix + offset;
 			tap_pix = clamp(tap_pix, make_int2(0, 0), (globals.FrameBuffer.resolution - 1));
@@ -162,26 +169,26 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 				getLuminance(RGBSpectrum(sampled_irradiance)),
 				getLuminance(RGBSpectrum(tap_irradiance)), sampled_variance);
 
-			float w = clamp(dw * nw * lw, 0.f, 1.f);
+			float w = (dw * nw * lw);
 
 			// scale by the filtering kernel
 			float h = ((use_5x5filter) ? filterKernel5x5 : filterKernel3x3)[(x + radius) + (y + radius) * ((2 * radius) + 1)];
 			float hw = h * w;
 
 			// add to total irradiance
-			avg_irradiance += tap_irradiance * hw;
+			f_irradiance += tap_irradiance * hw;
 			f_variance += Sqr(hw) * tap_variance;
 			wsum += hw;
 		}
 	}
 
-	avg_irradiance /= wsum;
+	f_irradiance /= wsum;
 	f_variance /= Sqr(wsum);
 
-	avg_irradiance.w = sampled_irradiance.w;//restore history length for temporal feedback
+	f_irradiance.w = sampled_irradiance.w;//restore history length for temporal feedback
 	//f_variance = sampled_variance;
 	//out----
-	texWrite((avg_irradiance),
+	texWrite((f_irradiance),
 		globals.FrameBuffer.filtered_irradiance_back_render_surface_object,
 		current_pix);
 	texWrite(make_float4(make_float3(f_variance), 1),

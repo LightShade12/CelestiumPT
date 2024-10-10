@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTF("../models/svgf_test_unit.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -187,6 +187,8 @@ void EditorSandbox::onRender(float delta_secs)
 						m_Camera.recalculateProjection();
 						s_updateCam |= true;
 					};
+					ImGui::SeparatorText("Motion");
+					ImGui::SliderFloat("Speed", &m_Camera.movement_speed, 0, 10);
 				};
 				if (ImGui::CollapsingHeader("Pathtracing")) {
 					ImGui::Checkbox("Accumulation", &(m_Renderer.getIntegratorSettings()->accumulate));
