@@ -89,6 +89,10 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 	LightSampleContext prev_ctx{};
 	ShapeIntersection payload{};
 	float eta_scale = 1;//TODO: look up russian roulette
+	//float3 sunpos = make_float3(sinf(globals.frameidx * 0.01f), 1, cosf(globals.frameidx * 0.01f)) * 100;
+	float3 sunpos = make_float3(0.266, 0.629, 0.257) * 100;
+	RGBSpectrum suncol(1.000, 0.877, 0.822);
+	suncol *= RGBSpectrum(1, 0.7, 0.4);
 
 	for (int bounce_depth = 0; bounce_depth <= globals.IntegratorCFG.max_bounces; bounce_depth++) {
 		seed += bounce_depth;
@@ -104,7 +108,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += globals.SceneDescriptor.device_geometry_aggregate->SkyLight.Le(ray) * throughtput;
+			//light += globals.SceneDescriptor.device_geometry_aggregate->SkyLight.Le(ray) * throughtput;
 			break;
 		}
 
@@ -134,6 +138,16 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 		RGBSpectrum Ld = SampleLd(globals, ray, payload, bsdf,
 			light_sampler, seed, primary_surface);
 		light += Ld * throughtput;
+		if (false) {
+			bool sunhit = !IntersectP(globals, Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
+				sunpos + make_float3(Samplers::get2D_PCGHash(seed), Samplers::get1D_PCGHash(seed)) * 5.f),
+				100);
+			if (sunhit) {
+				RGBSpectrum f_c = suncol * bsdf.f(wo, normalize(sunpos))
+					* dot(payload.w_shading_norm, normalize(sunpos)) * 20.f;
+				light += f_c * throughtput;
+			}
+		}
 
 		BSDFSample bs = bsdf.sampleBSDF(wo, Samplers::get2D_PCGHash(seed));
 		float3 wi = bs.wi;
