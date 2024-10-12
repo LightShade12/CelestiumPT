@@ -29,10 +29,13 @@ __device__ LightLiSample Light::SampleLi(LightSampleContext ctx, float2 u2) cons
 {
 	ShapeSampleContext shape_ctx{};
 	ShapeSample ss = m_triangle->sample(shape_ctx, u2);
+	//transform p&n by model mat here
+
 	if (ss.pdf == 0 || dot(ss.p - ctx.pos, ss.p - ctx.pos) == 0)return {};
 	float3 wi = normalize(ss.p - ctx.pos);
 	RGBSpectrum Le = L(ss.p, ss.n, -wi);
 	if (!Le)return {};
+	//also transform tri face normal
 	return LightLiSample(Le, wi, ss.p, m_triangle->face_normal, ss.pdf);
 }
 

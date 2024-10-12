@@ -108,7 +108,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			//light += globals.SceneDescriptor.device_geometry_aggregate->SkyLight.Le(ray) * throughtput;
+			light += globals.SceneDescriptor.device_geometry_aggregate->SkyLight.Le(ray) * throughtput;
 			break;
 		}
 
@@ -125,9 +125,11 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 			else {
 				const Light* arealight = payload.arealight;
 				float light_pdf = light_sampler.PMF(arealight) * arealight->PDF_Li(prev_ctx, ray.getDirection());
+				//---
 				float dist = length(prev_ctx.pos - payload.w_pos);
 				float cosTheta_emitter = AbsDot(-ray.getDirection(), payload.w_geo_norm);
 				light_pdf = light_pdf * (1.f / cosTheta_emitter) * Sqr(dist);
+				//---
 				float w_l = powerHeuristic(1, p_b, 1, light_pdf);
 				light += Le * throughtput * w_l;
 			}
