@@ -1,7 +1,7 @@
-#include "Light.cuh"
-#include "ShapeIntersection.cuh"
+#include "light.cuh"
+#include "shape_intersection.cuh"
 #include "maths/constants.cuh"
-#include "Ray.cuh"
+#include "ray.cuh"
 
 __device__ RGBSpectrum SkyShading(const Ray& ray) {
 	//return make_float3(0);
@@ -11,6 +11,10 @@ __device__ RGBSpectrum SkyShading(const Ray& ray) {
 	return (1.0f - a) * RGBSpectrum(1.0, 1.0, 1.0) + a * RGBSpectrum(0.2, 0.4, 1.0);
 };
 
+__device__ RGBSpectrum InfiniteLight::Le(const Ray& ray) const
+{
+	return SkyShading(ray) * scale * Lemit;
+}
 __device__ LightSampleContext::LightSampleContext(const ShapeIntersection& si)
 {
 	pos = si.w_pos;
@@ -25,10 +29,13 @@ __device__ LightLiSample Light::SampleLi(LightSampleContext ctx, float2 u2) cons
 {
 	ShapeSampleContext shape_ctx{};
 	ShapeSample ss = m_triangle->sample(shape_ctx, u2);
+	//transform p&n by model mat here
+
 	if (ss.pdf == 0 || dot(ss.p - ctx.pos, ss.p - ctx.pos) == 0)return {};
 	float3 wi = normalize(ss.p - ctx.pos);
 	RGBSpectrum Le = L(ss.p, ss.n, -wi);
 	if (!Le)return {};
+	//also transform tri face normal
 	return LightLiSample(Le, wi, ss.p, m_triangle->face_normal, ss.pdf);
 }
 

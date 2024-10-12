@@ -1,9 +1,9 @@
-#include "RayStages.cuh"
-#include "Ray.cuh"
-#include "Storage.cuh"
-#include "SceneGeometry.cuh"
-#include "ShapeIntersection.cuh"
-#include "Triangle.cuh"
+#include "ray_stages.cuh"
+#include "ray.cuh"
+#include "storage.cuh"
+#include "scene_geometry.cuh"
+#include "shape_intersection.cuh"
+#include "triangle.cuh"
 #include "maths/constants.cuh"
 
 __device__ ShapeIntersection MissStage(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& in_payload) {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Storage.cuh"
+#include "storage.cuh"
 #include <cuda_runtime.h>
 #include <vector_types.h>
 
@@ -10,7 +10,11 @@ class RGBSpectrum;
 class BSDF;
 class LightSampler;
 
+// Path tracing kernel that writes irradiance, moment data, and G-buffer
+__global__ void renderPathTraceRaw(const IntegratorGlobals globals);
 __global__ void renderKernel(IntegratorGlobals globals);
+__device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, int2 ppixel);
+__device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBSpectrum radiance_sample, int2 c_pix);
 
 namespace IntegratorPipeline {
 	//wrapper for kernel launch

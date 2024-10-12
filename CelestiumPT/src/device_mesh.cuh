@@ -1,6 +1,6 @@
 #pragma once
 
-#include "maths/maths_linear_algebra.cuh"
+#include "maths/linear_algebra.cuh"
 
 class DeviceMesh {
 public:

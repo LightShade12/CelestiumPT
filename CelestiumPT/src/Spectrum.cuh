@@ -155,3 +155,5 @@ __device__ __host__ float4 make_float4(const RGBSpectrum& rgb, float s);
 
 //utility
 __device__ RGBSpectrum clampOutput(const RGBSpectrum& rgb);
+
+__device__ float getLuminance(const RGBSpectrum& t_linear_col);

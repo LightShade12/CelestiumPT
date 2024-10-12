@@ -1,8 +1,8 @@
 #include "TLAS.cuh"
-#include "Ray.cuh"
-#include "Storage.cuh"
-#include "SceneGeometry.cuh"
-#include "ShapeIntersection.cuh"
+#include "ray.cuh"
+#include "storage.cuh"
+#include "scene_geometry.cuh"
+#include "shape_intersection.cuh"
 
 TLAS::TLAS(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNode>& tlasnodes)
 {
@@ -77,6 +77,9 @@ void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<
 
 	delete[] TLASnodeIdx;
 }
+
+#define TLAS_TRAVERSAL_MAX_STACK_DEPTH 16
+
 __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
 {
 	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
@@ -85,9 +88,8 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 	//if (m_BoundingBox.intersect(ray) < 0)return;
 
-	const uint8_t maxStackSize = 64;//TODO: rename this var
-	int nodeIdxStack[maxStackSize];
-	float nodeHitDistStack[maxStackSize];
+	int nodeIdxStack[TLAS_TRAVERSAL_MAX_STACK_DEPTH];
+	float nodeHitDistStack[TLAS_TRAVERSAL_MAX_STACK_DEPTH];
 	uint8_t stackPtr = 0;
 
 	float current_node_hitdist = FLT_MAX;
@@ -155,9 +157,8 @@ __device__ bool TLAS::intersectP(const IntegratorGlobals& globals, const Ray& ra
 
 	//if (m_BoundingBox.intersect(ray) < 0)return;
 
-	const uint8_t maxStackSize = 64;//TODO: rename this var
-	int nodeIdxStack[maxStackSize];
-	float nodeHitDistStack[maxStackSize];
+	int nodeIdxStack[TLAS_TRAVERSAL_MAX_STACK_DEPTH];
+	float nodeHitDistStack[TLAS_TRAVERSAL_MAX_STACK_DEPTH];
 	uint8_t stackPtr = 0;
 
 	const TLASNode* stackTopNode = &(scene_data->DeviceTLASNodesBuffer[m_TLASRootIdx]);//is this in register?

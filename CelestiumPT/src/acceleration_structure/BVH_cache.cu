@@ -1,4 +1,4 @@
-#include "BVHCache.cuh"
+#include "BVH_cache.cuh"
 
 BVHPrimitiveCache::BVHPrimitiveCache(Triangle triangle)
 {

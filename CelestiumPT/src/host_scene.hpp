@@ -1,8 +1,9 @@
 #pragma once
 
-#include "HostMesh.hpp"
-#include "HostMaterial.hpp"
-#include "HostCamera.hpp"
+#include "host_mesh.hpp"
+#include "host_material.hpp"
+#include "host_camera.hpp"
+
 #include <glm/glm.hpp>
 
 class DeviceScene;
@@ -27,7 +28,7 @@ public:
 		glm::vec3 f_nrm, int mat_idx, bool skip_sync = true);
 
 	void addMaterial(glm::vec3 albedo_factor, glm::vec3 emission_factor, float emission_strength);
-	void addLight(int triangle_idx, glm::vec3 color, float scale);
+	void addLight(int triangle_idx, int object_idx, glm::vec3 color, float scale);
 	void addMesh(HostMesh hmesh);
 	void LogStatus();
 

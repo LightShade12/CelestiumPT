@@ -1,12 +1,12 @@
-#include "HostScene.hpp"
-#include "DeviceScene.cuh"
-#include "DeviceMesh.cuh"
+#include "host_scene.hpp"
+#include "device_scene.cuh"
+#include "device_mesh.cuh"
 
-#include "Triangle.cuh"
+#include "triangle.cuh"
 
 //#include "Ray.cuh"
 //#include "ShapeIntersection.cuh"
-#include "SceneGeometry.cuh"
+#include "scene_geometry.cuh"
 //#include "SceneGeometry.cuh"
 
 #define CLSPT_NAME_STRING_LENGTH 32
@@ -120,7 +120,7 @@ void HostScene::addMaterial(glm::vec3 albedo_factor, glm::vec3 emission_factor, 
 	m_DeviceScene->syncDeviceGeometry();
 }
 
-void HostScene::addLight(int triangle_idx, glm::vec3 color, float scale)
+void HostScene::addLight(int triangle_idx, int object_index, glm::vec3 color, float scale)
 {
 	Light dlight(&(m_DeviceScene->DeviceTriangles[triangle_idx]), make_float3(color.x, color.y, color.z), scale);
 	(m_DeviceScene->DeviceTriangles[triangle_idx]).LightIdx = m_DeviceScene->DeviceLights.size();

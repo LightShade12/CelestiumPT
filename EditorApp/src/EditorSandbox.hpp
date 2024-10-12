@@ -33,10 +33,13 @@ public:
 		LOCALPOSITION = 7,
 		VELOCITY = 8,
 		DEPTH = 9,
-		HIST_DEPTH = 10,
-		ALBEDO = 11
+		ALBEDO = 10,
+		VARIANCE = 11
 	};
 
+private:
+	void saveImagePNG();
+public:
 	constexpr static uint32_t minimum_viewport_height_threshold = 5;//any lower than this is prone to invalid render buffer sizes
 	constexpr static uint32_t minimum_viewport_height = 10;
 	constexpr static uint32_t viewport_vertical_scrolloverdraw_compensation_offset = 12;

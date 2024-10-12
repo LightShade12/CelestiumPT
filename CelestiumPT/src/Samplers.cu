@@ -1,4 +1,4 @@
-#include "Samplers.cuh"
+#include "samplers.cuh"
 
 namespace Samplers {
 	__device__ uint32_t pcg_hash(uint32_t input)

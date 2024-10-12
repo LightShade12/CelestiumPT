@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Triangle.cuh"
+#include "triangle.cuh"
 
 #include <vector_types.h>
 #include <float.h>

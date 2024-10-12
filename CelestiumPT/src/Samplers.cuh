@@ -1,8 +1,9 @@
 #pragma once
 
-#include <cuda_runtime.h>
 #include "maths/vector_maths.cuh"
 #include "maths/constants.cuh"
+
+#include <cuda_runtime.h>
 
 namespace Samplers {
 	__device__ uint32_t pcg_hash(uint32_t input);

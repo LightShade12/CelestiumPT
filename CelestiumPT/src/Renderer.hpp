@@ -1,8 +1,8 @@
 #pragma once
 
-#include "IntegratorSettings.hpp"
-#include "HostCamera.hpp"
-#include "HostScene.hpp"
+#include "integrator_settings.hpp"
+#include "host_camera.hpp"
+#include "host_scene.hpp"
 
 #include <glad/glad.h>
 #include <cstdint>
@@ -29,11 +29,13 @@ public:
 	GLuint getVelocityTargetTextureName() const;
 	GLuint getGASDebugTargetTextureName() const;
 	GLuint getDepthTargetTextureName() const;
-	GLuint getHistoryDepthTargetTextureName() const;
 	GLuint getUVsDebugTargetTextureName() const;
 	GLuint getObjectIDDebugTargetTextureName() const;
 	GLuint getBarycentricsDebugTargetTextureName() const;
+	GLuint getAlbedoTargetTextureName() const;
+	GLuint getIntegratedVarianceTargetTextureName() const;
 
+	int getSPP() const;
 	void setCamera(int idx);
 	IntegratorSettings* getIntegratorSettings();//TODO: make this safer and more robust
 	HostCamera* getCurrentCamera() { return &m_CurrentCamera; };
@@ -45,10 +47,21 @@ public:
 	~Renderer();
 
 private:
-	GLuint m_blit_mediator_FBO_name = NULL;
+
+	void blitFilteredIrradianceVarianceBackToFront();
+
+	void blitMomentsBackToFront();
+
+	void blitFilteredIrradianceToHistory(bool read_from_back);
+
+	GLuint m_blit_mediator_FBO0_name = NULL;
+	GLuint m_blit_mediator_FBO1_name = NULL;
+
+	//TODO:rename
 	GLenum m_blit_target0_attachment = GL_COLOR_ATTACHMENT1;
 	GLenum m_blit_target1_attachment = GL_COLOR_ATTACHMENT3;
 	GLenum m_blit_target2_attachment = GL_COLOR_ATTACHMENT5;
+	GLenum m_blit_target3_attachment = GL_COLOR_ATTACHMENT0;
 
 	uint32_t m_NativeRenderResolutionWidth = NULL;
 	uint32_t m_NativeRenderResolutionHeight = NULL;

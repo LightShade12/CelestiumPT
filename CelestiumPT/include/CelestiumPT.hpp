@@ -1,5 +1,5 @@
 #pragma once
 
-#include "../src/acceleration_structure/GASBuilder.hpp"
-#include "../src/Renderer.hpp"
+#include "../src/acceleration_structure/GAS_builder.hpp"
+#include "../src/renderer.hpp"
 #include "../src/utility.hpp"

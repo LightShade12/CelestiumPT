@@ -103,12 +103,8 @@
     <ClCompile Include="thirdparty\imgui\imgui_draw.cpp" />
     <ClCompile Include="thirdparty\imgui\imgui_tables.cpp" />
     <ClCompile Include="thirdparty\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="thirdparty\stb\stb.cpp" />
     <ClCompile Include="thirdparty\tinygltf\tiny_gltf.cc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CelestiumPT\CelestiumPT.vcxproj">
-      <Project>{7a15f594-8ef8-4ff8-889e-7503e6171302}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Camera.hpp" />
@@ -127,10 +123,17 @@
     <ClInclude Include="thirdparty\imgui\imstb_rectpack.h" />
     <ClInclude Include="thirdparty\imgui\imstb_textedit.h" />
     <ClInclude Include="thirdparty\imgui\imstb_truetype.h" />
+    <ClInclude Include="thirdparty\stb\stb_image.h" />
+    <ClInclude Include="thirdparty\stb\stb_image_write.h" />
     <ClInclude Include="thirdparty\tinygltf\tiny_gltf.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Mesh.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CelestiumPT\CelestiumPT.vcxproj">
+      <Project>{9b7ba236-ea40-4e46-b069-5e190827f9c5}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

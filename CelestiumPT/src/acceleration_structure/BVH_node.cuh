@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Bounds.cuh"
+#include "bounds.cuh"
 
 //BLAS Node
 struct BVHNode {

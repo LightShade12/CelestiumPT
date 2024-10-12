@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Triangle.cuh"
-#include "DeviceMesh.cuh"
-#include "DeviceMaterial.cuh"
-#include "DeviceCamera.cuh"
+#include "triangle.cuh"
+#include "device_mesh.cuh"
+#include "device_material.cuh"
+#include "device_camera.cuh"
 #include "Light.cuh"
-#include "acceleration_structure/BVHNode.cuh"
+#include "acceleration_structure/BVH_node.cuh"
 #include "acceleration_structure/BLAS.cuh"
-#include "acceleration_structure/TLASNode.cuh"
+#include "acceleration_structure/TLAS_node.cuh"
 
 #include <thrust/device_vector.h>
 #include <thrust/universal_vector.h>

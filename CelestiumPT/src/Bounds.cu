@@ -1,6 +1,6 @@
-#include "Bounds.cuh"
-#include "maths/maths_linear_algebra.cuh"
-#include "Ray.cuh"
+#include "bounds.cuh"
+#include "maths/linear_algebra.cuh"
+#include "ray.cuh"
 
 float Bounds3f::getSurfaceArea() const
 {

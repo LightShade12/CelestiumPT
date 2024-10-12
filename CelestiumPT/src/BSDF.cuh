@@ -1,7 +1,7 @@
 #pragma once
 
-#include "maths/matrix.cuh"
-#include "Spectrum.cuh"
+#include "maths/matrix_maths.cuh"
+#include "spectrum.cuh"
 #include "maths/constants.cuh"
 
 struct BSDFSample {

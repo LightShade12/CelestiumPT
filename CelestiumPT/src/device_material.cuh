@@ -1,5 +1,5 @@
 #pragma once
-#include "Spectrum.cuh"
+#include "spectrum.cuh"
 
 struct DeviceMaterial {
 	__device__ DeviceMaterial() = default;

@@ -1,7 +1,9 @@
 #include "EditorSandbox.hpp"
 #include "Application.hpp"
 
-#include "glm/glm.hpp"
+#include <stb/stb_image_write.h>
+
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
@@ -13,12 +15,12 @@
 #include "imgui/imgui.h"
 
 bool processMouse(GLFWwindow* window, Camera* camera, float delta_ts);
-//TODO: investigate deprecated cuda library include warning
+//TODO: investigate deprecated cuda library include warning: device_functions.cuh?
 void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTF("../models/cs16_dust_unit.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -37,6 +39,40 @@ void EditorSandbox::initialise()
 
 void EditorSandbox::destroy()
 {
+	printf("\ndestroy(): Sandbox closed\n");
+}
+
+void EditorSandbox::saveImagePNG()
+{
+	size_t w = m_Renderer.getFrameWidth(), h = m_Renderer.getFrameHeight();
+	std::vector<GLubyte> frame_data(w * h * 4); // RGBA8
+
+	// Save composite image
+	glBindTexture(GL_TEXTURE_2D, m_Renderer.getCompositeRenderTargetTextureName());
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, frame_data.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
+	stbi_flip_vertically_on_write(true);
+
+	std::string composite_fname = "composite_img_" + std::to_string(m_Renderer.getSPP()) + "_spp.png";
+
+	if (stbi_write_png(composite_fname.c_str(),
+		w, h, 4, frame_data.data(), 4 * sizeof(GLubyte) * w) != 0)
+		printf("\nComposite image saved: %s\n", composite_fname.c_str());
+	else
+		printf("\nComposite image save failed\n");
+
+	// Save variance image
+	glBindTexture(GL_TEXTURE_2D, m_Renderer.getIntegratedVarianceTargetTextureName());
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, frame_data.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	std::string variance_fname = "variance_img_" + std::to_string(m_Renderer.getSPP()) + "_spp.png";
+
+	if (stbi_write_png(variance_fname.c_str(),
+		w, h, 4, frame_data.data(), 4 * sizeof(GLubyte) * w) != 0)
+		printf("\nVariance image saved: %s\n", variance_fname.c_str());
+	else
+		printf("\nVariance image save failed\n");
 }
 
 static bool s_updateCam = false;
@@ -46,7 +82,7 @@ void EditorSandbox::onUpdate(float delta)
 {
 	s_updateCam |= processMouse(Application::Get().getWindowHandle(), &m_Camera, delta);
 
-	if (m_PhysCFG.enabled) {
+	if (!m_PhysCFG.enabled) {
 		for (Mesh mesh : m_Meshes)
 		{
 			bool updatemesh = false;
@@ -68,6 +104,11 @@ void EditorSandbox::onUpdate(float delta)
 				translation.y = mesh.translation.y + (0.15 * sinf(glfwGetTime()));
 				updatemesh |= true;
 			}
+			//if (mesh.host_mesh_handle.name == "Light") {
+			//	translation.x = mesh.translation.x + (1 * sinf(glfwGetTime()));
+			//	translation.z = mesh.translation.x + (1 * cosf(glfwGetTime()));
+			//	updatemesh |= true;
+			//}
 
 			if (updatemesh) {
 				glm::mat4 trans = (glm::translate(glm::mat4(1), translation));
@@ -118,6 +159,8 @@ void EditorSandbox::onUpdate(float delta)
 	s_updateMesh = false;
 }
 
+static int g_max_spp = 100;
+
 void EditorSandbox::onRender(float delta_secs)
 {
 	{
@@ -132,8 +175,10 @@ void EditorSandbox::onRender(float delta_secs)
 		if (ImGui::BeginTabBar("dev_tabs")) {
 			if (ImGui::BeginTabItem("Rendering")) {
 				if (ImGui::CollapsingHeader("Debug")) {
+					ImGui::Text("SPP:%d\n", m_Renderer.getSPP());
+					ImGui::SliderInt("max SPP", &g_max_spp, 1, 100);
 					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0HistoryDepth\0Albedo\0");
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0Albedo\0Variance\0");
 					if (curent_renderview == RenderView::GAS) {
 						ImGui::SliderFloat("GAS shading brightness",
 							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 0.1);
@@ -147,10 +192,18 @@ void EditorSandbox::onRender(float delta_secs)
 						m_Camera.recalculateProjection();
 						s_updateCam |= true;
 					};
+					ImGui::SeparatorText("Motion");
+					ImGui::SliderFloat("Speed", &m_Camera.movement_speed, 0, 10);
 				};
 				if (ImGui::CollapsingHeader("Pathtracing")) {
 					ImGui::Checkbox("Accumulation", &(m_Renderer.getIntegratorSettings()->accumulate));
 					ImGui::Checkbox("Temporal accumulation", &(m_Renderer.getIntegratorSettings()->temporal_accumulation));
+					ImGui::Checkbox("SVGF denoiser", &(m_Renderer.getIntegratorSettings()->use_SVGF));
+					ImGui::Indent();
+					if (m_Renderer.getIntegratorSettings()->use_SVGF) {
+						ImGui::Checkbox("Use 5x5 filter", &(m_Renderer.getIntegratorSettings()->use_5x5_filter));
+					}
+					ImGui::Unindent();
 					ImGui::InputInt("Ray bounces", &(m_Renderer.getIntegratorSettings()->max_bounces));
 				};
 				if (ImGui::CollapsingHeader("Geometry")) {
@@ -172,6 +225,9 @@ void EditorSandbox::onRender(float delta_secs)
 				if (ImGui::CollapsingHeader("Denoising")) {
 				};
 				if (ImGui::CollapsingHeader("General")) {
+					if (ImGui::Button("Save Frame as PNG")) {
+						saveImagePNG();
+					}
 				};
 
 				ImGui::EndTabItem();
@@ -262,9 +318,15 @@ void EditorSandbox::onRender(float delta_secs)
 						ImVec2((float)m_Renderer.getFrameWidth(),
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
-			else if (curent_renderview == RenderView::HIST_DEPTH) {
-				if (m_Renderer.getHistoryDepthTargetTextureName() != NULL)
-					ImGui::Image((void*)(uintptr_t)m_Renderer.getHistoryDepthTargetTextureName(),
+			else if (curent_renderview == RenderView::ALBEDO) {
+				if (m_Renderer.getAlbedoTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getAlbedoTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::VARIANCE) {
+				if (m_Renderer.getIntegratedVarianceTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getIntegratedVarianceTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(),
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
@@ -293,7 +355,9 @@ void EditorSandbox::onRender(float delta_secs)
 
 		m_Camera.resizeFrame((int)vpdims.x, (int)vpdims.y);
 		m_Renderer.resizeResolution((int)vpdims.x, (int)vpdims.y);
+
 		m_GASBuilder.refresh(m_Renderer.getCurrentScene());
+		//if (m_Renderer.getSPP() < g_max_spp)
 		m_Renderer.renderFrame();
 		m_Camera.host_camera_handle->updateCamera();//Must happen per frame
 	}

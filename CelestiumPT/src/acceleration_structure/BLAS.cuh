@@ -1,10 +1,11 @@
 #pragma once
 
-#include "BVHCache.cuh"
-#include "Triangle.cuh"
-#include "Bounds.cuh"
+#include "BVH_cache.cuh"
+#include "triangle.cuh"
+#include "bounds.cuh"
 
-#include "maths/matrix.cuh"
+#include "maths/matrix_maths.cuh"
+
 #include <cuda_runtime.h>
 #include <thrust/universal_vector.h>
 
