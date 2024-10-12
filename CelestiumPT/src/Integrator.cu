@@ -145,7 +145,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 				sunpos + make_float3(Samplers::get2D_PCGHash(seed), Samplers::get1D_PCGHash(seed)) * 5.f),
 				100);
 			if (sunhit) {
-				RGBSpectrum f_c = suncol * bsdf.f(wo, normalize(sunpos))
+				RGBSpectrum f_c = suncol * bsdf.f(wo, normalize(sunpos), primary_surface)
 					* dot(payload.w_shading_norm, normalize(sunpos)) * 20.f;
 				light += f_c * throughtput;
 			}
@@ -191,7 +191,7 @@ __device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& glo
 
 	float3 wi = ls.wi;
 	float3 wo = -ray.getDirection();
-	RGBSpectrum f = ((primary_surface) ? RGBSpectrum(1) : bsdf.f(wo, wi)) * AbsDot(wi, payload.w_shading_norm);
+	RGBSpectrum f = ((primary_surface) ? RGBSpectrum(1) : bsdf.f(wo, wi, primary_surface)) * AbsDot(wi, payload.w_shading_norm);
 
 	if (!f || !Unoccluded(globals, payload, ls.pLight)) return Ld;
 
