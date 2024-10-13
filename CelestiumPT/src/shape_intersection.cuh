@@ -23,7 +23,7 @@ struct ShapeIntersection {
 	float3 l_shading_norm{};
 	//Material material;
 	const Light* arealight = nullptr;
-	Mat4 invModelMatrix;
+	Mat4 m_invModelMatrix;
 
 	bool front_face = true;
 	float3 GAS_debug = make_float3(0);

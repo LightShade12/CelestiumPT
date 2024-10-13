@@ -154,14 +154,14 @@ __device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_p
 		cur_px.x * (int)sizeof(float4), cur_px.y);
 	int c_objID = c_objID_sample.x;
 
-	Mat4 p_model = globals.SceneDescriptor.device_geometry_aggregate->DeviceMeshesBuffer[c_objID].prev_modelMatrix;
+	Mat4 p_model = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMeshesBuffer[c_objID].prev_modelMatrix;
 
 	//DEPTH HEURISTIC-------------
 	float4 p_depth_sample = surf2Dread<float4>(globals.FrameBuffer.history_depth_render_surface_object,
 		prev_pix.x * (int)sizeof(float4), prev_pix.y);
 	float p_depth = p_depth_sample.x;
 
-	float3 p_cpos = make_float3(globals.SceneDescriptor.active_camera->prev_viewMatrix.inverse() * make_float4(0, 0, 0, 1));
+	float3 p_cpos = make_float3(globals.SceneDescriptor.ActiveCamera->prev_viewMatrix.inverse() * make_float4(0, 0, 0, 1));
 	float3 p_wpos = make_float3(p_model * make_float4(c_lpos, 1));//clipspace
 
 	float estimated_p_depth = length(p_cpos - p_wpos);

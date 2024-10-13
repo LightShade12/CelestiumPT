@@ -63,7 +63,7 @@ __device__ DeviceCamera::DeviceCamera()
 	FOV_y_radians = deg2rad(60);
 };
 
-__device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, float2 screen_uv)
+__device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, float2 screen_uv) const
 {
 	float4 target_cs = invProjectionMatrix * make_float4(screen_uv.x, screen_uv.y, 1.f, 1.f);
 	float4 target_ws = invViewMatrix * make_float4(

@@ -172,8 +172,8 @@ __device__ RGBSpectrum gammaCorrection(const RGBSpectrum linear_color)
 
 __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si)
 {
-	const Triangle& triangle = globals.SceneDescriptor.device_geometry_aggregate->DeviceTrianglesBuffer[si.triangle_idx];
-	DeviceMaterial& material = globals.SceneDescriptor.device_geometry_aggregate->DeviceMaterialBuffer[triangle.mat_idx];
+	const Triangle& triangle = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTrianglesBuffer[si.triangle_idx];
+	DeviceMaterial& material = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMaterialBuffer[triangle.mat_idx];
 
 	texWrite((material.emission_color_factor) ?
 		//make_float4(material.emission_color_factor * material.emission_strength, 1)

@@ -134,7 +134,7 @@ void HostScene::addMesh(HostMesh hmesh)
 	dmesh.triangle_offset_idx = hmesh.triangle_offset_idx;
 	dmesh.tri_count = hmesh.tri_count;
 	dmesh.modelMatrix = Mat4(hmesh.modelMatrix);
-	dmesh.inverseModelMatrix = Mat4(hmesh.invModelMatrix);
+	dmesh.inverseModelMatrix = Mat4(hmesh.m_invModelMatrix);
 	dmesh.prev_modelMatrix = dmesh.modelMatrix;
 
 	m_DeviceScene->DeviceMeshes.push_back(dmesh);

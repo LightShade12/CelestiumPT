@@ -391,94 +391,86 @@ void BLAS::makeFinalPartition(BVHNode& left, BVHNode& right, float bin, Partitio
 
 #define BLAS_TRAVERSAL_MAX_STACK_DEPTH 16
 
-__device__ void BLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
+__device__ void BLAS::intersect(const IntegratorGlobals& t_globals, const Ray& t_ray, ShapeIntersection* t_closest_hitpayload)
 {
 	if (m_BVHNodesCount == 0) return;//empty BLAS
 	//if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
 
-	Ray local_ray = ray;
-	local_ray.setOrigin(make_float3(invModelMatrix * make_float4(local_ray.getOrigin(), 1)));
-	local_ray.setDirection(make_float3(invModelMatrix * make_float4(local_ray.getDirection(), 0)));
+	Ray local_ray = t_ray;
+	local_ray.setOrigin(make_float3(m_invModelMatrix * make_float4(local_ray.getOrigin(), 1)));
+	local_ray.setDirection(make_float3(m_invModelMatrix * make_float4(local_ray.getDirection(), 0)));
 
-	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
+	const SceneGeometry* scene_data = t_globals.SceneDescriptor.DeviceGeometryAggregate;
 
-	size_t nodeIdxStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];//max idx = 65,535
-	//float nodeHitDistStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];
-	uint8_t stackPtr = 0;//max points to 255
+	size_t node_idx_stack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];
+	uint8_t stack_ptr = 0;//max points to 255
 
-	float current_node_hitdist = FLT_MAX;
+	node_idx_stack[stack_ptr++] = m_BVHRootIdx;
+	const BVHNode* stack_top_node = &(scene_data->DeviceBVHNodesBuffer[m_BVHRootIdx]);
 
-	nodeIdxStack[stackPtr] = m_BVHRootIdx;
-	const BVHNode* stackTopNode = &(scene_data->DeviceBVHNodesBuffer[m_BVHRootIdx]);//is this in register?
-	stackPtr++;
-	//nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(local_ray);
-
-	CompactShapeIntersection workinghitpayload;
-	workinghitpayload.hit_distance = FLT_MAX;
+	CompactShapeIntersection working_payload;
+	working_payload.hit_distance = FLT_MAX;
 	float child1_hitdist = -1;
 	float child2_hitdist = -1;
 	const Triangle* primitive = nullptr;
 
-	while (stackPtr > 0) {
-		stackTopNode = &(scene_data->DeviceBVHNodesBuffer[nodeIdxStack[--stackPtr]]);
-		//current_node_hitdist = nodeHitDistStack[stackPtr];
+	while (stack_ptr > 0) {
+		stack_top_node = &(scene_data->DeviceBVHNodesBuffer[node_idx_stack[--stack_ptr]]);
 
-		//skip nodes farther than closest triangle; redundant
-		//if (closest_hitpayload->hasHit() && closest_hitpayload->hit_distance < current_node_hitdist)continue;
-		closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * globals.IntegratorCFG.GAS_shading_brightness;
+		t_closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * t_globals.IntegratorCFG.GAS_shading_brightness;
 
 		//if interior
-		if (stackTopNode->triangle_indices_count <= 0)
+		if (stack_top_node->triangle_indices_count <= 0)
 		{
-			child1_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray);
-			child2_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray);
+			child1_hitdist = (scene_data->DeviceBVHNodesBuffer
+				[stack_top_node->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray);
+			child2_hitdist = (scene_data->DeviceBVHNodesBuffer
+				[stack_top_node->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray);
+
 			if (child1_hitdist > child2_hitdist) {
-				if (child1_hitdist >= 0 && child1_hitdist < closest_hitpayload->hit_distance) {
-					//nodeHitDistStack[stackPtr] = child1_hitdist;
-					nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx;
+				if (child1_hitdist >= 0 && child1_hitdist < t_closest_hitpayload->hit_distance) {
+					node_idx_stack[stack_ptr++] = stack_top_node->left_child_or_triangle_indices_start_idx;
 				}
-				if (child2_hitdist >= 0 && child2_hitdist < closest_hitpayload->hit_distance) {
-					//nodeHitDistStack[stackPtr] = child2_hitdist;
-					nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx + 1;
+				if (child2_hitdist >= 0 && child2_hitdist < t_closest_hitpayload->hit_distance) {
+					node_idx_stack[stack_ptr++] = stack_top_node->left_child_or_triangle_indices_start_idx + 1;
 				}
 			}
 			else {
-				if (child2_hitdist >= 0 && child2_hitdist < closest_hitpayload->hit_distance) {
-					//nodeHitDistStack[stackPtr] = child2_hitdist;
-					nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx + 1;
+				if (child2_hitdist >= 0 && child2_hitdist < t_closest_hitpayload->hit_distance) {
+					node_idx_stack[stack_ptr++] = stack_top_node->left_child_or_triangle_indices_start_idx + 1;
 				}
-				if (child1_hitdist >= 0 && child1_hitdist < closest_hitpayload->hit_distance) {
-					//nodeHitDistStack[stackPtr] = child1_hitdist;
-					nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx;
+				if (child1_hitdist >= 0 && child1_hitdist < t_closest_hitpayload->hit_distance) {
+					node_idx_stack[stack_ptr++] = stack_top_node->left_child_or_triangle_indices_start_idx;
 				}
 			}
 		}
 		else
 		{
-			for (int primIndiceIdx = stackTopNode->left_child_or_triangle_indices_start_idx;
-				primIndiceIdx < stackTopNode->left_child_or_triangle_indices_start_idx + stackTopNode->triangle_indices_count;
+			for (int primIndiceIdx = stack_top_node->left_child_or_triangle_indices_start_idx;
+				primIndiceIdx < stack_top_node->left_child_or_triangle_indices_start_idx + stack_top_node->triangle_indices_count;
 				primIndiceIdx++)
 			{
-				int primIdx = scene_data->DeviceBVHTriangleIndicesBuffer[primIndiceIdx];
-				primitive = &(scene_data->DeviceTrianglesBuffer[primIdx]);
-				IntersectionStage(local_ray, *primitive, primIdx, &workinghitpayload);
+				int prim_idx = scene_data->DeviceBVHTriangleIndicesBuffer[primIndiceIdx];
+				primitive = &(scene_data->DeviceTrianglesBuffer[prim_idx]);
+				IntersectionStage(local_ray, *primitive, prim_idx, &working_payload);
 
-				if (workinghitpayload.triangle_idx != -1 && workinghitpayload.hit_distance < closest_hitpayload->hit_distance)
+				if (working_payload.triangle_idx != -1 && working_payload.hit_distance < t_closest_hitpayload->hit_distance)
 				{
-					//if (!AnyHit(ray, sceneGeo, &workinghitpayload))continue;
-					//TODO:fix lights
+					if (!AnyHitStage(local_ray, *scene_data, working_payload))continue;
+					//TODO:fix lights handling
 					if (primitive->LightIdx >= 0) {
-						closest_hitpayload->arealight =
-							&(globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsBuffer[primitive->LightIdx]);
+						t_closest_hitpayload->arealight =
+							&(t_globals.SceneDescriptor.DeviceGeometryAggregate->DeviceLightsBuffer[primitive->LightIdx]);
 					}
-					else
-						closest_hitpayload->arealight = nullptr;
+					else {
+						t_closest_hitpayload->arealight = nullptr;
+					}
 
-					closest_hitpayload->object_idx = m_mesh_idx;
-					closest_hitpayload->invModelMatrix = invModelMatrix;
-					closest_hitpayload->hit_distance = workinghitpayload.hit_distance;
-					closest_hitpayload->triangle_idx = workinghitpayload.triangle_idx;
-					closest_hitpayload->bary = workinghitpayload.bary;
+					t_closest_hitpayload->object_idx = m_mesh_idx;
+					t_closest_hitpayload->m_invModelMatrix = m_invModelMatrix;
+					t_closest_hitpayload->hit_distance = working_payload.hit_distance;
+					t_closest_hitpayload->triangle_idx = working_payload.triangle_idx;
+					t_closest_hitpayload->bary = working_payload.bary;
 				}
 			}
 		}
@@ -491,10 +483,10 @@ __device__ bool BLAS::intersectP(const IntegratorGlobals& globals, const Ray& ra
 	//if (m_BoundingBox.intersect(ray) < 0)return; //just to check BLAS bounds; WORLD SPACE
 
 	Ray local_ray = ray;
-	local_ray.setOrigin(make_float3(invModelMatrix * make_float4(local_ray.getOrigin(), 1)));
-	local_ray.setDirection(make_float3(invModelMatrix * make_float4(local_ray.getDirection(), 0)));
+	local_ray.setOrigin(make_float3(m_invModelMatrix * make_float4(local_ray.getOrigin(), 1)));
+	local_ray.setDirection(make_float3(m_invModelMatrix * make_float4(local_ray.getDirection(), 0)));
 
-	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
+	const SceneGeometry* scene_data = globals.SceneDescriptor.DeviceGeometryAggregate;
 
 	size_t nodeIdxStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];//max idx = 65,535
 	float nodeHitDistStack[BLAS_TRAVERSAL_MAX_STACK_DEPTH];
@@ -560,6 +552,6 @@ __device__ bool BLAS::intersectP(const IntegratorGlobals& globals, const Ray& ra
 
 void BLAS::setTransform(Mat4 model_matrix)
 {
-	invModelMatrix = model_matrix.inverse();
+	m_invModelMatrix = model_matrix.inverse();
 	m_BoundingBox.adaptBounds(model_matrix, m_Original_bounding_box);
 }

@@ -80,9 +80,9 @@ void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<
 
 #define TLAS_TRAVERSAL_MAX_STACK_DEPTH 16
 
-__device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload)
+__device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload) const
 {
-	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
+	const SceneGeometry* scene_data = globals.SceneDescriptor.DeviceGeometryAggregate;
 
 	if (m_BLASCount == 0) return;//empty scene;empty TLAS
 
@@ -149,9 +149,9 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 }
 
 //TODO: optimise P methods via culling
-__device__ bool TLAS::intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax)
+__device__ bool TLAS::intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax) const
 {
-	SceneGeometry* scene_data = globals.SceneDescriptor.device_geometry_aggregate;
+	const SceneGeometry* scene_data = globals.SceneDescriptor.DeviceGeometryAggregate;
 
 	if (m_BLASCount == 0) return;//empty scene;empty TLAS
 

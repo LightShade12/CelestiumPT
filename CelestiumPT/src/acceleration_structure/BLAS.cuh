@@ -82,5 +82,5 @@ public:
 	long int m_BVHNodesStartIdx = -1;
 	long int m_BVHRootIdx = -1;//Ideally should be startidx too
 	DeviceMesh* m_MeshLink = nullptr;//TODO: remove this safely
-	Mat4 invModelMatrix;
+	Mat4 m_invModelMatrix;
 };

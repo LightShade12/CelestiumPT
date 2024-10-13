@@ -53,7 +53,7 @@ void BLASBuilder::build(HostScene* hscene)
 
 		Mat4 d_inv_mat = dmesh->inverseModelMatrix;
 
-		blas.invModelMatrix = dmesh->inverseModelMatrix;
+		blas.m_invModelMatrix = dmesh->inverseModelMatrix;
 		blas.m_BoundingBox.pMax = make_float3(d_inv_mat.inverse() * make_float4(hnodes[blas.m_BVHRootIdx].m_BoundingBox.pMax, 1));
 		blas.m_BoundingBox.pMin = make_float3(d_inv_mat.inverse() * make_float4(hnodes[blas.m_BVHRootIdx].m_BoundingBox.pMin, 1));
 		blas.m_Original_bounding_box = blas.m_BoundingBox;

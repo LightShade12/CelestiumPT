@@ -11,7 +11,7 @@ public:
 	__device__ __host__ DeviceCamera();
 
 	//screen_uv = -1 to 1
-	__device__ Ray generateRay(int frame_width, int frame_height, float2 screen_uv);
+	__device__ Ray generateRay(int frame_width, int frame_height, float2 screen_uv) const;
 
 	float FOV_y_radians = 1.0472f;
 	Mat4 viewMatrix, prev_viewMatrix;

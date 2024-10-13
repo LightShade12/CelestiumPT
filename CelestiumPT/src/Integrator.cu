@@ -33,14 +33,14 @@ __host__ void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& gl
 __device__ RGBSpectrum IntegratorPipeline::evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel)
 {
 	uint32_t seed = ppixel.x + ppixel.y * globals.FrameBuffer.resolution.x;
-	seed *= globals.frameidx;
+	seed *= globals.FrameIndex;
 
 	int2 frameres = globals.FrameBuffer.resolution;
 
 	float2 screen_uv = { (ppixel.x / frameres.x),(ppixel.y / frameres.y) };
 	screen_uv = screen_uv * 2 - 1;//-1->1
 
-	Ray primary_ray = globals.SceneDescriptor.active_camera->generateRay(frameres.x, frameres.y, screen_uv);
+	Ray primary_ray = globals.SceneDescriptor.ActiveCamera->generateRay(frameres.x, frameres.y, screen_uv);
 
 	RGBSpectrum L = IntegratorPipeline::Li(globals, primary_ray, seed, ppixel);
 
@@ -52,7 +52,7 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 	ShapeIntersection payload;
 	payload.hit_distance = tmax;
 
-	payload = globals.SceneDescriptor.device_geometry_aggregate->GAS_structure.intersect(globals, ray, tmax);
+	payload = globals.SceneDescriptor.DeviceGeometryAggregate->GAS_structure.intersect(globals, ray, tmax);
 
 	if (payload.triangle_idx == -1) {
 		return MissStage(globals, ray, payload);
@@ -63,7 +63,7 @@ __device__ ShapeIntersection IntegratorPipeline::Intersect(const IntegratorGloba
 
 __device__ bool IntegratorPipeline::IntersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax)
 {
-	return globals.SceneDescriptor.device_geometry_aggregate->GAS_structure.intersectP(globals, ray, tmax);
+	return globals.SceneDescriptor.DeviceGeometryAggregate->GAS_structure.intersectP(globals, ray, tmax);
 }
 
 __device__ bool IntegratorPipeline::Unoccluded(const IntegratorGlobals& globals, const ShapeIntersection& p0, float3 p1)
@@ -83,13 +83,13 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 	Ray ray = in_ray;
 	RGBSpectrum throughtput(1.f), light(0.f);
 	LightSampler light_sampler(
-		globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsBuffer,
-		globals.SceneDescriptor.device_geometry_aggregate->DeviceLightsCount);
+		globals.SceneDescriptor.DeviceGeometryAggregate->DeviceLightsBuffer,
+		globals.SceneDescriptor.DeviceGeometryAggregate->DeviceLightsCount);
 	float p_b = 1;
 	LightSampleContext prev_ctx{};
 	ShapeIntersection payload{};
 	float eta_scale = 1;//TODO: look up russian roulette
-	//float3 sunpos = make_float3(sinf(globals.frameidx * 0.01f), 1, cosf(globals.frameidx * 0.01f)) * 100;
+	//float3 sunpos = make_float3(sinf(globals.FrameIndex * 0.01f), 1, cosf(globals.FrameIndex * 0.01f)) * 100;
 	float3 sunpos = make_float3(0.266, 0.629, 0.257) * 100;
 	RGBSpectrum suncol(1.000, 0.877, 0.822);
 	suncol *= RGBSpectrum(1, 0.7, 0.4);
@@ -108,7 +108,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += globals.SceneDescriptor.device_geometry_aggregate->SkyLight.Le(ray) * throughtput;
+			light += globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray) * throughtput;
 			break;
 		}
 
@@ -229,11 +229,11 @@ __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, 
 		return;
 	}
 
-	Mat4 c_VP = globals.SceneDescriptor.active_camera->projectionMatrix * globals.SceneDescriptor.active_camera->viewMatrix;
-	Mat4 p_VP = globals.SceneDescriptor.active_camera->prev_projectionMatrix *
-		globals.SceneDescriptor.active_camera->prev_viewMatrix;
-	Mat4 c_M = globals.SceneDescriptor.device_geometry_aggregate->DeviceMeshesBuffer[(int)objID].modelMatrix;
-	Mat4 p_M = globals.SceneDescriptor.device_geometry_aggregate->DeviceMeshesBuffer[(int)objID].prev_modelMatrix;
+	Mat4 c_VP = globals.SceneDescriptor.ActiveCamera->projectionMatrix * globals.SceneDescriptor.ActiveCamera->viewMatrix;
+	Mat4 p_VP = globals.SceneDescriptor.ActiveCamera->prev_projectionMatrix *
+		globals.SceneDescriptor.ActiveCamera->prev_viewMatrix;
+	Mat4 c_M = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMeshesBuffer[(int)objID].modelMatrix;
+	Mat4 p_M = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMeshesBuffer[(int)objID].prev_modelMatrix;
 
 	float4 c_inpos = c_VP * c_M * make_float4(l_pos, 1);//clipspace
 	float4 p_inpos = p_VP * p_M * make_float4(l_pos, 1);//clipspace
@@ -362,7 +362,7 @@ __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBS
 	globals.FrameBuffer.variance_accumulation_framebuffer
 		[c_pix.x + c_pix.y * globals.FrameBuffer.resolution.x] += make_float3(s, s2, 0);
 	float3 avg_mom = (
-		globals.FrameBuffer.variance_accumulation_framebuffer[c_pix.x + c_pix.y * globals.FrameBuffer.resolution.x] / (globals.frameidx)
+		globals.FrameBuffer.variance_accumulation_framebuffer[c_pix.x + c_pix.y * globals.FrameBuffer.resolution.x] / (globals.FrameIndex)
 		);
 
 	float var = fabsf(avg_mom.y - Sqr(avg_mom.x));
@@ -374,7 +374,7 @@ __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBS
 	globals.FrameBuffer.accumulation_framebuffer
 		[c_pix.x + c_pix.y * globals.FrameBuffer.resolution.x] += make_float3(radiance_sample);
 	return RGBSpectrum(
-		globals.FrameBuffer.accumulation_framebuffer[c_pix.x + c_pix.y * globals.FrameBuffer.resolution.x] / (globals.frameidx)
+		globals.FrameBuffer.accumulation_framebuffer[c_pix.x + c_pix.y * globals.FrameBuffer.resolution.x] / (globals.FrameIndex)
 	);
 }
 

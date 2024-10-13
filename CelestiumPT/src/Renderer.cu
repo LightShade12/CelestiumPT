@@ -148,11 +148,11 @@ Renderer::Renderer()
 	m_CudaResourceAPI->m_BlockGridDimensions = dim3(m_NativeRenderResolutionWidth / m_ThreadBlock_x + 1, m_NativeRenderResolutionHeight / m_ThreadBlock_y + 1);
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
-	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate, sizeof(SceneGeometry));
+	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate, sizeof(SceneGeometry));
 
-	m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate->SkyLight = InfiniteLight();
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate->SkyLight = InfiniteLight();
 
-	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);
+	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate);
 	m_CurrentScene = HostScene(&(m_CelestiumPTResourceAPI->DeviceScene));
 }
 
@@ -400,7 +400,7 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_integrated_moments_back_surfobj));
 
 	//prepare globals--------------------
-	m_CelestiumPTResourceAPI->m_IntegratorGlobals.frameidx = g_frameIndex;
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameIndex = g_frameIndex;
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.resolution =
 		make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.accumulation_framebuffer =
@@ -689,8 +689,8 @@ void Renderer::setCamera(int idx)
 	if (idx < 0)idx = 0;
 	if (idx >= m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras.size())idx = m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras.size() - 1;
 	DeviceCamera* dcam = thrust::raw_pointer_cast(&m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras[idx]);
-	m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.active_camera = dcam;
-	m_CurrentCamera = HostCamera(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.active_camera);
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.ActiveCamera = dcam;
+	m_CurrentCamera = HostCamera(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.ActiveCamera);
 }
 
 IntegratorSettings* Renderer::getIntegratorSettings()
@@ -702,7 +702,7 @@ Renderer::~Renderer()
 {
 	glDeleteFramebuffers(1, &m_blit_mediator_FBO0_name);
 	glDeleteFramebuffers(1, &m_blit_mediator_FBO1_name);
-	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.device_geometry_aggregate);//TODO: non critical ownership issues with devicescene
+	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate);//TODO: non critical ownership issues with devicescene
 	delete m_CudaResourceAPI;
 	m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras.clear();
 	delete m_CelestiumPTResourceAPI;

@@ -49,13 +49,13 @@ public:
 };
 
 struct DeviceSceneDescriptor {
-	SceneGeometry* device_geometry_aggregate = nullptr;
-	DeviceCamera* active_camera = nullptr;
+	SceneGeometry* DeviceGeometryAggregate = nullptr;
+	DeviceCamera* ActiveCamera = nullptr;
 };
 
 struct IntegratorGlobals {
 	FrameBufferStorage FrameBuffer;
 	DeviceSceneDescriptor SceneDescriptor;
 	IntegratorSettings IntegratorCFG;
-	uint32_t frameidx = 0;
+	uint32_t FrameIndex = 0;
 };

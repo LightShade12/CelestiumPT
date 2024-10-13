@@ -22,14 +22,14 @@ void GAS::refresh(HostScene* host_scene)
 	dscene->DeviceTLASNodes = tlasnodes;
 	host_scene->syncDeviceGeometry();
 }
-__device__ ShapeIntersection GAS::intersect(const IntegratorGlobals& globals, const Ray& ray, float tmax)
+__device__ ShapeIntersection GAS::intersect(const IntegratorGlobals& globals, const Ray& ray, float tmax) const
 {
 	ShapeIntersection payload;
 	payload.hit_distance = tmax;
 	tlas.intersect(globals, ray, &payload);
 	return payload;
 }
-__device__ bool GAS::intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax)
+__device__ bool GAS::intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax) const
 {
 	return tlas.intersectP(globals, ray, tmax);
 }

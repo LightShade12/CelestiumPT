@@ -17,12 +17,12 @@ public:
 		return modelMatrix;
 	};
 	glm::mat4 getInverseTransform() const {
-		return invModelMatrix;
+		return m_invModelMatrix;
 	};
 
 	void setTransform(glm::mat4 transform) {
 		modelMatrix = transform;
-		invModelMatrix = glm::inverse(modelMatrix);
+		m_invModelMatrix = glm::inverse(modelMatrix);
 	};
 public:
 	std::string name;
@@ -32,5 +32,5 @@ public:
 	size_t tri_count = 0;
 
 	glm::mat4 modelMatrix{};
-	glm::mat4 invModelMatrix{};
+	glm::mat4 m_invModelMatrix{};
 };

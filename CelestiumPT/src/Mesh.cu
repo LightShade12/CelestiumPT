@@ -14,7 +14,7 @@ HostMesh::HostMesh(DeviceMesh* device_mesh)
 	name = device_mesh->name;
 
 	modelMatrix = device_mesh->modelMatrix.toGLM();
-	invModelMatrix = device_mesh->inverseModelMatrix.toGLM();
+	m_invModelMatrix = device_mesh->inverseModelMatrix.toGLM();
 
 	triangle_offset_idx = device_mesh->triangle_offset_idx;
 	tri_count = device_mesh->tri_count;
@@ -26,7 +26,7 @@ void HostMesh::updateDevice(HostScene* hscene)
 	if (m_deviceMesh != nullptr) {
 		//print_matrix(modelMatrix);
 		Mat4 dmodel = Mat4(modelMatrix);
-		Mat4 dinvmodel = Mat4(invModelMatrix);
+		Mat4 dinvmodel = Mat4(m_invModelMatrix);
 
 		//Mat4::print_matrix(dmodmat);
 		m_deviceMesh->prev_modelMatrix = m_deviceMesh->modelMatrix;

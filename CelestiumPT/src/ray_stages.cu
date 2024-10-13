@@ -14,7 +14,7 @@ __device__ ShapeIntersection MissStage(const IntegratorGlobals& globals, const R
 
 __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& in_payload)
 {
-	const Triangle& triangle = globals.SceneDescriptor.device_geometry_aggregate->DeviceTrianglesBuffer[in_payload.triangle_idx];
+	const Triangle& triangle = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTrianglesBuffer[in_payload.triangle_idx];
 
 	ShapeIntersection out_payload;
 
@@ -22,13 +22,13 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 	out_payload.triangle_idx = in_payload.triangle_idx;
 	out_payload.hit_distance = in_payload.hit_distance;
 	out_payload.GAS_debug = in_payload.GAS_debug;
-	out_payload.invModelMatrix = in_payload.invModelMatrix;
+	out_payload.m_invModelMatrix = in_payload.m_invModelMatrix;
 	out_payload.arealight = in_payload.arealight;
 	out_payload.object_idx = in_payload.object_idx;
 
-	Mat4 model_matrix = in_payload.invModelMatrix.inverse();
+	Mat4 model_matrix = in_payload.m_invModelMatrix.inverse();
 	out_payload.w_pos = ray.getOrigin() + (ray.getDirection() * in_payload.hit_distance);
-	out_payload.l_pos = make_float3(in_payload.invModelMatrix * make_float4(out_payload.w_pos, 1));
+	out_payload.l_pos = make_float3(in_payload.m_invModelMatrix * make_float4(out_payload.w_pos, 1));
 
 	out_payload.w_geo_norm = triangle.face_normal;
 
@@ -95,4 +95,9 @@ __device__ void IntersectionStage(const Ray& ray, const Triangle& triangle, int 
 	}
 
 	return;// payload;
-};
+}
+__device__ bool AnyHitStage(const Ray& t_ray, const SceneGeometry& t_scene_geometry, const CompactShapeIntersection& t_payload)
+{
+	return true;
+}
+;

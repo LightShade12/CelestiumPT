@@ -28,8 +28,8 @@ __device__ Mat3 getTBNMatrix(float3 ns, const Triangle& triangle)
 
 __device__ BSDF ShapeIntersection::getBSDF(const IntegratorGlobals& globals)
 {
-	const Triangle& triangle = globals.SceneDescriptor.device_geometry_aggregate->DeviceTrianglesBuffer[triangle_idx];
-	DeviceMaterial material = globals.SceneDescriptor.device_geometry_aggregate->DeviceMaterialBuffer[triangle.mat_idx];
+	const Triangle& triangle = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTrianglesBuffer[triangle_idx];
+	DeviceMaterial material = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMaterialBuffer[triangle.mat_idx];
 	return BSDF(getTBNMatrix(w_shading_norm, triangle), material);
 }
 

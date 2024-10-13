@@ -27,8 +27,8 @@ public:
 
 	//----------------------------------------------------------------------------------------
 
-	__device__ void intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload);
-	__device__ bool intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax);
+	__device__ void intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload) const;
+	__device__ bool intersectP(const IntegratorGlobals& globals, const Ray& ray, float tmax) const;
 
 public:
 	Bounds3f m_BoundingBox;
