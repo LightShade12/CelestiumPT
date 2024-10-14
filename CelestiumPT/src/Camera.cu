@@ -16,7 +16,7 @@ HostCamera::HostCamera(DeviceCamera* device_camera)
 	m_projection = projmat.toGLM();
 	m_invProjection = invprojmat.toGLM();
 
-	FOV_y_radians = device_camera->FOV_y_radians;
+	fov_y_radians = device_camera->fov_y_radians;
 }
 
 void HostCamera::updateDevice()
@@ -30,12 +30,13 @@ void HostCamera::updateDevice()
 		//m_device_camera->prev_projectionMatrix = m_device_camera->projectionMatrix;
 		//m_device_camera->prev_viewMatrix = m_device_camera->viewMatrix;
 
+		m_device_camera->exposure = exposure;
 		m_device_camera->invViewMatrix = invviewmat;
 		m_device_camera->viewMatrix = viewmat;
 		m_device_camera->projectionMatrix = projmat;
 		m_device_camera->invProjectionMatrix = invprojmat;
 
-		m_device_camera->FOV_y_radians = FOV_y_radians;
+		m_device_camera->fov_y_radians = fov_y_radians;
 	}
 }
 
@@ -60,7 +61,7 @@ __device__ DeviceCamera::DeviceCamera()
 	prev_viewMatrix = viewMatrix;
 	prev_projectionMatrix = projectionMatrix;
 
-	FOV_y_radians = deg2rad(60);
+	fov_y_radians = deg2rad(60);
 };
 
 __device__ Ray DeviceCamera::generateRay(int frame_width, int frame_height, float2 screen_uv) const

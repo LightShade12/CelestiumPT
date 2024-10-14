@@ -9,6 +9,7 @@
 __device__ ShapeIntersection MissStage(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& in_payload) {
 	ShapeIntersection out_payload;
 	out_payload.GAS_debug = in_payload.GAS_debug;
+	out_payload.hit_count = in_payload.hit_count;
 	return out_payload;
 }
 
@@ -25,6 +26,7 @@ __device__ ShapeIntersection ClosestHitStage(const IntegratorGlobals& globals, c
 	out_payload.m_invModelMatrix = in_payload.m_invModelMatrix;
 	out_payload.arealight = in_payload.arealight;
 	out_payload.object_idx = in_payload.object_idx;
+	out_payload.hit_count = in_payload.hit_count;
 
 	Mat4 model_matrix = in_payload.m_invModelMatrix.inverse();
 	out_payload.w_pos = ray.getOrigin() + (ray.getDirection() * in_payload.hit_distance);

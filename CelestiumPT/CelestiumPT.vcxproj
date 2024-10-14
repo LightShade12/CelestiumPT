@@ -47,6 +47,7 @@
     <CudaCompile Include="src\triangle.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\celestium_pt.hpp" />
     <ClInclude Include="src\acceleration_structure\BLAS.cuh" />
     <ClInclude Include="src\acceleration_structure\BLAS_builder.hpp" />
     <ClInclude Include="src\acceleration_structure\BVH_cache.cuh" />

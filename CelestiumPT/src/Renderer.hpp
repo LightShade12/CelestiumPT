@@ -28,6 +28,8 @@ public:
 	GLuint getLocalPositionsTargetTextureName() const;
 	GLuint getVelocityTargetTextureName() const;
 	GLuint getGASDebugTargetTextureName() const;
+	GLuint getHeatmapDebugTargetTextureName() const;
+	GLuint getBboxHeatmapDebugTargetTextureName() const;
 	GLuint getDepthTargetTextureName() const;
 	GLuint getUVsDebugTargetTextureName() const;
 	GLuint getObjectIDDebugTargetTextureName() const;

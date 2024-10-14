@@ -123,7 +123,7 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 	float4 variance;
 	if (moments_hist_len < 4) {
 		variance = spatialVarianceEstimate(globals, current_pix);//var_irr
-		final_irradiance = RGBSpectrum(variance);
+		final_irradiance = RGBSpectrum(variance);//averaged irradiance in variance var
 	}
 	else {
 		float2 final_v = final_moments;

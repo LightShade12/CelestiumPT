@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EditorSandbox.hpp"
+#include "editor_sandbox.hpp"
 
 #include <cstdint>
 

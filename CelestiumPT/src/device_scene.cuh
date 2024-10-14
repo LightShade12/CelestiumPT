@@ -4,7 +4,7 @@
 #include "device_mesh.cuh"
 #include "device_material.cuh"
 #include "device_camera.cuh"
-#include "Light.cuh"
+#include "light.cuh"
 #include "acceleration_structure/BVH_node.cuh"
 #include "acceleration_structure/BLAS.cuh"
 #include "acceleration_structure/TLAS_node.cuh"

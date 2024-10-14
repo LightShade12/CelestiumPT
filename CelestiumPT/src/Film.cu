@@ -208,11 +208,60 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel
 		globals.FrameBuffer.objectID_debug_render_surface_object, ppixel);
 }
 
+__device__ float3 hueToRGB(float hue) {
+	// Clamp hue to the [0, 1] range to avoid issues
+	hue = fmodf(hue, 1.0f);
+	if (hue < 0.0f) hue += 1.0f;
+
+	float s = 1.0f;  // Full saturation
+	float v = 1.0f;  // Full brightness
+
+	// Offset the hue to start from blue and move counterclockwise through cyan to red
+	// Adding 2/3 (240°) makes 0 correspond to blue.
+	float h = (hue + 2.0f / 3.0f) * 6.0f;  // Hue is now in [0, 6] range
+	int i = int(floorf(h));  // Which sector of the hue circle are we in
+	float f = h - i;         // Fractional part of h
+
+	float p = v * (1.0f - s);
+	float q = v * (1.0f - s * f);
+	float t = v * (1.0f - s * (1.0f - f));
+
+	float3 color;
+	switch (i % 6) {  // Ensure 'i' is within [0, 5] range
+	case 0: color = make_float3(v, t, p); break;   // Red -> Yellow
+	case 1: color = make_float3(q, v, p); break;   // Yellow -> Green
+	case 2: color = make_float3(p, v, t); break;   // Green -> Cyan
+	case 3: color = make_float3(p, q, v); break;   // Cyan -> Blue
+	case 4: color = make_float3(t, p, v); break;   // Blue -> Magenta
+	case 5: color = make_float3(v, p, q); break;   // Magenta -> Red
+	default: color = make_float3(1.0f, 0.0f, 0.0f);  // Red in case of unexpected values
+	}
+
+	return color;
+}
+
 __device__ void recordGBufferAny(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si)
 {
 	//float2 uv = ppixel / make_float2(globals.FrameBuffer.resolution);
 	//float3 dbg_uv_col = make_float3(uv);
-
+	float3 heatmap;
+	float3 bboxheatmap;
+	int hit_threshold = 90;
+	int bbox_threshold = 20;
+	if (si.hit_count == 0) {
+		heatmap = { 0,0,0 };
+		bboxheatmap = { 0,0,0 };
+	}
+	else {
+		//heatmap = lerp(make_float3(0, 0, 1), make_float3(1, 0, 0),
+		//	fminf(1.f, si.hit_count / (float)threshold));
+		heatmap = hueToRGB(1.f - (si.hit_count / (float)hit_threshold));
+		bboxheatmap = hueToRGB(1.f - (si.bbox_hit_count / (float)bbox_threshold));
+	}
+	texWrite(make_float4(bboxheatmap, 1),
+		globals.FrameBuffer.bbox_heatmap_debug_render_surface_object, ppixel);
+	texWrite(make_float4(heatmap, 1),
+		globals.FrameBuffer.heatmap_debug_render_surface_object, ppixel);
 	texWrite(make_float4(si.GAS_debug, 1),
 		globals.FrameBuffer.GAS_debug_render_surface_object, ppixel);
 	texWrite(make_float4(make_float3(si.object_idx), 1),

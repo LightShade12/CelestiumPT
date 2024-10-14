@@ -418,28 +418,31 @@ __device__ void BLAS::intersect(const IntegratorGlobals& t_globals, const Ray& t
 		stack_top_node = &(scene_data->DeviceBVHNodesBuffer[node_idx_stack[--stack_ptr]]);
 
 		t_closest_hitpayload->GAS_debug += make_float3(0, 1, 0) * t_globals.IntegratorCFG.GAS_shading_brightness;
+		t_closest_hitpayload->bbox_hit_count++;
 
 		//if interior
 		if (stack_top_node->triangle_indices_count <= 0)
 		{
 			child1_hitdist = (scene_data->DeviceBVHNodesBuffer
-				[stack_top_node->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray);
+				[stack_top_node->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray,
+					t_closest_hitpayload->hit_distance);
 			child2_hitdist = (scene_data->DeviceBVHNodesBuffer
-				[stack_top_node->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray);
+				[stack_top_node->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray,
+					t_closest_hitpayload->hit_distance);
 
 			if (child1_hitdist > child2_hitdist) {
-				if (child1_hitdist >= 0 && child1_hitdist < t_closest_hitpayload->hit_distance) {
+				if (child1_hitdist >= 0) {
 					node_idx_stack[stack_ptr++] = stack_top_node->left_child_or_triangle_indices_start_idx;
 				}
-				if (child2_hitdist >= 0 && child2_hitdist < t_closest_hitpayload->hit_distance) {
+				if (child2_hitdist >= 0) {
 					node_idx_stack[stack_ptr++] = stack_top_node->left_child_or_triangle_indices_start_idx + 1;
 				}
 			}
 			else {
-				if (child2_hitdist >= 0 && child2_hitdist < t_closest_hitpayload->hit_distance) {
+				if (child2_hitdist >= 0) {
 					node_idx_stack[stack_ptr++] = stack_top_node->left_child_or_triangle_indices_start_idx + 1;
 				}
-				if (child1_hitdist >= 0 && child1_hitdist < t_closest_hitpayload->hit_distance) {
+				if (child1_hitdist >= 0) {
 					node_idx_stack[stack_ptr++] = stack_top_node->left_child_or_triangle_indices_start_idx;
 				}
 			}
@@ -453,6 +456,7 @@ __device__ void BLAS::intersect(const IntegratorGlobals& t_globals, const Ray& t
 				int prim_idx = scene_data->DeviceBVHTriangleIndicesBuffer[primIndiceIdx];
 				primitive = &(scene_data->DeviceTrianglesBuffer[prim_idx]);
 				IntersectionStage(local_ray, *primitive, prim_idx, &working_payload);
+				t_closest_hitpayload->hit_count++;
 
 				if (working_payload.triangle_idx != -1 && working_payload.hit_distance < t_closest_hitpayload->hit_distance)
 				{
@@ -496,7 +500,8 @@ __device__ bool BLAS::intersectP(const IntegratorGlobals& globals, const Ray& ra
 
 	nodeIdxStack[stackPtr] = m_BVHRootIdx;
 	const BVHNode* stackTopNode = &(scene_data->DeviceBVHNodesBuffer[m_BVHRootIdx]);//is this in register?
-	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(local_ray);
+	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(local_ray,
+		tmax);
 
 	CompactShapeIntersection workinghitpayload;
 	workinghitpayload.hit_distance = FLT_MAX;
@@ -511,8 +516,10 @@ __device__ bool BLAS::intersectP(const IntegratorGlobals& globals, const Ray& ra
 		//if interior
 		if (stackTopNode->triangle_indices_count <= 0)
 		{
-			child1_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray);
-			child2_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray);
+			child1_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx]).m_BoundingBox.intersect(local_ray,
+				tmax);
+			child2_hitdist = (scene_data->DeviceBVHNodesBuffer[stackTopNode->left_child_or_triangle_indices_start_idx + 1]).m_BoundingBox.intersect(local_ray,
+				tmax);
 			if (child1_hitdist > child2_hitdist) {
 				if (child1_hitdist >= 0 && child1_hitdist < tmax) {
 					nodeHitDistStack[stackPtr] = child1_hitdist; nodeIdxStack[stackPtr++] = stackTopNode->left_child_or_triangle_indices_start_idx;

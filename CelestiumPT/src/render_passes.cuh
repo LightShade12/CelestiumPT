@@ -2,6 +2,7 @@
 #include "storage.cuh"
 #include "cuda_utility.cuh"
 #include "film.cuh"
+#include "device_camera.cuh"
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -29,7 +30,7 @@ __global__ void composeCompositeImage(const IntegratorGlobals globals) {
 	RGBSpectrum frag_spectrum = sampled_radiance;
 	//EOTF
 	frag_spectrum = gammaCorrection(frag_spectrum);
-	frag_spectrum = toneMapping(frag_spectrum, 8);
+	frag_spectrum = toneMapping(frag_spectrum, globals.SceneDescriptor.ActiveCamera->exposure);
 
 	float4 frag_color = make_float4(frag_spectrum, 1);
 

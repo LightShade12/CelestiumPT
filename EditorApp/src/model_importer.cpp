@@ -1,7 +1,7 @@
-#include "ModelImporter.hpp"
-#include <glm/glm.hpp>
+#include "model_importer.hpp"
+#include "glm/glm.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/quaternion.hpp>
+#include "glm/gtx/quaternion.hpp"
 
 #include <iostream>
 
@@ -12,7 +12,6 @@ static std::string GetFilePathExtension(const std::string& FileName) {
 }
 
 //TODO:more coordinated loading
-
 bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 {
 	m_WorkingScene = scene_object;
@@ -56,7 +55,7 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 	//default fallback camera
 	if (scene_object->getCamerasCount() < 1) {
 		HostCamera hcam;
-		hcam.FOV_y_radians = glm::radians(60.f);
+		hcam.fov_y_radians = glm::radians(60.f);
 		hcam.setTransform(
 			glm::mat4(
 				glm::vec4(1, 0, 0, 0),
@@ -173,7 +172,7 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 
 		int mtidx = loadedMeshPrimitiveMatIdx[i / 3];
 
-		m_WorkingScene->AddTriangle(
+		m_WorkingScene->addTriangle(
 			loadedMeshPositions[i], loadedMeshNormals[i], loadedMeshUVs[i],
 			loadedMeshPositions[i + 1], loadedMeshNormals[i + 1], loadedMeshUVs[i + 1],
 			loadedMeshPositions[i + 2], loadedMeshNormals[i + 2], loadedMeshUVs[i + 2],
@@ -189,7 +188,6 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 		}
 	}
 
-	//printf("\rloaded mesh:%zu/%zu", nodeIdx + 1, m_SceneModel.nodes.size());
 	return false;
 }
 
@@ -199,10 +197,8 @@ bool ModelImporter::extractVertices(tinygltf::Mesh mesh,
 	std::vector<glm::vec2>& tex_coords,
 	std::vector<int>& primitive_mat_idx)
 {
-	//printf("total primitives: %zu\n", mesh.primitives.size());
 	for (size_t primIdx = 0; primIdx < mesh.primitives.size(); primIdx++)
 	{
-		//printf("prim idx:%zu \n", primIdx);
 		tinygltf::Primitive primitive = mesh.primitives[primIdx];
 
 		int pos_attrib_accesorIdx = primitive.attributes["POSITION"];
@@ -216,11 +212,6 @@ bool ModelImporter::extractVertices(tinygltf::Mesh mesh,
 		tinygltf::Accessor uv_accesor = m_SceneModel.accessors[uv_attrib_accesorIdx];
 		tinygltf::Accessor indices_accesor = m_SceneModel.accessors[indices_accesorIdx];
 
-		int pos_accesor_byte_offset = pos_accesor.byteOffset;//redundant
-		int nrm_accesor_byte_offset = nrm_accesor.byteOffset;//redundant
-		int uv_accesor_byte_offset = uv_accesor.byteOffset;//redundant
-		int indices_accesor_byte_offset = indices_accesor.byteOffset;//redundant
-
 		tinygltf::BufferView pos_bufferview = m_SceneModel.bufferViews[pos_accesor.bufferView];
 		tinygltf::BufferView nrm_bufferview = m_SceneModel.bufferViews[nrm_accesor.bufferView];
 		tinygltf::BufferView uv_bufferview = m_SceneModel.bufferViews[uv_accesor.bufferView];
@@ -231,11 +222,6 @@ bool ModelImporter::extractVertices(tinygltf::Mesh mesh,
 		int uv_buffer_byte_offset = uv_bufferview.byteOffset;
 
 		tinygltf::Buffer indices_buffer = m_SceneModel.buffers[indices_bufferview.buffer];//should alawys be zero?
-
-		//printf("normals accesor count: %d\n", nrm_accesor.count);
-		//printf("positions accesor count: %d\n", pos_accesor.count);
-		//printf("UVs accesor count: %d\n", uv_accesor.count);
-		//printf("indices accesor count: %d\n", indices_accesor.count);
 
 		unsigned short* indicesbuffer = (unsigned short*)(indices_buffer.data.data());
 		glm::vec3* positions_buffer = (glm::vec3*)(indices_buffer.data.data() + pos_buffer_byte_offset);
@@ -269,20 +255,7 @@ bool ModelImporter::loadMaterials(const tinygltf::Model& model)
 		glm::vec3 albedo_factor = glm::vec3(PBR_data.baseColorFactor[0], PBR_data.baseColorFactor[1], PBR_data.baseColorFactor[2]);//TODO: We just use RGB material albedo for now
 		glm::vec3 emission_factor = glm::vec3(gltf_material.emissiveFactor[0], gltf_material.emissiveFactor[1], gltf_material.emissiveFactor[2]);
 		float emission_strength = 0.f;
-		//if (PBR_data.baseColorTexture.index >= 0)drt_material.setAlbedoTextureIndex(model.textures[PBR_data.baseColorTexture.index].source);
-		//if (PBR_data.metallicRoughnessTexture.index >= 0)drt_material.setRoughnessTextureIndex(model.textures[PBR_data.metallicRoughnessTexture.index].source);
-		//if (gltf_material.normalTexture.index >= 0)drt_material.setNormalTextureIndex(model.textures[gltf_material.normalTexture.index].source);
-		//drt_material.setNormalMapScale(gltf_material.normalTexture.scale);
-		//if (gltf_material.emissiveTexture.index >= 0)drt_material.setEmissionTextureIndex(model.textures[gltf_material.emissiveTexture.index].source);
-		//drt_material.setMetallicity((PBR_data.metallicRoughnessTexture.index >= 0) ? 1.f : PBR_data.metallicFactor);
-		//drt_material.setRoughness((PBR_data.metallicRoughnessTexture.index >= 0) ? 1.f : PBR_data.roughnessFactor);
 
-		//if (gltf_material.extensions.find("KHR_materials_transmission") != gltf_material.extensions.end()) {
-		//	drt_material.setTransmission(gltf_material.extensions["KHR_materials_transmission"].Get("transmissionFactor").GetNumberAsDouble());
-		//};
-		//if (gltf_material.extensions.find("KHR_materials_ior") != gltf_material.extensions.end()) {
-		//	drt_material.setIOR(gltf_material.extensions["KHR_materials_ior"].Get("ior").GetNumberAsDouble());
-		//};
 		if (gltf_material.extensions.find("KHR_materials_emissive_strength") != gltf_material.extensions.end()) {
 			emission_strength = (gltf_material.extensions["KHR_materials_emissive_strength"].Get("emissiveStrength").GetNumberAsDouble());
 		};
@@ -302,7 +275,7 @@ bool ModelImporter::parseCamera(tinygltf::Node camera_node)
 
 	HostCamera hcam;
 
-	hcam.FOV_y_radians = gltf_camera.perspective.yfov;
+	hcam.fov_y_radians = gltf_camera.perspective.yfov;
 
 	glm::mat4 viewMatrix(
 		1, 0, 0, 0,

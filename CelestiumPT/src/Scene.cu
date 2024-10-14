@@ -3,7 +3,7 @@
 #include "device_mesh.cuh"
 
 #include "triangle.cuh"
-
+#include "maths/matrix_maths.cuh"
 //#include "Ray.cuh"
 //#include "ShapeIntersection.cuh"
 #include "scene_geometry.cuh"
@@ -84,14 +84,14 @@ size_t HostScene::getCamerasCount()
 void HostScene::addCamera(HostCamera camera)
 {
 	DeviceCamera dcam;
-	dcam.FOV_y_radians = camera.FOV_y_radians;
+	dcam.fov_y_radians = camera.fov_y_radians;
 	dcam.invViewMatrix = Mat4(camera.m_transform);
 	dcam.prev_viewMatrix = dcam.invViewMatrix.inverse();
 
 	m_DeviceScene->DeviceCameras.push_back(dcam);
 }
 
-void HostScene::AddTriangle(
+void HostScene::addTriangle(
 	glm::vec3 v0p, glm::vec3 v0n, glm::vec2 v0uv,
 	glm::vec3 v1p, glm::vec3 v1n, glm::vec2 v1uv,
 	glm::vec3 v2p, glm::vec3 v2n, glm::vec2 v2uv,
@@ -122,8 +122,12 @@ void HostScene::addMaterial(glm::vec3 albedo_factor, glm::vec3 emission_factor, 
 
 void HostScene::addLight(int triangle_idx, int object_index, glm::vec3 color, float scale)
 {
-	Light dlight(&(m_DeviceScene->DeviceTriangles[triangle_idx]), make_float3(color.x, color.y, color.z), scale);
+	Light dlight(&(m_DeviceScene->DeviceTriangles[triangle_idx]),
+		make_float3(color.x, color.y, color.z),
+		scale);
+
 	(m_DeviceScene->DeviceTriangles[triangle_idx]).LightIdx = m_DeviceScene->DeviceLights.size();
+
 	m_DeviceScene->DeviceLights.push_back(dlight);
 }
 

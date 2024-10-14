@@ -1,8 +1,8 @@
 #pragma once
-#include "CelestiumPT.hpp"
-#include <glm/glm.hpp>
-#include <glm/mat4x4.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include "celestium_pt.hpp"
+#include "glm/glm.hpp"
+#include "glm/mat4x4.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 
 struct Camera {
 	Camera() {
@@ -14,32 +14,38 @@ struct Camera {
 
 	Camera(HostCamera* hostcamera) {
 		host_camera_handle = hostcamera;
+
+		//transform
 		glm::mat4 mat = host_camera_handle->getTransform();
 		position = mat[3];
 		forward = mat[2];
 		up = mat[1];
 		right = mat[0];
-		fovYrad = host_camera_handle->FOV_y_radians;
+		
+		//imaging
+		exposure = host_camera_handle->exposure;
+		fov_y_rad = host_camera_handle->fov_y_radians;
 	}
 
-	void resizeFrame(int width, int height) {
-		if (width == m_width && height == m_height)return;
-		m_width = width; m_height = height;
+	void resizeFrame(int t_width, int t_height) {
+		if (t_width == width && t_height == height)return;
+		width = t_width; height = t_height;
 		recalculateProjection();
 		host_camera_handle->updateDevice();
 	};
 
 	void recalculateProjection() {
 		host_camera_handle->setProjection(
-			glm::perspectiveFovLH(fovYrad, float(m_width), float(m_height), 1.f, 100.f));
+			glm::perspectiveFovLH(fov_y_rad, float(width), float(height), 1.f, 100.f));
 	}
 public:
-	int m_width = 0, m_height = 0;
-	float fovYrad = 0;
+	int width = 0, height = 0;
+	float fov_y_rad = 0;
 	HostCamera* host_camera_handle = nullptr;//non-owning
 	float movement_speed = 6;
 	float rot_speed = 0.8;
 
+	float exposure = 1;
 	glm::vec3 position;
 	glm::vec3 right;
 	glm::vec3 up;

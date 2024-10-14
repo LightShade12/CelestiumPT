@@ -96,7 +96,8 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 
 	const TLASNode* stackTopNode = &(scene_data->DeviceTLASNodesBuffer[m_TLASRootIdx]);//is this in register?
 	nodeIdxStack[stackPtr] = m_TLASRootIdx;
-	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(ray);
+	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(ray,
+		closest_hitpayload->hit_distance);
 
 	float child1_hitdist = -1;
 	float child2_hitdist = -1;
@@ -117,8 +118,10 @@ __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray
 		{
 			int c1id = stackTopNode->leftRight & 0xFFFF, c2id = (stackTopNode->leftRight >> 16) & 0xFFFF;
 
-			child1_hitdist = (scene_data->DeviceTLASNodesBuffer[c1id]).m_BoundingBox.intersect(ray);
-			child2_hitdist = (scene_data->DeviceTLASNodesBuffer[c2id]).m_BoundingBox.intersect(ray);
+			child1_hitdist = (scene_data->DeviceTLASNodesBuffer[c1id]).m_BoundingBox.intersect(ray,
+				closest_hitpayload->hit_distance);
+			child2_hitdist = (scene_data->DeviceTLASNodesBuffer[c2id]).m_BoundingBox.intersect(ray,
+				closest_hitpayload->hit_distance);
 			//TODO:implement early cull properly see discord for ref
 			if (child1_hitdist > child2_hitdist) {
 				if (child1_hitdist >= 0 && child1_hitdist < closest_hitpayload->hit_distance)
@@ -163,7 +166,7 @@ __device__ bool TLAS::intersectP(const IntegratorGlobals& globals, const Ray& ra
 
 	const TLASNode* stackTopNode = &(scene_data->DeviceTLASNodesBuffer[m_TLASRootIdx]);//is this in register?
 	nodeIdxStack[stackPtr] = m_TLASRootIdx;
-	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(ray);
+	nodeHitDistStack[stackPtr++] = stackTopNode->m_BoundingBox.intersect(ray, tmax);
 
 	float child1_hitdist = -1;
 	float child2_hitdist = -1;
@@ -181,8 +184,10 @@ __device__ bool TLAS::intersectP(const IntegratorGlobals& globals, const Ray& ra
 		{
 			int c1id = stackTopNode->leftRight & 0xFFFF, c2id = (stackTopNode->leftRight >> 16) & 0xFFFF;
 
-			child1_hitdist = (scene_data->DeviceTLASNodesBuffer[c1id]).m_BoundingBox.intersect(ray);
-			child2_hitdist = (scene_data->DeviceTLASNodesBuffer[c2id]).m_BoundingBox.intersect(ray);
+			child1_hitdist = (scene_data->DeviceTLASNodesBuffer[c1id]).m_BoundingBox.intersect(ray,
+				tmax);
+			child2_hitdist = (scene_data->DeviceTLASNodesBuffer[c2id]).m_BoundingBox.intersect(ray,
+				tmax);
 			//TODO:implement early cull properly see discord for ref
 			if (child1_hitdist > child2_hitdist) {
 				if (child1_hitdist >= 0 && child1_hitdist < tmax)

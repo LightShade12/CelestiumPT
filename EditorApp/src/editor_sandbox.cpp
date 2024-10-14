@@ -1,15 +1,15 @@
-#include "EditorSandbox.hpp"
-#include "Application.hpp"
+#include "editor_sandbox.hpp"
+#include "application.hpp"
 
-#include <stb/stb_image_write.h>
+#include "stb/stb_image_write.h"
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/quaternion.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/quaternion.hpp>
+#include "glm/gtx/quaternion.hpp"
 
-#include <glad/include/glad/glad.h>
+#include "glad/include/glad/glad.h"
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 #include "imgui/imgui.h"
@@ -25,7 +25,6 @@ void EditorSandbox::initialise()
 	m_GASBuilder.build(m_HostSceneHandle);
 
 	m_Renderer.setCamera(0);
-	//m_HostSceneHandle->LogStatus();
 
 	if (m_HostSceneHandle->getMeshesCount() > 0)
 		m_selected_mesh = Mesh(m_HostSceneHandle->getMesh(0));
@@ -178,7 +177,7 @@ void EditorSandbox::onRender(float delta_secs)
 					ImGui::Text("SPP:%d\n", m_Renderer.getSPP());
 					ImGui::SliderInt("max SPP", &g_max_spp, 1, 100);
 					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0Albedo\0Variance\0");
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0Albedo\0Variance\0Heatmap\0bbox heatmap\0");
 					if (curent_renderview == RenderView::GAS) {
 						ImGui::SliderFloat("GAS shading brightness",
 							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 0.1);
@@ -188,10 +187,12 @@ void EditorSandbox::onRender(float delta_secs)
 				if (ImGui::CollapsingHeader("Camera")) {
 					ImGui::Text("Camera transformations");
 					s_updateCam |= ImGui::DragFloat3("Camera translation", &m_Camera.position.x);
-					if (ImGui::SliderAngle("FoV", &(m_Camera.fovYrad), 20, 120)) {
+					if (ImGui::SliderAngle("FoV", &(m_Camera.fov_y_rad), 20, 120)) {
 						m_Camera.recalculateProjection();
 						s_updateCam |= true;
 					};
+					if (ImGui::SliderFloat("Exposure", &m_Camera.host_camera_handle->exposure, 0.1, 20))
+						s_updateCam |= true;
 					ImGui::SeparatorText("Motion");
 					ImGui::SliderFloat("Speed", &m_Camera.movement_speed, 0, 10);
 				};
@@ -333,6 +334,18 @@ void EditorSandbox::onRender(float delta_secs)
 			else if (curent_renderview == RenderView::ALBEDO) {
 				if (m_Renderer.getAlbedoRenderTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getAlbedoRenderTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::HEATMAP) {
+				if (m_Renderer.getHeatmapDebugTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getHeatmapDebugTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::BBOXHEATMAP) {
+				if (m_Renderer.getBboxHeatmapDebugTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getBboxHeatmapDebugTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(),
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}

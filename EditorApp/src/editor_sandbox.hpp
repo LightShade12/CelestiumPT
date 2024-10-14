@@ -1,9 +1,9 @@
 #pragma once
-#include <CelestiumPT.hpp>
+#include "celestium_pt.hpp"
 
-#include "ModelImporter.hpp"
-#include "Camera.hpp"
-#include "Mesh.hpp"
+#include "model_importer.hpp"
+#include "camera.hpp"
+#include "mesh.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -34,7 +34,9 @@ public:
 		VELOCITY = 8,
 		DEPTH = 9,
 		ALBEDO = 10,
-		VARIANCE = 11
+		VARIANCE = 11,
+		HEATMAP = 12,
+		BBOXHEATMAP = 13
 	};
 
 private:

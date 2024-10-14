@@ -1,6 +1,6 @@
 #pragma once
-#include "CelestiumPT.hpp"
-#include <glm/glm.hpp>
+#include "celestium_pt.hpp"
+#include "glm/glm.hpp"
 
 class Mesh {
 public:

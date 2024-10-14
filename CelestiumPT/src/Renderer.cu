@@ -130,6 +130,8 @@ struct CelestiumPT_API
 	FrameBuffer PositionsRenderBuffer;//debug
 	FrameBuffer ObjectIDDebugRenderBuffer;
 	FrameBuffer GASDebugRenderBuffer;
+	FrameBuffer HitHeatmapDebugRenderBuffer;
+	FrameBuffer BboxHeatmapDebugRenderBuffer;
 	FrameBuffer UVsDebugRenderBuffer;
 	FrameBuffer BarycentricsDebugRenderBuffer;
 
@@ -175,6 +177,8 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->LocalPositionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->HitHeatmapDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->BboxHeatmapDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->UVsDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->ObjectIDDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -372,6 +376,10 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.local_positions_render_surface_object));
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.GAS_debug_render_surface_object));
+	m_CelestiumPTResourceAPI->HitHeatmapDebugRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.heatmap_debug_render_surface_object));
+	m_CelestiumPTResourceAPI->BboxHeatmapDebugRenderBuffer.beginRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bbox_heatmap_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->UVsDebugRenderBuffer.beginRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.UV_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->BarycentricsDebugRenderBuffer.beginRender(
@@ -556,8 +564,12 @@ void Renderer::renderFrame()
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.GAS_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->ObjectIDDebugRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_debug_render_surface_object));
+	m_CelestiumPTResourceAPI->BboxHeatmapDebugRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bbox_heatmap_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_render_surface_object));
+	m_CelestiumPTResourceAPI->HitHeatmapDebugRenderBuffer.endRender(
+		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.heatmap_debug_render_surface_object));
 	m_CelestiumPTResourceAPI->VelocityRenderBuffer.endRender(
 		&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_render_surface_object));
 	m_CelestiumPTResourceAPI->IrradianceRenderBuffer.endRender(
@@ -647,6 +659,16 @@ GLuint Renderer::getVelocityTargetTextureName() const
 GLuint Renderer::getGASDebugTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->GASDebugRenderBuffer.m_RenderTargetTextureName;
+}
+
+GLuint Renderer::getHeatmapDebugTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->HitHeatmapDebugRenderBuffer.m_RenderTargetTextureName;
+}
+
+GLuint Renderer::getBboxHeatmapDebugTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->BboxHeatmapDebugRenderBuffer.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getDepthTargetTextureName() const

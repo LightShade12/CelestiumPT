@@ -92,7 +92,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 	//float3 sunpos = make_float3(sinf(globals.FrameIndex * 0.01f), 1, cosf(globals.FrameIndex * 0.01f)) * 100;
 	float3 sunpos = make_float3(0.266, 0.629, 0.257) * 100;
 	RGBSpectrum suncol(1.000, 0.877, 0.822);
-	suncol *= RGBSpectrum(1, 0.7, 0.4);
+	//suncol *= RGBSpectrum(1, 0.7, 0.4);
 
 	for (int bounce_depth = 0; bounce_depth <= globals.IntegratorCFG.max_bounces; bounce_depth++) {
 		seed += bounce_depth;
@@ -108,7 +108,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 		{
 			if (primary_surface) recordGBufferMiss(globals, ppixel);
 
-			light += globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray) * throughtput;
+			light += globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray) * RGBSpectrum(0.8, 1, 1.5) * throughtput;
 			break;
 		}
 
@@ -140,7 +140,8 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 		RGBSpectrum Ld = SampleLd(globals, ray, payload, bsdf,
 			light_sampler, seed, primary_surface);
 		light += Ld * throughtput;
-		if (false) {
+
+		if (true) {
 			bool sunhit = !IntersectP(globals, Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
 				sunpos + make_float3(Samplers::get2D_PCGHash(seed), Samplers::get1D_PCGHash(seed)) * 5.f),
 				100);

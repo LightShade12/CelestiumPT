@@ -1,14 +1,12 @@
-#include "Application.hpp"
+#include "application.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_opengl3.h>
+#include "imgui/imgui.h"
+#include "imgui/backends/imgui_impl_glfw.h"
+#include "imgui/backends/imgui_impl_opengl3.h"
 
-#include <glad/include/glad/glad.h>
-#define GLFW_INCLUDE_NONE
-#include <glfw/include/GLFW/glfw3.h>
-
-#include <iostream>
+#include "glad/include/glad/glad.h"
+#define GLFW_INCLUDE_NONE //glad loader instead of local gl
+#include "glfw/include/GLFW/glfw3.h"
 
 static void glfw_error_callback(int error, const char* description)
 {

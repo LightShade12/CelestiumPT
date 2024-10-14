@@ -27,6 +27,8 @@ struct ShapeIntersection {
 
 	bool front_face = true;
 	float3 GAS_debug = make_float3(0);
+	int bbox_hit_count = 0;
+	int hit_count = 0;
 
 public:
 	__device__ inline bool hasHit() const { return triangle_idx != 1; };

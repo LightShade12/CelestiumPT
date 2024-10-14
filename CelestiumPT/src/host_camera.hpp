@@ -39,7 +39,8 @@ public:
 		m_invProjection = glm::inverse(m_projection);
 	}
 
-	float FOV_y_radians = glm::radians(60.f);
+	float fov_y_radians = glm::radians(60.f);
+	float exposure = 4;
 	glm::mat4 m_transform;
 	glm::mat4 m_view;
 	glm::mat4 m_projection;

@@ -31,6 +31,8 @@ public:
 	cudaSurfaceObject_t positions_render_surface_object;
 	cudaSurfaceObject_t local_positions_render_surface_object;
 	cudaSurfaceObject_t GAS_debug_render_surface_object;
+	cudaSurfaceObject_t heatmap_debug_render_surface_object;
+	cudaSurfaceObject_t bbox_heatmap_debug_render_surface_object;
 	cudaSurfaceObject_t depth_render_surface_object;
 	cudaSurfaceObject_t UV_debug_render_surface_object;
 	cudaSurfaceObject_t bary_debug_render_surface_object;

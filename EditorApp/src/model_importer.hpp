@@ -1,5 +1,5 @@
 #pragma once
-#include "CelestiumPT.hpp"
+#include "celestium_pt.hpp"
 #include "tinygltf/tiny_gltf.h"
 
 class ModelImporter

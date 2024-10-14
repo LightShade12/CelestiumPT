@@ -48,26 +48,21 @@ __host__ void Bounds3f::adaptBounds(const Mat4& model_mat, const Bounds3f& origi
 	pMax = newMax;
 }
 
-__device__ float Bounds3f::intersect(const Ray& ray) const
+__device__ float Bounds3f::intersect(const Ray& ray, float t_tmax) const
 {
 	float3 t0 = (pMin - ray.getOrigin()) * ray.getInvDirection();
 	float3 t1 = (pMax - ray.getOrigin()) * ray.getInvDirection();
 
 	float3 tmin = fminf(t0, t1);
-	float3 tmax = fmaxf(t1, t0);//switched order of t to guard NaNs
+	float3 tmax = fmaxf(t0, t1); // Corrected order to guard NaNs
 
-	//min max componenet
+	// Find the maximum of the entry points and the minimum of the exit points
 	float tenter = fmaxf(fmaxf(tmin.x, tmin.y), tmin.z);
 	float texit = fminf(fminf(tmax.x, tmax.y), tmax.z);
 
-	// Adjust tenter if the ray starts inside the AABB
-	if (tenter < 0.0f) {
-		tenter = 0.0f;
-	}
+	// ensure tenter is at least 0 if inside bbox
+	tenter = fmaxf(tenter, 0.0f);
 
-	if (tenter > texit || texit < 0) {
-		return -1; // No intersection
-	}
-
-	return tenter;
+	// Branchless return: if tenter > texit or texit < 0, return -1
+	return (tenter > texit || texit < 0.0f || tenter>t_tmax) ? -1.0f : tenter;
 }

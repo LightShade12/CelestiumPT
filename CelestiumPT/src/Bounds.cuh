@@ -12,7 +12,7 @@ struct Bounds3f
 	Bounds3f(float3 min, float3 max) :pMin(min), pMax(max) {};
 
 	__host__ void adaptBounds(const Mat4& model_mat, const Bounds3f& origin);
-	__device__ float intersect(const Ray& ray) const;
+	__device__ float intersect(const Ray& ray, float t_tmax) const;
 	float getSurfaceArea() const;//TODO: will return fltmin, fltmax if uninitialised
 	float3 getCentroid() const;
 

@@ -21,7 +21,7 @@ public:
 
 	void addCamera(HostCamera camera);
 
-	void AddTriangle(
+	void addTriangle(
 		glm::vec3 v0p, glm::vec3 v0n, glm::vec2 v0uv,
 		glm::vec3 v1p, glm::vec3 v1n, glm::vec2 v1uv,
 		glm::vec3 v2p, glm::vec3 v2n, glm::vec2 v2uv,

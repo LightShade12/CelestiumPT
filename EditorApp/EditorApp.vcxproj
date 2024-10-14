@@ -91,10 +91,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Application.cpp" />
-    <ClCompile Include="src\EditorApp.cpp" />
-    <ClCompile Include="src\EditorSandbox.cpp" />
-    <ClCompile Include="src\ModelImporter.cpp" />
+    <ClCompile Include="src\application.cpp" />
+    <ClCompile Include="src\editor_app.cpp" />
+    <ClCompile Include="src\editor_sandbox.cpp" />
+    <ClCompile Include="src\model_importer.cpp" />
     <ClCompile Include="thirdparty\glad\src\glad.c" />
     <ClCompile Include="thirdparty\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="thirdparty\imgui\backends\imgui_impl_opengl3.cpp" />
@@ -107,10 +107,10 @@
     <ClCompile Include="thirdparty\tinygltf\tiny_gltf.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Camera.hpp" />
-    <ClInclude Include="src\Application.hpp" />
-    <ClInclude Include="src\EditorSandbox.hpp" />
-    <ClInclude Include="src\ModelImporter.hpp" />
+    <ClInclude Include="src\camera.hpp" />
+    <ClInclude Include="src\application.hpp" />
+    <ClInclude Include="src\editor_sandbox.hpp" />
+    <ClInclude Include="src\model_importer.hpp" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
     <ClInclude Include="thirdparty\glad\include\KHR\khrplatform.h" />
     <ClInclude Include="thirdparty\glfw\include\GLFW\glfw3.h" />
@@ -128,7 +128,7 @@
     <ClInclude Include="thirdparty\tinygltf\tiny_gltf.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Mesh.hpp" />
+    <ClInclude Include="src\mesh.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CelestiumPT\CelestiumPT.vcxproj">
