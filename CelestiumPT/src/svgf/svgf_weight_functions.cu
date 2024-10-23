@@ -1,4 +1,4 @@
-#include "SVGFEdgeStoppingFunctions.cuh"
+#include "svgf_weight_functions.cuh"
 #include "maths/vector_maths.cuh"
 
 // Normal-weighting function (4.4.1)

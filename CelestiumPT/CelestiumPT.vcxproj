@@ -40,9 +40,9 @@
     <CudaCompile Include="src\scene.cu" />
     <CudaCompile Include="src\shape_intersection.cu" />
     <CudaCompile Include="src\spectrum.cu" />
-    <CudaCompile Include="src\svgf\SVGF_atrous.cu" />
-    <CudaCompile Include="src\svgf\SVGFEdgeStoppingFunctions.cu" />
-    <CudaCompile Include="src\svgf\SVGFTemporalReprojection.cu" />
+    <CudaCompile Include="src\svgf\svgf_atrous.cu" />
+    <CudaCompile Include="src\svgf\svgf_weight_functions.cu" />
+    <CudaCompile Include="src\svgf\svgf_temporal_reprojection.cu" />
     <CudaCompile Include="src\temporal_pass.cu" />
     <CudaCompile Include="src\triangle.cu" />
   </ItemGroup>
@@ -89,9 +89,9 @@
     <ClInclude Include="src\shape_intersection.cuh" />
     <ClInclude Include="src\spectrum.cuh" />
     <ClInclude Include="src\storage.cuh" />
-    <ClInclude Include="src\svgf\SVGFEdgeStoppingFunctions.cuh" />
-    <ClInclude Include="src\svgf\SVGFPasses.cuh" />
-    <ClInclude Include="src\svgf\SVGFTemporalReprojection.cuh" />
+    <ClInclude Include="src\svgf\svgf_weight_functions.cuh" />
+    <ClInclude Include="src\svgf\svgf_passes.cuh" />
+    <ClInclude Include="src\svgf\svgf_temporal_reprojection.cuh" />
     <ClInclude Include="src\temporal_pass.cuh" />
     <ClInclude Include="src\triangle.cuh" />
     <ClInclude Include="src\utility.hpp" />

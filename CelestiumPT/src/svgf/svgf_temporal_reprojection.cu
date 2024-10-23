@@ -1,6 +1,6 @@
-#include "SVGFTemporalReprojection.cuh"
+#include "svgf_temporal_reprojection.cuh"
 
-#include "SVGFPasses.cuh"
+#include "svgf_passes.cuh"
 #include "cuda_utility.cuh"
 #include "temporal_pass.cuh"
 

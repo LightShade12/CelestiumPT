@@ -1,4 +1,4 @@
-#include "SVGFPasses.cuh"
+#include "svgf_passes.cuh"
 
 #include "integrator.cuh"
 #include "spectrum.cuh"
@@ -6,7 +6,7 @@
 #include "maths/linear_algebra.cuh"
 #include "film.cuh"
 #include "error_check.cuh"
-#include "SVGFEdgeStoppingFunctions.cuh"
+#include "svgf_weight_functions.cuh"
 #include "cuda_utility.cuh"
 
 #define __CUDACC__
@@ -86,7 +86,7 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 	float2 screen_uv = { (float)current_pix.x / (float)frameres.x, (float)current_pix.y / (float)frameres.y };
 
 	if ((current_pix.x >= frameres.x) || (current_pix.y >= frameres.y)) return;
-	//----------------------------------------------
+	//=========================================================
 
 	int current_objID = texReadNearest(globals.FrameBuffer.objectID_render_surface_object, current_pix).x;
 
@@ -113,9 +113,9 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 		current_pix)));
 	float sampled_depth = texReadNearest(globals.FrameBuffer.depth_render_surface_object,
 		current_pix).x;
-	//float sampled_variance = texReadNearest(globals.FrameBuffer.filtered_variance_render_front_surfobj,
-	//	current_pix).x;
-	float sampled_variance = texReadGaussianWeighted(globals.FrameBuffer.filtered_variance_render_front_surfobj, frameres,
+	float sampled_variance = texReadNearest(globals.FrameBuffer.filtered_variance_render_front_surfobj,
+		current_pix).x;
+	float sampled_filtered_variance = texReadGaussianWeighted(globals.FrameBuffer.filtered_variance_render_front_surfobj, frameres,
 		current_pix);
 
 	// depth-gradient estimation from screen-space derivatives
@@ -125,13 +125,13 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 
 	bool use_5x5filter = globals.IntegratorCFG.use_5x5_filter;
 
-	const constexpr float filterKernel3x3[] =
+	constexpr float filterKernel3x3[] =
 	{
 		0.0625, 0.125, 0.0625,
 		0.125, 0.25, 0.125,
 		0.0625, 0.125, 0.0625 };
 
-	const constexpr float filterKernel5x5[] =
+	constexpr float filterKernel5x5[] =
 	{
 		0.00390625, 0.015625, 0.0234375, 0.015625, 0.00390625,
 		0.015625, 0.0625, 0.09375, 0.0625, 0.015625,
@@ -155,11 +155,12 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 
 			float4 tap_irradiance = texReadNearest(globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 				tap_pix);
+			float tap_variance = texReadNearest(globals.FrameBuffer.filtered_variance_render_front_surfobj,
+				tap_pix).x;
+
 			float3 tap_normal = make_float3(texReadNearest(globals.FrameBuffer.world_normals_render_surface_object,
 				tap_pix));
 			float tap_depth = texReadNearest(globals.FrameBuffer.depth_render_surface_object,
-				tap_pix).x;
-			float tap_variance = texReadNearest(globals.FrameBuffer.filtered_variance_render_front_surfobj,
 				tap_pix).x;
 
 			float nw = normalWeight((sampled_normal), normalize(tap_normal));
@@ -167,7 +168,7 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 			float lw = 1;
 			lw = luminanceWeight(
 				getLuminance(RGBSpectrum(sampled_irradiance)),
-				getLuminance(RGBSpectrum(tap_irradiance)), sampled_variance);
+				getLuminance(RGBSpectrum(tap_irradiance)), sampled_filtered_variance);
 
 			float w = (dw * nw * lw);
 

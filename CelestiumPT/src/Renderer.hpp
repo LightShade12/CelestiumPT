@@ -50,23 +50,9 @@ public:
 
 private:
 
-	void blitFilteredIrradianceVarianceBackToFront();
-
-	void blitMomentsBackToFront();
-
-	void blitFilteredIrradianceToHistory(bool read_from_back);
-
-	GLuint m_blit_mediator_FBO0_name = NULL;
-	GLuint m_blit_mediator_FBO1_name = NULL;
-
-	//TODO:rename
-	GLenum m_blit_target0_attachment = GL_COLOR_ATTACHMENT1;
-	GLenum m_blit_target1_attachment = GL_COLOR_ATTACHMENT3;
-	GLenum m_blit_target2_attachment = GL_COLOR_ATTACHMENT5;
-	GLenum m_blit_target3_attachment = GL_COLOR_ATTACHMENT0;
-
 	uint32_t m_NativeRenderResolutionWidth = NULL;
 	uint32_t m_NativeRenderResolutionHeight = NULL;
+
 	HostCamera m_CurrentCamera;
 	HostScene m_CurrentScene;
 	CudaAPI* m_CudaResourceAPI = nullptr;
