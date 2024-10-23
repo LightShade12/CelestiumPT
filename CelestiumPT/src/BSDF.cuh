@@ -21,7 +21,7 @@ public:
 
 	//BSDF(float3 tang, float3 bitan, float3 n) :tangentMatrix(Mat3(tang, bitan, n)) {};
 
-	__device__ BSDF(const Mat3& tangent_matrix, const DeviceMaterial& material);
+	__device__ BSDF(const Mat3& tangent_matrix, RGBSpectrum albedo);
 
 	__device__ RGBSpectrum f(float3 r_wo, float3 r_wi, bool primary_surface) const;
 

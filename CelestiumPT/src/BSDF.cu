@@ -2,10 +2,10 @@
 #include "device_material.cuh"
 #include "samplers.cuh"
 
-BSDF::BSDF(const Mat3& tangent_matrix, const DeviceMaterial& material)
+BSDF::BSDF(const Mat3& tangent_matrix, RGBSpectrum albedo)
 {
 	tangentMatrix = tangent_matrix;
-	albedo_factor = material.albedo_color_factor;
+	albedo_factor = albedo;
 }
 
 __device__ RGBSpectrum BSDF::f(float3 r_wo, float3 r_wi, bool primary_surface) const

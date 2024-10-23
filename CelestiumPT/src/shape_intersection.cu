@@ -30,7 +30,10 @@ __device__ BSDF ShapeIntersection::getBSDF(const IntegratorGlobals& globals)
 {
 	const Triangle& triangle = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTrianglesBuffer[triangle_idx];
 	DeviceMaterial material = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMaterialBuffer[triangle.mat_idx];
-	return BSDF(getTBNMatrix(w_shading_norm, triangle), material);
+
+
+
+	return BSDF(getTBNMatrix(w_shading_norm, triangle), material.albedo_color_factor);
 }
 
 __device__ RGBSpectrum ShapeIntersection::Le(float3 w)
