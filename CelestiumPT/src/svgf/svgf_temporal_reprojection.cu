@@ -14,10 +14,10 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 	int thread_pixel_coord_y = threadIdx.y + blockIdx.y * blockDim.y;
 	int2 current_pix = make_int2(thread_pixel_coord_x, thread_pixel_coord_y);
 
-	int2 frameres = globals.FrameBuffer.resolution;
-	float2 screen_uv = { (float)current_pix.x / (float)frameres.x, (float)current_pix.y / (float)frameres.y };
+	int2 frame_res = globals.FrameBuffer.resolution;
+	float2 screen_uv = { (float)current_pix.x / (float)frame_res.x, (float)current_pix.y / (float)frame_res.y };
 
-	if ((current_pix.x >= frameres.x) || (current_pix.y >= frameres.y)) return;
+	if ((current_pix.x >= frame_res.x) || (current_pix.y >= frame_res.y)) return;
 	//----------------------------------------------
 
 	float4 sampled_irradiance = texReadNearest(globals.FrameBuffer.current_irradiance_render_surface_object, current_pix);
@@ -51,14 +51,14 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 
 	//reproject
 	float2 current_velocity = make_float2(sampled_velocity.x, sampled_velocity.y);
-	float2 pixel_offset = current_velocity * make_float2(frameres);
+	float2 pixel_offset = current_velocity * make_float2(frame_res);
 
 	int2 prev_px = current_pix - make_int2(pixel_offset);
 	float2 prev_pxf = make_float2(current_pix) - pixel_offset;
 
 	//new fragment; out of screen
-	if (prev_px.x < 0 || prev_px.x >= frameres.x ||
-		prev_px.y < 0 || prev_px.y >= frameres.y)
+	if (prev_px.x < 0 || prev_px.x >= frame_res.x ||
+		prev_px.y < 0 || prev_px.y >= frame_res.y)
 	{
 		//feedback
 		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
@@ -66,7 +66,13 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 			current_pix);
 
 		//out---
-		float4 irr_var = spatialVarianceEstimate(globals, current_pix);
+		float4 irr_var;
+		irr_var = make_float4(final_irradiance);
+		irr_var.w = fabsf(final_moments.y - (Sqr(final_moments.x)));
+
+		if (globals.IntegratorCFG.svgf_enabled)
+			irr_var = spatialVarianceEstimate(globals, current_pix);
+
 		texWrite(make_float4(make_float3(irr_var.w), 0),
 			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
@@ -88,7 +94,12 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 			current_pix);
 
 		//out---
-		float4 irr_var = spatialVarianceEstimate(globals, current_pix);
+		float4 irr_var;
+		irr_var = make_float4(final_irradiance);
+		irr_var.w = fabsf(final_moments.y - (Sqr(final_moments.x)));
+
+		if (globals.IntegratorCFG.svgf_enabled)
+			irr_var = spatialVarianceEstimate(globals, current_pix);
 		texWrite(make_float4(make_float3(irr_var.w), 0),
 			globals.FrameBuffer.filtered_variance_render_front_surfobj,
 			current_pix);
@@ -99,7 +110,7 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 	}
 
 	float4 hist_irradiance = texReadBilinear(globals.FrameBuffer.history_integrated_irradiance_front_surfobj, prev_pxf,
-		frameres, false);
+		frame_res, false);
 	float4 hist_moments = texReadNearest(globals.FrameBuffer.history_integrated_moments_front_surfobj, prev_px);
 
 	float irradiance_hist_len = hist_irradiance.w;
@@ -121,13 +132,12 @@ __global__ void temporalIntegrate(const IntegratorGlobals globals)
 		current_pix);
 
 	float4 variance;
-	if (moments_hist_len < 4) {
+	if (moments_hist_len < 4 && globals.IntegratorCFG.svgf_enabled) {
 		variance = spatialVarianceEstimate(globals, current_pix);//var_irr
 		final_irradiance = RGBSpectrum(variance);//averaged irradiance in variance var
 	}
 	else {
-		float2 final_v = final_moments;
-		variance.w = fabsf(final_v.y - (Sqr(final_v.x)));
+		variance.w = fabsf(final_moments.y - (Sqr(final_moments.x)));
 	}
 
 	texWrite(make_float4(make_float3(variance.w), 1),

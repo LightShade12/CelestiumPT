@@ -25,11 +25,6 @@
 #include <surface_indirect_functions.h>
 #include <float.h>
 
-__host__ void IntegratorPipeline::invokeRenderKernel(const IntegratorGlobals& globals, dim3 block_grid_dims, dim3 thread_block_dims)
-{
-	renderKernel << < block_grid_dims, thread_block_dims >> > (globals);
-};
-
 __device__ RGBSpectrum IntegratorPipeline::evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel)
 {
 	uint32_t seed = ppixel.x + ppixel.y * globals.FrameBuffer.resolution.x;
@@ -212,21 +207,15 @@ __device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& glo
 
 //velocity is in screen UV space
 __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, int2 ppixel) {
-	//float2 ppixel = { c_uv.x * globals.FrameBuffer.resolution.x ,
-	//	c_uv.y * globals.FrameBuffer.resolution.y };
-
-	float4 c_lpos = surf2Dread<float4>(globals.FrameBuffer.local_positions_render_surface_object,
-		ppixel.x * (int)sizeof(float4), ppixel.y);
-	float4 c_objID = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
-		ppixel.x * (int)sizeof(float4), ppixel.y);
+	float4 c_lpos = texReadNearest(globals.FrameBuffer.local_positions_render_surface_object, ppixel);
+	float4 c_objID = texReadNearest(globals.FrameBuffer.objectID_render_surface_object, ppixel);
 
 	float3 l_pos = make_float3(c_lpos);
 	float objID = c_objID.x;
 
 	if (objID < 0) {
-		surf2Dwrite(make_float4(0, 0, 0, 1),
-			globals.FrameBuffer.velocity_render_surface_object,
-			ppixel.x * (int)sizeof(float4), ppixel.y);
+		texWrite(make_float4(0, 0, 0, 1),
+			globals.FrameBuffer.velocity_render_surface_object, ppixel);
 		return;
 	}
 
@@ -249,13 +238,10 @@ __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, 
 
 	float3 velcol = make_float3(0);
 
-	//velcol += (vel.x > 0) ? make_float3(vel.x, 0, 0) : make_float3(0, fabsf(vel.x), fabsf(vel.x));
-	//velcol += (vel.y > 0) ? make_float3(0, vel.y, 0) : make_float3(fabsf(vel.y), 0, fabsf(vel.y));
 	velcol = make_float3(vel, 0);
 
-	surf2Dwrite(make_float4(velcol, 1),
-		globals.FrameBuffer.velocity_render_surface_object,
-		ppixel.x * (int)sizeof(float4), ppixel.y);
+	texWrite(make_float4(velcol, 1),
+		globals.FrameBuffer.velocity_render_surface_object, ppixel);
 }
 
 __device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RGBSpectrum c_col, float4 c_moments, float2 c_uv, int2 c_pix) {
@@ -408,56 +394,4 @@ __global__ void renderPathTraceRaw(const IntegratorGlobals globals)
 		globals.FrameBuffer.current_irradiance_render_surface_object, current_pix);
 	texWrite(current_moments,
 		globals.FrameBuffer.current_moments_render_surface_object, current_pix);
-}
-
-__global__ void renderKernel(IntegratorGlobals globals)
-{
-	int thread_pixel_coord_x = threadIdx.x + blockIdx.x * blockDim.x;
-	int thread_pixel_coord_y = threadIdx.y + blockIdx.y * blockDim.y;
-	int2 ppixel = make_int2(thread_pixel_coord_x, thread_pixel_coord_y);
-
-	int2 frameres = globals.FrameBuffer.resolution;
-	float2 screen_uv = { (float)thread_pixel_coord_x / (float)frameres.x, (float)thread_pixel_coord_y / (float)frameres.y };
-
-	if ((thread_pixel_coord_x >= frameres.x) || (thread_pixel_coord_y >= frameres.y)) return;
-	//----------------------------------
-
-	RGBSpectrum sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, { (float)thread_pixel_coord_x,(float)thread_pixel_coord_y });
-	float s = getLuminance(sampled_radiance);
-	float s2 = s * s;
-	float4 current_moments = make_float4(s, s2, 0, 0);
-
-	computeVelocity(globals, screen_uv, ppixel);
-
-	if (globals.IntegratorCFG.temporal_accumulation) {
-		sampled_radiance = temporalAccumulation(globals, sampled_radiance, current_moments, screen_uv, ppixel);
-	}
-	else if (globals.IntegratorCFG.accumulate) {
-		sampled_radiance = staticAccumulation(globals, sampled_radiance, ppixel);
-	}
-
-	float4 sampled_albedo = surf2Dread<float4>(globals.FrameBuffer.albedo_render_surface_object,
-		thread_pixel_coord_x * (int)sizeof(float4), thread_pixel_coord_y);
-
-	sampled_radiance *= RGBSpectrum(sampled_albedo);//MODULATE
-
-	RGBSpectrum frag_spectrum = sampled_radiance;
-	{
-		//EOTF
-		frag_spectrum = gammaCorrection(frag_spectrum);
-
-		frag_spectrum = toneMapping(frag_spectrum, 8);
-
-		//frag_spectrum *= 3.0f;
-		//frag_spectrum = agx_fitted(frag_spectrum);
-		//frag_spectrum = agx_fitted_Eotf(frag_spectrum);
-
-		//frag_spectrum *= 1.f;
-		//frag_spectrum = agx_tonemapping(frag_spectrum);
-	}
-
-	float4 frag_color = make_float4(frag_spectrum, 1);
-
-	texWrite(frag_color,
-		globals.FrameBuffer.current_irradiance_render_surface_object, ppixel);//has to be uchar4/2/1 or float4/2/1; no 3 comp color
 }

@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/cs16_dust_unit.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTF("../models/temp.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -118,7 +118,7 @@ void EditorSandbox::onUpdate(float delta)
 				glm::mat4 model = mesh.original_tranform * trans * rot_x * rot_y * rot_z * scale;
 				mesh.host_mesh_handle.setTransform(model);
 				mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
-				if (m_Renderer.getIntegratorSettings()->accumulate && !m_Renderer.getIntegratorSettings()->temporal_accumulation)
+				if (m_Renderer.getIntegratorSettings()->accumulate && !m_Renderer.getIntegratorSettings()->temporal_filter_enabled)
 					m_Renderer.clearAccumulation();
 			}
 		}
@@ -135,7 +135,7 @@ void EditorSandbox::onUpdate(float delta)
 		//print_matrix(model);
 		m_selected_mesh.host_mesh_handle.setTransform(model);
 		m_selected_mesh.host_mesh_handle.updateDevice(m_Renderer.getCurrentScene());
-		if (m_Renderer.getIntegratorSettings()->accumulate && !m_Renderer.getIntegratorSettings()->temporal_accumulation)
+		if (m_Renderer.getIntegratorSettings()->accumulate && !m_Renderer.getIntegratorSettings()->temporal_filter_enabled)
 			m_Renderer.clearAccumulation();
 	}
 
@@ -150,7 +150,7 @@ void EditorSandbox::onUpdate(float delta)
 
 		m_Camera.host_camera_handle->setTransform(inv_view);
 		m_Camera.host_camera_handle->updateDevice();
-		if (m_Renderer.getIntegratorSettings()->accumulate && !m_Renderer.getIntegratorSettings()->temporal_accumulation)
+		if (m_Renderer.getIntegratorSettings()->accumulate && !m_Renderer.getIntegratorSettings()->temporal_filter_enabled)
 			m_Renderer.clearAccumulation();
 	};
 
@@ -198,10 +198,10 @@ void EditorSandbox::onRender(float delta_secs)
 				};
 				if (ImGui::CollapsingHeader("Pathtracing")) {
 					ImGui::Checkbox("Accumulation", &(m_Renderer.getIntegratorSettings()->accumulate));
-					ImGui::Checkbox("Temporal accumulation", &(m_Renderer.getIntegratorSettings()->temporal_accumulation));
-					ImGui::Checkbox("SVGF denoiser", &(m_Renderer.getIntegratorSettings()->use_SVGF));
+					ImGui::Checkbox("Temporal accumulation", &(m_Renderer.getIntegratorSettings()->temporal_filter_enabled));
+					ImGui::Checkbox("SVGF denoiser", &(m_Renderer.getIntegratorSettings()->svgf_enabled));
 					ImGui::Indent();
-					if (m_Renderer.getIntegratorSettings()->use_SVGF) {
+					if (m_Renderer.getIntegratorSettings()->svgf_enabled) {
 						ImGui::Checkbox("Use 5x5 filter", &(m_Renderer.getIntegratorSettings()->use_5x5_filter));
 					}
 					ImGui::Unindent();

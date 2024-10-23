@@ -12,14 +12,10 @@ class LightSampler;
 
 // Path tracing kernel that writes irradiance, moment data, and G-buffer
 __global__ void renderPathTraceRaw(const IntegratorGlobals globals);
-__global__ void renderKernel(IntegratorGlobals globals);
 __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, int2 ppixel);
 __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBSpectrum radiance_sample, int2 c_pix);
 
 namespace IntegratorPipeline {
-	//wrapper for kernel launch
-	__host__  void invokeRenderKernel(const IntegratorGlobals& globals, dim3 block_grid_dims, dim3 thread_block_dims);
-
 	__device__ RGBSpectrum evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel);
 
 	//TraceRay function

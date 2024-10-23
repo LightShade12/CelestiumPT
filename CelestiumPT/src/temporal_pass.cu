@@ -37,10 +37,6 @@ __global__ void temporalAccumulate(const IntegratorGlobals globals) {
 		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 			current_pix);
-		//out---
-		//texWrite(make_float4(make_float3(0), 0),
-		//	globals.FrameBuffer.filtered_variance_render_front_surfobj,
-		//	current_pix);
 		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
@@ -67,11 +63,6 @@ __global__ void temporalAccumulate(const IntegratorGlobals globals) {
 		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 			current_pix);
-		//out---
-		//float var = spatialVarianceEstimate(globals, current_pix);
-		//texWrite(make_float4(make_float3(var), 0),
-		//	globals.FrameBuffer.filtered_variance_render_front_surfobj,
-		//	current_pix);
 		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
@@ -89,11 +80,6 @@ __global__ void temporalAccumulate(const IntegratorGlobals globals) {
 		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
 			current_pix);
-		//out---
-		//float var = spatialVarianceEstimate(globals, current_pix);
-		//texWrite(make_float4(make_float3(var), 0),
-		//	globals.FrameBuffer.filtered_variance_render_front_surfobj,
-		//	current_pix);
 		texWrite(make_float4(final_irradiance, 0),
 			globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 			current_pix);
@@ -128,20 +114,30 @@ __global__ void temporalAccumulate(const IntegratorGlobals globals) {
 		current_pix);
 
 	//out----
-	//float variance;
-	//if (moments_hist_len < 4) {
-	//	variance = spatialVarianceEstimate(globals, current_pix);
-	//}
-	//else {
-	//	float2 final_v = final_moments;
-	//	variance = fabsf(final_v.y - (Sqr(final_v.x)));
-	//}
-	//texWrite(make_float4(make_float3(variance), 1),
-	//	globals.FrameBuffer.filtered_variance_render_front_surfobj,
-	//	current_pix);
 	texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),
 		globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
 		current_pix);
+}
+
+//depth2 is sampled depth
+__device__ bool testReprojectedDepth(float depth1, float depth2) {
+	float TEMPORAL_DEPTH_REJECT_THRESHOLD = 0.045f;
+
+	if (fabsf(depth1 - depth2) > (depth2 * TEMPORAL_DEPTH_REJECT_THRESHOLD)) {
+		return true;
+	}
+	return false;
+}
+
+__device__ bool testReprojectedNormals(float3 n1, float3 n2)
+{
+	float TEMPORAL_NORMALS_REJECT_THRESHOLD = fabsf(cosf(deg2rad(45)));//TODO:make consexpr
+
+	if (AbsDot(n1, n2) < TEMPORAL_NORMALS_REJECT_THRESHOLD) {
+		return true;
+	}
+
+	return false;
 }
 
 __device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_pix, int2 cur_px)
@@ -166,12 +162,7 @@ __device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_p
 
 	float estimated_p_depth = length(p_cpos - p_wpos);
 
-	float TEMPORAL_DEPTH_REJECT_THRESHOLD = 0.045f;
-
-	if (fabsf(estimated_p_depth - p_depth) > (p_depth * TEMPORAL_DEPTH_REJECT_THRESHOLD)) {
-		return true;
-	}
-	return false;
+	return testReprojectedDepth(estimated_p_depth, p_depth);
 
 	//NORMALS HEURISTIC------------
 	float4 p_wnorm_sample = surf2Dread<float4>(globals.FrameBuffer.history_world_normals_render_surface_object,
@@ -184,11 +175,5 @@ __device__ bool rejectionHeuristic(const IntegratorGlobals& globals, int2 prev_p
 
 	float3 estimated_p_wnorm = normalize(make_float3(p_model * make_float4(c_lnorm, 0)));
 
-	float TEMPORAL_NORMALS_REJECT_THRESHOLD = fabsf(cosf(deg2rad(45)));//TODO:make consexpr
-
-	if (AbsDot(p_wnorm, estimated_p_wnorm) < TEMPORAL_NORMALS_REJECT_THRESHOLD) {
-		return true;
-	}
-
-	return false;
+	return testReprojectedNormals(p_wnorm, estimated_p_wnorm);
 }
