@@ -2,8 +2,8 @@
 #include "error_check.cuh"
 #include "storage.cuh"
 #include "integrator.cuh"
-#include "svgf/svgf_passes.cuh"
-#include "svgf/svgf_temporal_reprojection.cuh"
+#include "denoiser/svgf_passes.cuh"
+#include "denoiser/svgf_temporal_reprojection.cuh"
 #include "render_passes.cuh"
 #include "temporal_pass.cuh"
 
