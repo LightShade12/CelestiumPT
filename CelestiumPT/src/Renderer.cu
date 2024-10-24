@@ -2,8 +2,7 @@
 #include "error_check.cuh"
 #include "storage.cuh"
 #include "integrator.cuh"
-#include "denoiser/svgf_passes.cuh"
-#include "denoiser/svgf_temporal_reprojection.cuh"
+#include "denoiser/denoiser.cuh"
 #include "render_passes.cuh"
 
 #include "scene_geometry.cuh"

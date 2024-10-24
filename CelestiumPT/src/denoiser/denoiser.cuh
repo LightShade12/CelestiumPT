@@ -6,4 +6,5 @@
 // SVGF kernel that applies spatial filtering
 __global__ void atrousSVGF(const IntegratorGlobals globals, int stepsize);
 
-__device__ float4 spatialVarianceEstimate(const IntegratorGlobals& globals, int2 t_current_pix);
+// Temporal integration kernel for SVGF; out: filtered_irradiance frontbuff; feedsback moments
+__global__ void temporalAccumulate(const IntegratorGlobals globals);
