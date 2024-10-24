@@ -338,10 +338,18 @@ void Renderer::renderFrame()
 				m_CelestiumPTResourceAPI->IntegratedMomentsFrontBuffer, m_NativeRenderResolutionWidth,
 				m_NativeRenderResolutionHeight);
 			//potential irradiance feedback
-			if (!m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.svgf_enabled)
+			if (!m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.svgf_enabled) {
 				texCopy(m_CelestiumPTResourceAPI->SVGFFilteredIrradianceFrontBuffer,
 					m_CelestiumPTResourceAPI->IntegratedIrradianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
 					m_NativeRenderResolutionHeight);
+			}
+
+			//Variance Estimation=================================================
+			estimateVariance << < m_CudaResourceAPI->m_BlockGridDimensions,
+				m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
 		}
 		//SVGF atrous----------------
 		if (m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.svgf_enabled)

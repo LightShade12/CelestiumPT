@@ -8,3 +8,5 @@ __global__ void atrousSVGF(const IntegratorGlobals globals, int stepsize);
 
 // Temporal integration kernel for SVGF; out: filtered_irradiance frontbuff; feedsback moments
 __global__ void temporalAccumulate(const IntegratorGlobals globals);
+
+__global__ void estimateVariance(const IntegratorGlobals t_globals);

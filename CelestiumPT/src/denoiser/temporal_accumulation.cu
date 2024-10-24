@@ -102,9 +102,6 @@ __global__ void temporalAccumulate(const IntegratorGlobals t_globals)
 			current_pix);
 
 		//out---
-		texWrite(make_float4(make_float3(0), 0),
-			t_globals.FrameBuffer.svgf_filtered_variance_front_surfobject,
-			current_pix);
 		texWrite(make_float4(final_irradiance, 0),
 			t_globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
 			current_pix);
@@ -130,20 +127,9 @@ __global__ void temporalAccumulate(const IntegratorGlobals t_globals)
 			current_pix);
 
 		//out---
-		float4 irr_var;
-		irr_var = make_float4(final_irradiance);
-		irr_var.w = fabsf(final_moments.y - (Sqr(final_moments.x)));
-
-		if (t_globals.IntegratorCFG.svgf_enabled)
-			irr_var = spatialVarianceEstimate(t_globals, current_pix);
-
-		texWrite(make_float4(make_float3(irr_var.w), 0),
-			t_globals.FrameBuffer.svgf_filtered_variance_front_surfobject,
-			current_pix);
-		texWrite(make_float4(make_float3(irr_var), 0),/*final_irradiance*/
+		texWrite(make_float4(final_irradiance, 0),
 			t_globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
 			current_pix);
-
 		return;
 	}
 
@@ -158,16 +144,7 @@ __global__ void temporalAccumulate(const IntegratorGlobals t_globals)
 			current_pix);
 
 		//out---
-		float4 irr_var;
-		irr_var = make_float4(final_irradiance);
-		irr_var.w = fabsf(final_moments.y - (Sqr(final_moments.x)));
-
-		if (t_globals.IntegratorCFG.svgf_enabled)
-			irr_var = spatialVarianceEstimate(t_globals, current_pix);
-		texWrite(make_float4(make_float3(irr_var.w), 0),
-			t_globals.FrameBuffer.svgf_filtered_variance_front_surfobject,
-			current_pix);
-		texWrite(make_float4(make_float3(irr_var), 0),/*final_irradiance*/
+		texWrite(make_float4(final_irradiance, 0),
 			t_globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
 			current_pix);
 		return;
@@ -193,18 +170,6 @@ __global__ void temporalAccumulate(const IntegratorGlobals t_globals)
 		t_globals.FrameBuffer.integrated_moments_back_surfobject,
 		current_pix);
 
-	float4 variance;
-	if (moments_hist_len < 4 && t_globals.IntegratorCFG.svgf_enabled) {
-		variance = spatialVarianceEstimate(t_globals, current_pix);//var_irr
-		final_irradiance = RGBSpectrum(variance);//averaged irradiance in variance var
-	}
-	else {
-		variance.w = fabsf(final_moments.y - (Sqr(final_moments.x)));
-	}
-
-	texWrite(make_float4(make_float3(variance.w), 1),
-		t_globals.FrameBuffer.svgf_filtered_variance_front_surfobject,
-		current_pix);
 	//out----
 	texWrite(make_float4(final_irradiance, irradiance_hist_len + 1),//send out hist_len to restore it after 1st filterpass
 		t_globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
