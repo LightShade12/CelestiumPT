@@ -19,8 +19,7 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 	status = loadGLTFModel(filepath);
 	if (!status)return false;
 
-	//load textures
-	//load materials
+	loadTextures(m_SceneModel);
 	loadMaterials(m_SceneModel);
 
 	for (std::string extensionname : m_SceneModel.extensionsUsed) {
@@ -242,6 +241,39 @@ bool ModelImporter::extractVertices(tinygltf::Mesh mesh,
 	return true;
 }
 
+bool ModelImporter::loadTextures(const tinygltf::Model& model)
+{
+	const char* image_reference_directory = "../models/";//TODO:bad
+	printf("detected textures count in file: %zu\n", model.images.size());
+
+	for (size_t texture_idx = 0; texture_idx < model.images.size(); texture_idx++)
+	{
+		tinygltf::Image gltf_image = model.images[texture_idx];
+		printf("loading image: %s\n", gltf_image.name.c_str());
+
+		const unsigned char* imgdata = nullptr;
+		size_t byte_len = 0;
+
+		if (is_binary_file)
+		{
+			tinygltf::BufferView imgbufferview = model.bufferViews[gltf_image.bufferView];
+			imgdata = model.buffers[imgbufferview.buffer].data.data() + imgbufferview.byteOffset;
+			byte_len = imgbufferview.byteLength;
+		}
+		else
+		{
+			//invoke stb to load
+			//drt_texture = Texture((image_reference_directory + gltf_image.uri).c_str());
+		}
+		if (imgdata == nullptr) {
+			printf("Image data null\n"); return false;
+		}
+		m_WorkingScene->addTexture(imgdata, byte_len, gltf_image.name.c_str(),
+			gltf_image.bits);//whitespace will be incorrectly parsed
+	}
+	return true;
+}
+
 bool ModelImporter::loadMaterials(const tinygltf::Model& model)
 {
 	printf("detected materials count in file: %zu\n", model.materials.size());
@@ -251,8 +283,11 @@ bool ModelImporter::loadMaterials(const tinygltf::Model& model)
 		tinygltf::Material gltf_material = model.materials[matIdx];
 		printf("loading material: %s\n", gltf_material.name.c_str());
 		tinygltf::PbrMetallicRoughness PBR_data = gltf_material.pbrMetallicRoughness;
-		//setName(drt_material.getNamePtr(), gltf_material.name.c_str());
+		int diff_tex_idx = -1;
+
 		glm::vec3 albedo_factor = glm::vec3(PBR_data.baseColorFactor[0], PBR_data.baseColorFactor[1], PBR_data.baseColorFactor[2]);//TODO: We just use RGB material albedo for now
+		if (PBR_data.baseColorTexture.index >= 0)diff_tex_idx = model.textures[PBR_data.baseColorTexture.index].source;
+
 		glm::vec3 emission_factor = glm::vec3(gltf_material.emissiveFactor[0], gltf_material.emissiveFactor[1], gltf_material.emissiveFactor[2]);
 		float emission_strength = 0.f;
 
@@ -260,8 +295,10 @@ bool ModelImporter::loadMaterials(const tinygltf::Model& model)
 			emission_strength = (gltf_material.extensions["KHR_materials_emissive_strength"].Get("emissiveStrength").GetNumberAsDouble());
 		};
 
-		//printToConsole("albedo texture idx: %d\n", drt_material.AlbedoTextureIndex);
-		m_WorkingScene->addMaterial(albedo_factor, emission_factor, emission_strength);
+		printf("albedo texture idx: %d\n", diff_tex_idx);
+
+		m_WorkingScene->addMaterial(albedo_factor, emission_factor,
+			emission_strength, diff_tex_idx);
 	}
 	printf("loaded materials count: %zu \n\n", m_WorkingScene->getMaterialsCount());
 
@@ -321,10 +358,5 @@ bool ModelImporter::parseNode(tinygltf::Node node)
 			parseMesh(gltf_node);
 		}
 	}
-	return false;
-}
-
-bool ModelImporter::loadTextures(const tinygltf::Model& model, bool is_binary)
-{
 	return false;
 }

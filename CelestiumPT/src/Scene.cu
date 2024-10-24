@@ -110,12 +110,13 @@ void HostScene::addTriangle(
 	}
 }
 
-void HostScene::addMaterial(glm::vec3 albedo_factor, glm::vec3 emission_factor, float emission_strength)
+void HostScene::addMaterial(glm::vec3 albedo_factor, glm::vec3 emission_factor, float emission_strength, int t_diff_tex_idx)
 {
 	DeviceMaterial dev_material;
 	dev_material.albedo_color_factor = RGBSpectrum(albedo_factor.r, albedo_factor.g, albedo_factor.b);
 	dev_material.emission_color_factor = RGBSpectrum(emission_factor.r, emission_factor.g, emission_factor.b);
 	dev_material.emission_strength = emission_strength;
+	dev_material.albedo_color_texture_id = t_diff_tex_idx;
 	m_DeviceScene->DeviceMaterials.push_back(dev_material);
 	m_DeviceScene->syncDeviceGeometry();
 }
@@ -143,6 +144,10 @@ void HostScene::addMesh(HostMesh hmesh)
 
 	m_DeviceScene->DeviceMeshes.push_back(dmesh);
 	m_DeviceScene->syncDeviceGeometry();
+}
+
+void HostScene::addTexture(const unsigned char* t_img_data, size_t t_byte_length, const char* tex_name, uint32_t t_channel_bit_depth)
+{
 }
 
 void HostScene::LogStatus()
