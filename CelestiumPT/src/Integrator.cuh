@@ -11,7 +11,7 @@ class BSDF;
 class LightSampler;
 
 // Path tracing kernel that writes irradiance, moment data, and G-buffer
-__global__ void renderPathTraceRaw(const IntegratorGlobals globals);
+__global__ void tracePathSample(const IntegratorGlobals globals);
 __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, int2 ppixel);
 __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBSpectrum radiance_sample, int2 c_pix);
 

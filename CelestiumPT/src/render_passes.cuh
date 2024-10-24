@@ -19,11 +19,11 @@ __global__ void composeCompositeImage(const IntegratorGlobals globals) {
 	if ((current_pix.x >= frameres.x) || (current_pix.y >= frameres.y)) return;
 	//----------------------------------------------
 
-	float4 sampled_irradiance = texReadNearest(globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
+	float4 sampled_irradiance = texReadNearest(globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
 		current_pix);
 	RGBSpectrum sampled_radiance = RGBSpectrum(sampled_irradiance);
 
-	float4 sampled_albedo = texReadNearest(globals.FrameBuffer.albedo_render_surface_object, current_pix);
+	float4 sampled_albedo = texReadNearest(globals.FrameBuffer.albedo_surfobject, current_pix);
 
 	sampled_radiance *= RGBSpectrum(sampled_albedo);//MODULATE assume BRDF normalised
 
@@ -34,5 +34,5 @@ __global__ void composeCompositeImage(const IntegratorGlobals globals) {
 
 	float4 frag_color = make_float4(frag_spectrum, 1);
 
-	texWrite(frag_color, globals.FrameBuffer.composite_render_surface_object, current_pix);
+	texWrite(frag_color, globals.FrameBuffer.composite_surfobject, current_pix);
 }

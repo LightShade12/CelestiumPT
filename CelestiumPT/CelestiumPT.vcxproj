@@ -26,7 +26,6 @@
     <CudaCompile Include="src\cuda_utility.cu" />
     <CudaCompile Include="src\error_check.cu" />
     <CudaCompile Include="src\film.cu" />
-    <CudaCompile Include="src\frame_buffer.cu" />
     <CudaCompile Include="src\integrator.cu" />
     <CudaCompile Include="src\light.cu" />
     <CudaCompile Include="src\material.cu" />
@@ -43,7 +42,6 @@
     <CudaCompile Include="src\denoiser\svgf_atrous.cu" />
     <CudaCompile Include="src\denoiser\svgf_weight_functions.cu" />
     <CudaCompile Include="src\denoiser\svgf_temporal_reprojection.cu" />
-    <CudaCompile Include="src\temporal_pass.cu" />
     <CudaCompile Include="src\triangle.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -65,7 +63,6 @@
     <ClInclude Include="src\device_scene.cuh" />
     <ClInclude Include="src\error_check.cuh" />
     <ClInclude Include="src\film.cuh" />
-    <ClInclude Include="src\frame_buffer.hpp" />
     <ClInclude Include="src\host_camera.hpp" />
     <ClInclude Include="src\host_material.hpp" />
     <ClInclude Include="src\host_mesh.hpp" />
@@ -92,7 +89,6 @@
     <ClInclude Include="src\denoiser\svgf_weight_functions.cuh" />
     <ClInclude Include="src\denoiser\svgf_passes.cuh" />
     <ClInclude Include="src\denoiser\svgf_temporal_reprojection.cuh" />
-    <ClInclude Include="src\temporal_pass.cuh" />
     <ClInclude Include="src\triangle.cuh" />
     <ClInclude Include="src\utility.hpp" />
   </ItemGroup>
@@ -142,7 +138,7 @@
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(ProjectDir)src;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(ProjectDir)src;$(ProjectDir)thirdparty;$(ProjectDir)thirdparty/glad/include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -151,7 +147,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <Include>$(ProjectDir)src;</Include>
+      <Include>$(ProjectDir)src;$(ProjectDir)thirdparty;$(ProjectDir)thirdparty/glad/include;</Include>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
@@ -164,7 +160,7 @@
       <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(ProjectDir)src;$(ProjectDir)thirdparty;$(ProjectDir)thirdparty/glad/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(ProjectDir)src;$(ProjectDir)thirdparty;$(ProjectDir)thirdparty/glad/include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

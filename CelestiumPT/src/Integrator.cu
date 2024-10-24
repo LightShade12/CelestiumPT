@@ -13,7 +13,6 @@
 #include "acceleration_structure/GAS.cuh"
 #include "samplers.cuh"
 #include "cuda_utility.cuh"
-#include "temporal_pass.cuh"
 
 #include "maths/linear_algebra.cuh"
 #include "maths/sampling.cuh"
@@ -207,15 +206,15 @@ __device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& glo
 
 //velocity is in screen UV space
 __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, int2 ppixel) {
-	float4 c_lpos = texReadNearest(globals.FrameBuffer.local_positions_render_surface_object, ppixel);
-	float4 c_objID = texReadNearest(globals.FrameBuffer.objectID_render_surface_object, ppixel);
+	float4 c_lpos = texReadNearest(globals.FrameBuffer.local_positions_surfobject, ppixel);
+	float4 c_objID = texReadNearest(globals.FrameBuffer.objectID_surfobject, ppixel);
 
 	float3 l_pos = make_float3(c_lpos);
 	float objID = c_objID.x;
 
 	if (objID < 0) {
 		texWrite(make_float4(0, 0, 0, 1),
-			globals.FrameBuffer.velocity_render_surface_object, ppixel);
+			globals.FrameBuffer.velocity_surfobject, ppixel);
 		return;
 	}
 
@@ -241,106 +240,7 @@ __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, 
 	velcol = make_float3(vel, 0);
 
 	texWrite(make_float4(velcol, 1),
-		globals.FrameBuffer.velocity_render_surface_object, ppixel);
-}
-
-__device__ RGBSpectrum temporalAccumulation(const IntegratorGlobals& globals, RGBSpectrum c_col, float4 c_moments, float2 c_uv, int2 c_pix) {
-	RGBSpectrum final_color = c_col;
-	float4 c_objID = surf2Dread<float4>(globals.FrameBuffer.objectID_render_surface_object,
-		c_pix.x * (int)sizeof(float4), c_pix.y);
-	int objID = c_objID.x;
-	//float4 sampled_moments = texReadNearest(globals.FrameBuffer.current_moments_render_surface_object, c_pix);
-	float4 sampled_moments = c_moments;
-	float2 final_moments = make_float2(sampled_moments.x, sampled_moments.y);
-
-	//void sample/ miss/ sky
-	if (objID < 0) {
-		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-		texWrite(make_float4(make_float3(variance), 1),
-			globals.FrameBuffer.filtered_variance_render_front_surfobj,
-			c_pix);
-		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
-			globals.FrameBuffer.history_integrated_moments_back_surfobj,
-			c_pix);
-		texWrite(make_float4(final_color, 0),
-			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
-			c_pix);
-		return final_color;
-	}
-
-	float4 c_vel = surf2Dread<float4>(globals.FrameBuffer.velocity_render_surface_object,
-		c_pix.x * (int)sizeof(float4), c_pix.y);
-
-	//reproject
-	float2 vel = make_float2(c_vel.x, c_vel.y);
-	float2 pixel_offset = (vel)*make_float2(globals.FrameBuffer.resolution);
-	int2 prev_px = c_pix - make_int2(pixel_offset);
-	float2 prev_pxf = make_float2(c_pix) - pixel_offset;
-
-	//new fragment
-	if (prev_px.x < 0 || prev_px.x >= globals.FrameBuffer.resolution.x ||
-		prev_px.y < 0 || prev_px.y >= globals.FrameBuffer.resolution.y) {
-		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-		texWrite(make_float4(make_float3(variance), 1),
-			globals.FrameBuffer.filtered_variance_render_front_surfobj,
-			c_pix);
-		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
-			globals.FrameBuffer.history_integrated_moments_back_surfobj,
-			c_pix);
-		texWrite(make_float4(final_color, 0), globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
-			c_pix);
-		return final_color;
-	}
-
-	bool prj_success = !rejectionHeuristic(globals, prev_px, c_pix);
-
-	//disocclusion/ reproj failure
-	if (!prj_success) {
-		float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-		texWrite(make_float4(make_float3(variance), 1),
-			globals.FrameBuffer.filtered_variance_render_front_surfobj,
-			c_pix);
-		texWrite(make_float4(final_moments.x, final_moments.y, 0, 0),
-			globals.FrameBuffer.history_integrated_moments_back_surfobj,
-			c_pix);
-		texWrite(make_float4(final_color, 0),
-			globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
-			c_pix);
-		return final_color;
-	}
-	const int MAX_ACCUMULATION_FRAMES = 16;
-
-	float4 hist_col = texReadBilinear(globals.FrameBuffer.history_integrated_irradiance_front_surfobj, prev_pxf,
-		globals.FrameBuffer.resolution, false);
-	float4 hist_moments = texReadNearest(globals.FrameBuffer.history_integrated_moments_front_surfobj, prev_px);
-
-	float moments_hist_len = hist_moments.w;
-	float hist_len = hist_col.w;
-
-	final_moments = lerp(make_float2(hist_moments.x, hist_moments.y), make_float2(final_moments.x, final_moments.y),
-		1.f / fminf(float(moments_hist_len + 1), MAX_ACCUMULATION_FRAMES));
-
-	final_color = RGBSpectrum(lerp(make_float3(hist_col), make_float3(c_col),
-		1.f / fminf(float(hist_len + 1), MAX_ACCUMULATION_FRAMES)));
-
-	float variance = fabsf(final_moments.y - Sqr(final_moments.x));
-
-	//variamce
-	texWrite(make_float4(make_float3(variance), 1),
-		globals.FrameBuffer.filtered_variance_render_front_surfobj,
-		c_pix);
-
-	//feedback: moments
-	texWrite(make_float4(final_moments.x, final_moments.y, 0, moments_hist_len + 1),
-		globals.FrameBuffer.history_integrated_moments_back_surfobj,
-		c_pix);
-
-	//feedback
-	texWrite(make_float4(final_color, hist_len + 1),
-		globals.FrameBuffer.history_integrated_irradiance_back_surfobj,
-		c_pix);
-
-	return final_color;
+		globals.FrameBuffer.velocity_surfobject, ppixel);
 }
 
 __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBSpectrum radiance_sample, int2 c_pix) {
@@ -355,7 +255,7 @@ __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBS
 	float var = fabsf(avg_mom.y - Sqr(avg_mom.x));
 
 	texWrite(make_float4(make_float3(var), 1),
-		globals.FrameBuffer.filtered_variance_render_front_surfobj,
+		globals.FrameBuffer.svgf_filtered_variance_front_surfobject,
 		c_pix);
 
 	globals.FrameBuffer.accumulation_framebuffer
@@ -366,7 +266,7 @@ __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBS
 }
 
 //must write to irradiance, moment data & gbuffer
-__global__ void renderPathTraceRaw(const IntegratorGlobals globals)
+__global__ void tracePathSample(const IntegratorGlobals globals)
 {
 	//setup threads
 	int thread_pixel_coord_x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -391,7 +291,7 @@ __global__ void renderPathTraceRaw(const IntegratorGlobals globals)
 	float4 current_radiance = make_float4(sampled_radiance, 1);
 
 	texWrite(current_radiance,
-		globals.FrameBuffer.current_irradiance_render_surface_object, current_pix);
+		globals.FrameBuffer.raw_irradiance_surfobject, current_pix);
 	texWrite(current_moments,
-		globals.FrameBuffer.current_moments_render_surface_object, current_pix);
+		globals.FrameBuffer.raw_moments_surfobject, current_pix);
 }

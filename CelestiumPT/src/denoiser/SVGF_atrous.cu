@@ -16,16 +16,16 @@
 #include <device_launch_parameters.h>
 
 __device__ float4 spatialVarianceEstimate(const IntegratorGlobals& globals, int2 t_current_pix) {
-	float3 sampled_normal = normalize(make_float3(texReadNearest(globals.FrameBuffer.world_normals_render_surface_object,
+	float3 sampled_normal = normalize(make_float3(texReadNearest(globals.FrameBuffer.world_normals_surfobject,
 		t_current_pix)));
-	float sampled_depth = texReadNearest(globals.FrameBuffer.depth_render_surface_object,
+	float sampled_depth = texReadNearest(globals.FrameBuffer.depth_surfobject,
 		t_current_pix).x;
-	float histlen = texReadNearest(globals.FrameBuffer.current_moments_render_surface_object, t_current_pix).w;
+	float histlen = texReadNearest(globals.FrameBuffer.raw_moments_surfobject, t_current_pix).w;
 
 	// depth-gradient estimation from screen-space derivatives
 	float2 dgrad = make_float2(
-		dFdx(globals.FrameBuffer.depth_render_surface_object, t_current_pix, globals.FrameBuffer.resolution).x,
-		dFdy(globals.FrameBuffer.depth_render_surface_object, t_current_pix, globals.FrameBuffer.resolution).x);
+		dFdx(globals.FrameBuffer.depth_surfobject, t_current_pix, globals.FrameBuffer.resolution).x,
+		dFdy(globals.FrameBuffer.depth_surfobject, t_current_pix, globals.FrameBuffer.resolution).x);
 
 	float weight_sum = 0.f;
 	float2 f_moments = make_float2(0.f);
@@ -42,11 +42,11 @@ __device__ float4 spatialVarianceEstimate(const IntegratorGlobals& globals, int2
 			int2 tap_pix = t_current_pix + offset;
 			tap_pix = clamp(tap_pix, make_int2(0, 0), (globals.FrameBuffer.resolution - 1));
 
-			float4 tap_irradiance = texReadNearest(globals.FrameBuffer.current_irradiance_render_surface_object,
+			float4 tap_irradiance = texReadNearest(globals.FrameBuffer.raw_irradiance_surfobject,
 				tap_pix);
-			float3 tap_normal = make_float3(texReadNearest(globals.FrameBuffer.world_normals_render_surface_object,
+			float3 tap_normal = make_float3(texReadNearest(globals.FrameBuffer.world_normals_surfobject,
 				tap_pix));
-			float tap_depth = texReadNearest(globals.FrameBuffer.depth_render_surface_object,
+			float tap_depth = texReadNearest(globals.FrameBuffer.depth_surfobject,
 				tap_pix).x;
 
 			float l = getLuminance(RGBSpectrum(tap_irradiance));
@@ -76,7 +76,7 @@ __device__ float4 spatialVarianceEstimate(const IntegratorGlobals& globals, int2
 }
 
 //updates filtered irradiance and filtered variance
-__global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
+__global__ void atrousSVGF(const IntegratorGlobals globals, int stepsize) {
 	//setup threads
 	int thread_pixel_coord_x = threadIdx.x + blockIdx.x * blockDim.x;
 	int thread_pixel_coord_y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -88,40 +88,40 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 	if ((current_pix.x >= frameres.x) || (current_pix.y >= frameres.y)) return;
 	//=========================================================
 
-	int current_objID = texReadNearest(globals.FrameBuffer.objectID_render_surface_object, current_pix).x;
+	int current_objID = texReadNearest(globals.FrameBuffer.objectID_surfobject, current_pix).x;
 
 	//void sample/ miss/ sky
 	if (current_objID < 0) {
 		//no filter
-		float sampled_variance = texReadNearest(globals.FrameBuffer.filtered_variance_render_front_surfobj,
+		float sampled_variance = texReadNearest(globals.FrameBuffer.svgf_filtered_variance_front_surfobject,
 			current_pix).x;
-		float4 sampled_irradiance = texReadNearest(globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
+		float4 sampled_irradiance = texReadNearest(globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
 			current_pix);
 		//out----
 		texWrite(sampled_irradiance,
-			globals.FrameBuffer.filtered_irradiance_back_render_surface_object,
+			globals.FrameBuffer.svgf_filtered_irradiance_back_surfobject,
 			current_pix);
 		texWrite(make_float4(make_float3(sampled_variance), 1),
-			globals.FrameBuffer.filtered_variance_render_back_surfobj,
+			globals.FrameBuffer.svgf_filtered_variance_back_surfobject,
 			current_pix);
 		return;
 	}
 
-	float4 sampled_irradiance = texReadNearest(globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
+	float4 sampled_irradiance = texReadNearest(globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
 		current_pix);
-	float3 sampled_normal = normalize(make_float3(texReadNearest(globals.FrameBuffer.world_normals_render_surface_object,
+	float3 sampled_normal = normalize(make_float3(texReadNearest(globals.FrameBuffer.world_normals_surfobject,
 		current_pix)));
-	float sampled_depth = texReadNearest(globals.FrameBuffer.depth_render_surface_object,
+	float sampled_depth = texReadNearest(globals.FrameBuffer.depth_surfobject,
 		current_pix).x;
-	float sampled_variance = texReadNearest(globals.FrameBuffer.filtered_variance_render_front_surfobj,
+	float sampled_variance = texReadNearest(globals.FrameBuffer.svgf_filtered_variance_front_surfobject,
 		current_pix).x;
-	float sampled_filtered_variance = texReadGaussianWeighted(globals.FrameBuffer.filtered_variance_render_front_surfobj, frameres,
+	float sampled_filtered_variance = texReadGaussianWeighted(globals.FrameBuffer.svgf_filtered_variance_front_surfobject, frameres,
 		current_pix);
 
 	// depth-gradient estimation from screen-space derivatives
 	float2 dgrad = make_float2(
-		dFdx(globals.FrameBuffer.depth_render_surface_object, current_pix, globals.FrameBuffer.resolution).x,
-		dFdy(globals.FrameBuffer.depth_render_surface_object, current_pix, globals.FrameBuffer.resolution).x);
+		dFdx(globals.FrameBuffer.depth_surfobject, current_pix, globals.FrameBuffer.resolution).x,
+		dFdy(globals.FrameBuffer.depth_surfobject, current_pix, globals.FrameBuffer.resolution).x);
 
 	bool use_5x5filter = globals.IntegratorCFG.use_5x5_filter;
 
@@ -153,14 +153,14 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 			int2 tap_pix = current_pix + offset;
 			tap_pix = clamp(tap_pix, make_int2(0, 0), (globals.FrameBuffer.resolution - 1));
 
-			float4 tap_irradiance = texReadNearest(globals.FrameBuffer.filtered_irradiance_front_render_surface_object,
+			float4 tap_irradiance = texReadNearest(globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
 				tap_pix);
-			float tap_variance = texReadNearest(globals.FrameBuffer.filtered_variance_render_front_surfobj,
+			float tap_variance = texReadNearest(globals.FrameBuffer.svgf_filtered_variance_front_surfobject,
 				tap_pix).x;
 
-			float3 tap_normal = make_float3(texReadNearest(globals.FrameBuffer.world_normals_render_surface_object,
+			float3 tap_normal = make_float3(texReadNearest(globals.FrameBuffer.world_normals_surfobject,
 				tap_pix));
-			float tap_depth = texReadNearest(globals.FrameBuffer.depth_render_surface_object,
+			float tap_depth = texReadNearest(globals.FrameBuffer.depth_surfobject,
 				tap_pix).x;
 
 			float nw = normalWeight((sampled_normal), normalize(tap_normal));
@@ -190,9 +190,9 @@ __global__ void SVGFPass(const IntegratorGlobals globals, int stepsize) {
 	//f_variance = sampled_variance;
 	//out----
 	texWrite((f_irradiance),
-		globals.FrameBuffer.filtered_irradiance_back_render_surface_object,
+		globals.FrameBuffer.svgf_filtered_irradiance_back_surfobject,
 		current_pix);
 	texWrite(make_float4(make_float3(f_variance), 1),
-		globals.FrameBuffer.filtered_variance_render_back_surfobj,
+		globals.FrameBuffer.svgf_filtered_variance_back_surfobject,
 		current_pix);
 }

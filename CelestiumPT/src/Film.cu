@@ -179,33 +179,33 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel
 		//make_float4(material.emission_color_factor * material.emission_strength, 1)
 		make_float4(1)
 		: make_float4(make_float3(material.albedo_color_factor) / PI, 1),
-		globals.FrameBuffer.albedo_render_surface_object, ppixel);
+		globals.FrameBuffer.albedo_surfobject, ppixel);
 
 	texWrite(make_float4(si.w_pos, 1),
-		globals.FrameBuffer.positions_render_surface_object, ppixel);
+		globals.FrameBuffer.world_positions_surfobject, ppixel);
 
 	texWrite(make_float4(make_float3(si.hit_distance), 1),
-		globals.FrameBuffer.depth_render_surface_object, ppixel);
+		globals.FrameBuffer.depth_surfobject, ppixel);
 
 	texWrite(make_float4(si.l_pos, 1),
-		globals.FrameBuffer.local_positions_render_surface_object, ppixel);
+		globals.FrameBuffer.local_positions_surfobject, ppixel);
 
 	texWrite(make_float4(si.w_shading_norm, 1),
-		globals.FrameBuffer.world_normals_render_surface_object, ppixel);
+		globals.FrameBuffer.world_normals_surfobject, ppixel);
 
 	texWrite(make_float4(si.l_shading_norm, 1),
-		globals.FrameBuffer.local_normals_render_surface_object, ppixel);
+		globals.FrameBuffer.local_normals_surfobject, ppixel);
 
 	texWrite(make_float4(si.bary, 1),
-		globals.FrameBuffer.bary_debug_render_surface_object, ppixel);
+		globals.FrameBuffer.bary_surfobject, ppixel);
 
 	texWrite(make_float4(si.uv.x, si.uv.y, 0, 1),
-		globals.FrameBuffer.UV_debug_render_surface_object, ppixel);
+		globals.FrameBuffer.UVs_surfobject, ppixel);
 
 	uint32_t obj_id_debug = si.object_idx;
 	float3 obj_id_color = make_float3(Samplers::get2D_PCGHash(obj_id_debug), Samplers::get1D_PCGHash(++obj_id_debug));
 	texWrite(make_float4(obj_id_color, 1),
-		globals.FrameBuffer.objectID_debug_render_surface_object, ppixel);
+		globals.FrameBuffer.debugview_objectID_surfobject, ppixel);
 }
 
 __device__ float3 hueToRGB(float hue) {
@@ -259,33 +259,33 @@ __device__ void recordGBufferAny(const IntegratorGlobals& globals, float2 ppixel
 		bboxheatmap = hueToRGB(1.f - (si.bbox_hit_count / (float)bbox_threshold));
 	}
 	texWrite(make_float4(bboxheatmap, 1),
-		globals.FrameBuffer.bbox_heatmap_debug_render_surface_object, ppixel);
+		globals.FrameBuffer.debugview_bbox_test_heatmap_surfobject, ppixel);
 	texWrite(make_float4(heatmap, 1),
-		globals.FrameBuffer.heatmap_debug_render_surface_object, ppixel);
+		globals.FrameBuffer.debugview_tri_test_heatmap_surfobject, ppixel);
 	texWrite(make_float4(si.GAS_debug, 1),
-		globals.FrameBuffer.GAS_debug_render_surface_object, ppixel);
+		globals.FrameBuffer.debugview_GAS_overlap_surfobject, ppixel);
 	texWrite(make_float4(make_float3(si.object_idx), 1),
-		globals.FrameBuffer.objectID_render_surface_object, ppixel);
+		globals.FrameBuffer.objectID_surfobject, ppixel);
 }
 
 __device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixel)
 {
 	texWrite(make_float4(0, 0, 0, 1),
-		globals.FrameBuffer.positions_render_surface_object, ppixel);
+		globals.FrameBuffer.world_positions_surfobject, ppixel);
 	texWrite(make_float4(1.f),
-		globals.FrameBuffer.albedo_render_surface_object, ppixel);
+		globals.FrameBuffer.albedo_surfobject, ppixel);
 	texWrite(make_float4(1),
-		globals.FrameBuffer.depth_render_surface_object, ppixel);
+		globals.FrameBuffer.depth_surfobject, ppixel);
 	texWrite(make_float4(0, 0, 0.0, 1),
-		globals.FrameBuffer.local_positions_render_surface_object, ppixel);
+		globals.FrameBuffer.local_positions_surfobject, ppixel);
 	texWrite(make_float4(0, 0, 0, 1),
-		globals.FrameBuffer.world_normals_render_surface_object, ppixel);
+		globals.FrameBuffer.world_normals_surfobject, ppixel);
 	texWrite(make_float4(0, 0, 0, 1),
-		globals.FrameBuffer.local_normals_render_surface_object, ppixel);
+		globals.FrameBuffer.local_normals_surfobject, ppixel);
 	texWrite(make_float4(0, 0, 0, 1),
-		globals.FrameBuffer.bary_debug_render_surface_object, ppixel);
+		globals.FrameBuffer.bary_surfobject, ppixel);
 	texWrite(make_float4(0, 0, 0, 1),
-		globals.FrameBuffer.UV_debug_render_surface_object, ppixel);
+		globals.FrameBuffer.UVs_surfobject, ppixel);
 	texWrite(make_float4(0, 0, 0, 1),
-		globals.FrameBuffer.objectID_debug_render_surface_object, ppixel);
+		globals.FrameBuffer.debugview_objectID_surfobject, ppixel);
 }
