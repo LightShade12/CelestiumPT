@@ -228,19 +228,19 @@ __device__ ShapeIntersection initializePayloadFromGBuffer(const IntegratorGlobal
 	return out_payload;
 };
 
-__device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const IntegratorGlobals& globals, int2 ppixel, uint32_t seed)
+__device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const IntegratorGlobals& t_globals, int2 t_current_pix, uint32_t t_seed)
 {
-	float3 cpos = make_float3(globals.SceneDescriptor.ActiveCamera->invViewMatrix[3]);
+	float3 cpos = make_float3(t_globals.SceneDescriptor.ActiveCamera->invViewMatrix[3]);
 
-	ShapeIntersection payload = initializePayloadFromGBuffer(globals, ppixel);
+	ShapeIntersection payload = initializePayloadFromGBuffer(t_globals, t_current_pix);
 
 	Ray ray = Ray(cpos, normalize(payload.w_pos - cpos));
 
 	RGBSpectrum throughtput(1.f), light(0.f);
 
 	LightSampler light_sampler(
-		globals.SceneDescriptor.DeviceGeometryAggregate->DeviceLightsBuffer,
-		globals.SceneDescriptor.DeviceGeometryAggregate->DeviceLightsCount);
+		t_globals.SceneDescriptor.DeviceGeometryAggregate->DeviceLightsBuffer,
+		t_globals.SceneDescriptor.DeviceGeometryAggregate->DeviceLightsCount);
 
 	float p_b = 1;
 	LightSampleContext prev_ctx{};
@@ -249,18 +249,18 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 	float3 sunpos = make_float3(0.266, 0.629, 0.257) * 100;
 	RGBSpectrum suncol(1.000, 0.877, 0.822);
 
-	for (int bounce_depth = 0; bounce_depth <= globals.IntegratorCFG.max_bounces; bounce_depth++)
+	for (int bounce_depth = 0; bounce_depth <= t_globals.IntegratorCFG.max_bounces; bounce_depth++)
 	{
-		seed += bounce_depth;
+		t_seed += bounce_depth;
 
 		bool primary_surface = (bounce_depth == 0);
 
-		if (!primary_surface)payload = IntegratorPipeline::Intersect(globals, ray);
+		if (!primary_surface)payload = IntegratorPipeline::Intersect(t_globals, ray);
 
 		//miss--
 		if (payload.hit_distance < 0)//TODO: standardize invalid/miss payload definition
 		{
-			light += globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray) * RGBSpectrum(0.8, 1, 1.5) * throughtput;
+			light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray) * RGBSpectrum(0.8, 1, 1.5) * throughtput;
 			break;
 		}
 
@@ -286,15 +286,15 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 			}
 		}
 
-		BSDF bsdf = payload.getBSDF(globals);
+		BSDF bsdf = payload.getBSDF(t_globals);
 
-		RGBSpectrum Ld = SampleLd(globals, ray, payload, bsdf,
-			light_sampler, seed, primary_surface);
+		RGBSpectrum Ld = SampleLd(t_globals, ray, payload, bsdf,
+			light_sampler, t_seed, primary_surface);
 		light += Ld * throughtput;
 
 		if (false) {
-			bool sunhit = !IntersectP(globals, Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
-				sunpos + make_float3(Samplers::get2D_PCGHash(seed), Samplers::get1D_PCGHash(seed)) * 5.f),
+			bool sunhit = !IntersectP(t_globals, Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
+				sunpos + make_float3(Samplers::get2D_PCGHash(t_seed), Samplers::get1D_PCGHash(t_seed)) * 5.f),
 				100);
 			if (sunhit) {
 				RGBSpectrum f_c = suncol * bsdf.f(wo, normalize(sunpos), primary_surface)
@@ -303,7 +303,7 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 			}
 		}
 
-		BSDFSample bs = bsdf.sampleBSDF(wo, Samplers::get2D_PCGHash(seed), primary_surface);
+		BSDFSample bs = bsdf.sampleBSDF(wo, Samplers::get2D_PCGHash(t_seed), primary_surface);
 		float3 wi = bs.wi;
 		float pdf = bs.pdf;
 		if (primary_surface)bs.f = RGBSpectrum(1);
@@ -319,7 +319,7 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		RGBSpectrum RR_beta = throughtput * eta_scale;
 		if (RR_beta.maxComponentValue() < 1 && bounce_depth > 1) {
 			float q = fmaxf(0.f, 1.f - RR_beta.maxComponentValue());
-			if (Samplers::get1D_PCGHash(seed) < q)
+			if (Samplers::get1D_PCGHash(t_seed) < q)
 				break;
 			throughtput /= 1 - q;
 		}
@@ -359,47 +359,6 @@ __device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& glo
 	return Ld;
 };
 
-//Accumulation-----------------------------------------------------
-
-//velocity is in screen UV space
-__device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, int2 ppixel) {
-	float4 c_lpos = texReadNearest(globals.FrameBuffer.local_positions_surfobject, ppixel);
-	float4 c_objID = texReadNearest(globals.FrameBuffer.objectID_surfobject, ppixel);
-
-	float3 l_pos = make_float3(c_lpos);
-	float objID = c_objID.x;
-
-	if (objID < 0) {
-		texWrite(make_float4(0, 0, 0, 1),
-			globals.FrameBuffer.velocity_surfobject, ppixel);
-		return;
-	}
-
-	Mat4 c_VP = globals.SceneDescriptor.ActiveCamera->projectionMatrix * globals.SceneDescriptor.ActiveCamera->viewMatrix;
-	Mat4 p_VP = globals.SceneDescriptor.ActiveCamera->prev_projectionMatrix *
-		globals.SceneDescriptor.ActiveCamera->prev_viewMatrix;
-	Mat4 c_M = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMeshesBuffer[(int)objID].modelMatrix;
-	Mat4 p_M = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMeshesBuffer[(int)objID].prev_modelMatrix;
-
-	float4 c_inpos = c_VP * c_M * make_float4(l_pos, 1);//clipspace
-	float4 p_inpos = p_VP * p_M * make_float4(l_pos, 1);//clipspace
-
-	float3 c_ndc = make_float3(c_inpos) / c_inpos.w;
-	float3 p_ndc = make_float3(p_inpos) / p_inpos.w;
-
-	float2 c_uv = (make_float2(c_ndc) + 1.f) / 2.f;//0->1
-	float2 p_uv = (make_float2(p_ndc) + 1.f) / 2.f;
-
-	float2 vel = c_uv - p_uv;
-
-	float3 velcol = make_float3(0);
-
-	velcol = make_float3(vel, 0);
-
-	texWrite(make_float4(velcol, 1),
-		globals.FrameBuffer.velocity_surfobject, ppixel);
-}
-
 __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBSpectrum radiance_sample, int2 c_pix) {
 	float s = getLuminance(radiance_sample);
 	float s2 = s * s;
@@ -422,7 +381,7 @@ __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBS
 	);
 }
 
-//must write to irradiance, moment data & gbuffer
+//must write to irradiance
 __global__ void tracePathSample(const IntegratorGlobals t_globals)
 {
 	//setup threads
@@ -436,6 +395,7 @@ __global__ void tracePathSample(const IntegratorGlobals t_globals)
 	if ((current_pix.x >= frame_res.x) || (current_pix.y >= frame_res.y)) return;
 
 	//--------------------------------------------------
+
 	uint32_t seed = current_pix.x + current_pix.y * frame_res.x;
 	seed *= t_globals.FrameIndex;
 
@@ -444,8 +404,6 @@ __global__ void tracePathSample(const IntegratorGlobals t_globals)
 	//RGBSpectrum sampled_radiance = IntegratorPipeline::evaluatePixelSample(t_globals, make_float2(current_pix));
 
 	RGBSpectrum sampled_radiance = IntegratorPipeline::deferredEvaluatePixelSample(t_globals, current_pix, seed);
-
-	computeVelocity(t_globals, screen_uv, current_pix);//this concludes all Gbuffer data writes
 
 	float4 current_radiance = make_float4(sampled_radiance, 1);
 
