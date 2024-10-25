@@ -282,16 +282,10 @@ __global__ void tracePathSample(const IntegratorGlobals globals)
 
 	RGBSpectrum sampled_radiance = IntegratorPipeline::evaluatePixelSample(globals, make_float2(current_pix));
 
-	float s = getLuminance(sampled_radiance);
-	float s2 = s * s;
-	float4 current_moments = make_float4(s, s2, 0, 1);
-
 	computeVelocity(globals, screen_uv, current_pix);//this concludes all Gbuffer data writes
 
 	float4 current_radiance = make_float4(sampled_radiance, 1);
 
 	texWrite(current_radiance,
 		globals.FrameBuffer.raw_irradiance_surfobject, current_pix);
-	texWrite(current_moments,
-		globals.FrameBuffer.raw_moments_surfobject, current_pix);
 }

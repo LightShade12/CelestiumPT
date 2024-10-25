@@ -85,10 +85,12 @@ __global__ void temporalAccumulate(const IntegratorGlobals t_globals)
 	//============================================================
 
 	float4 sampled_irradiance = texReadNearest(t_globals.FrameBuffer.raw_irradiance_surfobject, current_pix);
-	float4 sampled_moments = texReadNearest(t_globals.FrameBuffer.raw_moments_surfobject, current_pix);
 
 	RGBSpectrum final_irradiance = RGBSpectrum(sampled_irradiance);
-	float2 final_moments = make_float2(sampled_moments.x, sampled_moments.y);
+
+	float s = getLuminance(final_irradiance);
+
+	float2 final_moments = make_float2(s, Sqr(s));
 
 	int current_objID = texReadNearest(t_globals.FrameBuffer.objectID_surfobject, current_pix).x;
 

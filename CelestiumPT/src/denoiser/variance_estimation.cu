@@ -16,7 +16,7 @@ __device__ float4 spatialVarianceEstimate(const IntegratorGlobals& globals, int2
 		t_current_pix)));
 	float sampled_depth = texReadNearest(globals.FrameBuffer.depth_surfobject,
 		t_current_pix).x;
-	float histlen = texReadNearest(globals.FrameBuffer.raw_moments_surfobject, t_current_pix).w;
+	float hist_len = texReadNearest(globals.FrameBuffer.integrated_moments_front_surfobject, t_current_pix).w;
 
 	// depth-gradient estimation from screen-space derivatives
 	float2 dgrad = make_float2(
@@ -66,12 +66,12 @@ __device__ float4 spatialVarianceEstimate(const IntegratorGlobals& globals, int2
 	f_irradiance /= weight_sum;
 
 	float variance = fabsf(f_moments.y - Sqr(f_moments.x));
-	variance *= fmaxf(4.f / histlen, 1.f);//boost for 1st few frames
+	//variance *= SPATIAL_ESTIMATE_MIN_FRAMES / fminf(hist_len, SPATIAL_ESTIMATE_MIN_FRAMES);//boost for 1st few frames; NaN bugged
 
 	return make_float4(f_irradiance, variance);
 }
 
-__global__ void estimateVariance(const IntegratorGlobals t_globals) 
+__global__ void estimateVariance(const IntegratorGlobals t_globals)
 {
 	//setup threads
 	int thread_pixel_coord_x = threadIdx.x + blockIdx.x * blockDim.x;

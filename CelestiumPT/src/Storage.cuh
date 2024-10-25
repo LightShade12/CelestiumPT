@@ -21,7 +21,6 @@ public:
 
 	//raw
 	cudaSurfaceObject_t raw_irradiance_surfobject;
-	cudaSurfaceObject_t raw_moments_surfobject;
 	
 	//temporal accum
 	cudaSurfaceObject_t integrated_irradiance_front_surfobject;//read only

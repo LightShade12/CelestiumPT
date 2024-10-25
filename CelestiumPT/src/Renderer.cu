@@ -105,7 +105,6 @@ struct CelestiumPT_API
 
 	//raw
 	FrameBuffer RawIrradianceRenderBuffer;
-	FrameBuffer RawMomentsRenderBuffer;
 
 	//SVGF
 	FrameBuffer SVGFFilteredVarianceRenderFrontBuffer;
@@ -193,7 +192,7 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->VelocityRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
-	m_CelestiumPTResourceAPI->RawMomentsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+
 	m_CelestiumPTResourceAPI->SVGFFilteredVarianceRenderBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->SVGFFilteredIrradianceFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->SVGFFilteredIrradianceBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -234,8 +233,6 @@ void Renderer::renderFrame()
 		// Raw Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.raw_irradiance_surfobject));
-		m_CelestiumPTResourceAPI->RawMomentsRenderBuffer.beginRender(
-			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.raw_moments_surfobject));
 
 		// SVGF Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->SVGFFilteredVarianceRenderFrontBuffer.beginRender(
@@ -351,7 +348,8 @@ void Renderer::renderFrame()
 			checkCudaErrors(cudaGetLastError());
 			checkCudaErrors(cudaDeviceSynchronize());
 		}
-		//SVGF atrous----------------
+
+		//SVGF atrous====================================
 		if (m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.svgf_enabled)
 		{
 			for (int iter = 0; iter < SVGF_MAX_ITERATIONS; iter++) {
@@ -379,6 +377,7 @@ void Renderer::renderFrame()
 					m_NativeRenderResolutionHeight);
 			}
 		}
+
 		//Compose=====================
 		{
 			composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
@@ -400,8 +399,6 @@ void Renderer::renderFrame()
 		// Raw Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.raw_irradiance_surfobject));
-		m_CelestiumPTResourceAPI->RawMomentsRenderBuffer.endRender(
-			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.raw_moments_surfobject));
 
 		// SVGF Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->SVGFFilteredVarianceRenderFrontBuffer.endRender(
