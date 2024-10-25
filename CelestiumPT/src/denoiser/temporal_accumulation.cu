@@ -136,6 +136,7 @@ __global__ void temporalAccumulate(const IntegratorGlobals t_globals)
 	}
 
 	bool prj_success = !rejectionHeuristic(t_globals, prev_px, current_pix);
+	//prj_success = true;
 
 	//disocclusion/ reproj failure
 	if (!prj_success)

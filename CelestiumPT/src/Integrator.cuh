@@ -15,6 +15,7 @@ __global__ void tracePathSample(const IntegratorGlobals globals);
 
 namespace IntegratorPipeline {
 	__device__ RGBSpectrum evaluatePixelSample(const IntegratorGlobals& globals, int2 ppixel);
+
 	__device__ RGBSpectrum deferredEvaluatePixelSample(const IntegratorGlobals& t_globals, int2 t_current_pix, uint32_t t_seed);
 
 	//TraceRay function
