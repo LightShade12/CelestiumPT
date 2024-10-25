@@ -16,7 +16,7 @@ __device__ void computeVelocity(const IntegratorGlobals& globals, float2 tc_uv, 
 __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBSpectrum radiance_sample, int2 c_pix);
 
 namespace IntegratorPipeline {
-	__device__ RGBSpectrum evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel);
+	__device__ RGBSpectrum evaluatePixelSample(const IntegratorGlobals& globals, int2 ppixel);
 	__device__ RGBSpectrum deferredEvaluatePixelSample(const IntegratorGlobals& globals, int2 ppixel, uint32_t seed);
 
 	//TraceRay function
@@ -25,7 +25,7 @@ namespace IntegratorPipeline {
 
 	__device__ bool Unoccluded(const IntegratorGlobals& globals, const ShapeIntersection& p0, float3 p1);
 
-	__device__ RGBSpectrum LiPathIntegrator(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel);
+	__device__ RGBSpectrum LiPathIntegrator(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, int2 ppixel);
 
 	__device__ RGBSpectrum SampleLd(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& payload,
 		const BSDF& bsdf, const LightSampler& light_sampler, uint32_t& seed, bool primary_surface);

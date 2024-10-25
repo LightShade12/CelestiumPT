@@ -12,6 +12,38 @@
 #include <surface_indirect_functions.h>
 #include <float.h>
 
+__device__ float3 hueToRGB(float hue) {
+	// Clamp hue to the [0, 1] range to avoid issues
+	hue = fmodf(hue, 1.0f);
+	if (hue < 0.0f) hue += 1.0f;
+
+	float s = 1.0f;  // Full saturation
+	float v = 1.0f;  // Full brightness
+
+	// Offset the hue to start from blue and move counterclockwise through cyan to red
+	// Adding 2/3 (240°) makes 0 correspond to blue.
+	float h = (hue + 2.0f / 3.0f) * 6.0f;  // Hue is now in [0, 6] range
+	int i = int(floorf(h));  // Which sector of the hue circle are we in
+	float f = h - i;         // Fractional part of h
+
+	float p = v * (1.0f - s);
+	float q = v * (1.0f - s * f);
+	float t = v * (1.0f - s * (1.0f - f));
+
+	float3 color;
+	switch (i % 6) {  // Ensure 'i' is within [0, 5] range
+	case 0: color = make_float3(v, t, p); break;   // Red -> Yellow
+	case 1: color = make_float3(q, v, p); break;   // Yellow -> Green
+	case 2: color = make_float3(p, v, t); break;   // Green -> Cyan
+	case 3: color = make_float3(p, q, v); break;   // Cyan -> Blue
+	case 4: color = make_float3(t, p, v); break;   // Blue -> Magenta
+	case 5: color = make_float3(v, p, q); break;   // Magenta -> Red
+	default: color = make_float3(1.0f, 0.0f, 0.0f);  // Red in case of unexpected values
+	}
+
+	return color;
+}
+
 // 0: Default, 1: Golden, 2: Punchy
 #define AGX_LOOK 0
 
@@ -208,38 +240,6 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, int2 ppixel, 
 		globals.FrameBuffer.debugview_objectID_surfobject, ppixel);
 }
 
-__device__ float3 hueToRGB(float hue) {
-	// Clamp hue to the [0, 1] range to avoid issues
-	hue = fmodf(hue, 1.0f);
-	if (hue < 0.0f) hue += 1.0f;
-
-	float s = 1.0f;  // Full saturation
-	float v = 1.0f;  // Full brightness
-
-	// Offset the hue to start from blue and move counterclockwise through cyan to red
-	// Adding 2/3 (240°) makes 0 correspond to blue.
-	float h = (hue + 2.0f / 3.0f) * 6.0f;  // Hue is now in [0, 6] range
-	int i = int(floorf(h));  // Which sector of the hue circle are we in
-	float f = h - i;         // Fractional part of h
-
-	float p = v * (1.0f - s);
-	float q = v * (1.0f - s * f);
-	float t = v * (1.0f - s * (1.0f - f));
-
-	float3 color;
-	switch (i % 6) {  // Ensure 'i' is within [0, 5] range
-	case 0: color = make_float3(v, t, p); break;   // Red -> Yellow
-	case 1: color = make_float3(q, v, p); break;   // Yellow -> Green
-	case 2: color = make_float3(p, v, t); break;   // Green -> Cyan
-	case 3: color = make_float3(p, q, v); break;   // Cyan -> Blue
-	case 4: color = make_float3(t, p, v); break;   // Blue -> Magenta
-	case 5: color = make_float3(v, p, q); break;   // Magenta -> Red
-	default: color = make_float3(1.0f, 0.0f, 0.0f);  // Red in case of unexpected values
-	}
-
-	return color;
-}
-
 __device__ void recordGBufferAny(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si)
 {
 	//Gbuffer
@@ -249,7 +249,7 @@ __device__ void recordGBufferAny(const IntegratorGlobals& globals, int2 ppixel, 
 		globals.FrameBuffer.triangleID_surfobject, ppixel);
 
 	//DebugViews===================================
-	
+
 	//float2 uv = ppixel / make_float2(globals.FrameBuffer.resolution);
 	//float3 dbg_uv_col = make_float3(uv);
 	float3 heatmap;
@@ -272,27 +272,31 @@ __device__ void recordGBufferAny(const IntegratorGlobals& globals, int2 ppixel, 
 		globals.FrameBuffer.debugview_tri_test_heatmap_surfobject, ppixel);
 	texWrite(make_float4(si.GAS_debug, 1),
 		globals.FrameBuffer.debugview_GAS_overlap_surfobject, ppixel);
-
 }
 
 __device__ void recordGBufferMiss(const IntegratorGlobals& globals, int2 ppixel)
 {
-	texWrite(make_float4(0, 0, 0, 1),
-		globals.FrameBuffer.world_positions_surfobject, ppixel);
 	texWrite(make_float4(1.f),
 		globals.FrameBuffer.albedo_surfobject, ppixel);
-	texWrite(make_float4(1),
-		globals.FrameBuffer.depth_surfobject, ppixel);
-	texWrite(make_float4(0, 0, 0.0, 1),
+
+	texWrite(make_float4(0, 0, 0, 1),
+		globals.FrameBuffer.world_positions_surfobject, ppixel);
+	texWrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.local_positions_surfobject, ppixel);
 	texWrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.world_normals_surfobject, ppixel);
 	texWrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.local_normals_surfobject, ppixel);
+
+	texWrite(make_float4(make_float3(-1), 1),
+		globals.FrameBuffer.depth_surfobject, ppixel);
+
 	texWrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.bary_surfobject, ppixel);
 	texWrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.UVs_surfobject, ppixel);
+
+	//DebugView-----------------------------------
 	texWrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.debugview_objectID_surfobject, ppixel);
 }

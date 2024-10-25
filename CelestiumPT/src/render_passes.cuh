@@ -53,6 +53,7 @@ __global__ void computePrimaryVisibility(const IntegratorGlobals t_globals) {
 	if ((current_pix.x >= frame_res.x) || (current_pix.y >= frame_res.y)) return;
 	//----------------------------------------------
 
+	screen_uv = screen_uv * 2 - 1;
 	Ray primary_ray = t_globals.SceneDescriptor.ActiveCamera->generateRay(frame_res.x, frame_res.y, screen_uv);
 
 	ShapeIntersection payload = IntegratorPipeline::Intersect(t_globals, primary_ray);

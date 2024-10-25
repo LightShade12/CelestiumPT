@@ -24,7 +24,7 @@
 #include <surface_indirect_functions.h>
 #include <float.h>
 
-__device__ RGBSpectrum IntegratorPipeline::evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel)
+__device__ RGBSpectrum IntegratorPipeline::evaluatePixelSample(const IntegratorGlobals& globals, int2 ppixel)
 {
 	int2 frameres = globals.FrameBuffer.resolution;
 
@@ -67,7 +67,7 @@ __device__ bool IntegratorPipeline::Unoccluded(const IntegratorGlobals& globals,
 	return !(IntegratorPipeline::IntersectP(globals, ray, tmax));
 }
 
-__device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel)
+__device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, int2 ppixel)
 {
 	Ray ray = in_ray;
 	RGBSpectrum throughtput(1.f), light(0.f);
@@ -168,6 +168,64 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 
 __device__ ShapeIntersection initializePayloadFromGBuffer(const IntegratorGlobals& t_globals, int2 t_current_pix)
 {
+	ShapeIntersection out_payload;
+	out_payload.w_pos = make_float3(texReadNearest(t_globals.FrameBuffer.world_positions_surfobject,
+		(t_current_pix)));
+	out_payload.l_pos = make_float3(texReadNearest(t_globals.FrameBuffer.local_positions_surfobject,
+		(t_current_pix)));
+
+	out_payload.w_shading_norm = make_float3(texReadNearest(t_globals.FrameBuffer.world_normals_surfobject,
+		(t_current_pix)));
+	out_payload.l_shading_norm = make_float3(texReadNearest(t_globals.FrameBuffer.local_normals_surfobject,
+		(t_current_pix)));
+
+	//----------
+	out_payload.triangle_idx = texReadNearest(t_globals.FrameBuffer.triangleID_surfobject,
+		(t_current_pix)).x;
+	out_payload.object_idx = texReadNearest(t_globals.FrameBuffer.objectID_surfobject,
+		(t_current_pix)).x;
+
+	//----------
+	out_payload.hit_distance = texReadNearest(t_globals.FrameBuffer.depth_surfobject,
+		(t_current_pix)).x;
+
+	//----------
+	out_payload.bary = make_float3(texReadNearest(t_globals.FrameBuffer.bary_surfobject,
+		(t_current_pix)));
+
+	out_payload.uv = make_float2(make_float3(texReadNearest(t_globals.FrameBuffer.UVs_surfobject,
+		(t_current_pix))));
+
+	//----------
+	out_payload.arealight = nullptr;
+
+	if (out_payload.triangle_idx >= 0) {
+		const Triangle& triangle = t_globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTrianglesBuffer[out_payload.triangle_idx];
+
+		if (triangle.LightIdx >= 0) {
+			out_payload.arealight =
+				&(t_globals.SceneDescriptor.DeviceGeometryAggregate->DeviceLightsBuffer[triangle.LightIdx]);
+		}
+
+		const DeviceMesh& mesh = t_globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMeshesBuffer[out_payload.object_idx];
+
+		//---------
+		out_payload.m_invModelMatrix = mesh.inverseModelMatrix;
+
+		//construct geometric normal
+		out_payload.w_geo_norm = normalize(make_float3(
+			out_payload.m_invModelMatrix.inverse() * make_float4(triangle.face_normal, 0)));
+
+		//shading may have been flipped from init geo; if diff then was flipped i.e backface
+		if (dot(out_payload.w_geo_norm, out_payload.w_shading_norm) < 0) {
+			out_payload.front_face = false;
+			out_payload.w_geo_norm = -1.f * out_payload.w_geo_norm;
+		}
+
+		//---------
+	}
+
+	return out_payload;
 };
 
 __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const IntegratorGlobals& globals, int2 ppixel, uint32_t seed)
