@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CelestiumPT.hpp"
+#include "editor_sandbox.hpp"
 
 #include <cstdint>
 
@@ -14,6 +14,10 @@ public:
 
 	void run();
 
+	float getDeltaTimeSeconds();
+	GLFWwindow* getWindowHandle() { return m_MainWindow; };
+	static Application& Get();
+
 	~Application();
 
 private:
@@ -22,7 +26,7 @@ private:
 	void close();
 
 private:
+	EditorSandbox m_EditorSandbox;
 	GLFWwindow* m_MainWindow = nullptr;
 	uint32_t m_width, m_height = 0;
-	Renderer m_Renderer;
 };

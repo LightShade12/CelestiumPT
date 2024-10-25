@@ -63,8 +63,9 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib</AdditionalDependencies>
+      <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib;cudadevrt.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)thirdparty\glfw\lib-vc2022;$(SolutionDir)CelestiumPT\lib</AdditionalLibraryDirectories>
+      <Profile>false</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -85,12 +86,15 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)thirdparty\glfw\lib-vc2022;$(SolutionDir)CelestiumPT\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib</AdditionalDependencies>
+      <AdditionalDependencies>User32.lib;Gdi32.lib;shell32.lib;glfw3.lib;cudart.lib;cudadevrt.lib</AdditionalDependencies>
+      <Profile>false</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Application.cpp" />
-    <ClCompile Include="src\EditorApp.cpp" />
+    <ClCompile Include="src\application.cpp" />
+    <ClCompile Include="src\editor_app.cpp" />
+    <ClCompile Include="src\editor_sandbox.cpp" />
+    <ClCompile Include="src\model_importer.cpp" />
     <ClCompile Include="thirdparty\glad\src\glad.c" />
     <ClCompile Include="thirdparty\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="thirdparty\imgui\backends\imgui_impl_opengl3.cpp" />
@@ -99,14 +103,14 @@
     <ClCompile Include="thirdparty\imgui\imgui_draw.cpp" />
     <ClCompile Include="thirdparty\imgui\imgui_tables.cpp" />
     <ClCompile Include="thirdparty\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="thirdparty\stb\stb.cpp" />
+    <ClCompile Include="thirdparty\tinygltf\tiny_gltf.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CelestiumPT\CelestiumPT.vcxproj">
-      <Project>{7a15f594-8ef8-4ff8-889e-7503e6171302}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\Application.hpp" />
+    <ClInclude Include="src\camera.hpp" />
+    <ClInclude Include="src\application.hpp" />
+    <ClInclude Include="src\editor_sandbox.hpp" />
+    <ClInclude Include="src\model_importer.hpp" />
     <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
     <ClInclude Include="thirdparty\glad\include\KHR\khrplatform.h" />
     <ClInclude Include="thirdparty\glfw\include\GLFW\glfw3.h" />
@@ -119,6 +123,17 @@
     <ClInclude Include="thirdparty\imgui\imstb_rectpack.h" />
     <ClInclude Include="thirdparty\imgui\imstb_textedit.h" />
     <ClInclude Include="thirdparty\imgui\imstb_truetype.h" />
+    <ClInclude Include="thirdparty\stb\stb_image.h" />
+    <ClInclude Include="thirdparty\stb\stb_image_write.h" />
+    <ClInclude Include="thirdparty\tinygltf\tiny_gltf.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\mesh.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CelestiumPT\CelestiumPT.vcxproj">
+      <Project>{9b7ba236-ea40-4e46-b069-5e190827f9c5}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

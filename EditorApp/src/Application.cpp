@@ -1,38 +1,51 @@
-#include "Application.hpp"
+#include "application.hpp"
 
-#include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_opengl3.h>
+#include "imgui/imgui.h"
+#include "imgui/backends/imgui_impl_glfw.h"
+#include "imgui/backends/imgui_impl_opengl3.h"
 
-#include <glad/include/glad/glad.h>
-#define GLFW_INCLUDE_NONE
-#include <glfw/include/GLFW/glfw3.h>
-#include <iostream>
+#include "glad/include/glad/glad.h"
+#define GLFW_INCLUDE_NONE //glad loader instead of local gl
+#include "glfw/include/GLFW/glfw3.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
 	fprintf(stderr, "Error: %s\n", description);
 }
 
-Application::Application()
+static Application* s_Instance = nullptr;
+
+Application::Application() : m_EditorSandbox()
 {
+	s_Instance = this;
 	initialize();
+}
+
+Application& Application::Get()
+{
+	return *s_Instance;
 }
 
 Application::~Application()
 {
 	close();
+	s_Instance = nullptr;
+	printf("\ndestructed application");
 }
+
+static float delta_time_secs = 0.0f;
+static float last_frame_secs = 0.0f;
 
 void Application::run()
 {
-	printf("start run..\n");
+	fprintf(stdout, "start run..\n");
 	//int width, height;
 	glClearColor(0.f, 0.24f, 0.3f, 1.f);
 
 	while (!glfwWindowShouldClose(m_MainWindow))
 	{
 		glfwPollEvents();
+		m_EditorSandbox.onUpdate(delta_time_secs);
 
 		if (glfwGetWindowAttrib(m_MainWindow, GLFW_ICONIFIED) != 0)
 		{
@@ -49,25 +62,7 @@ void Application::run()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		{
-			ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
-
-			ImGui::Begin("Hello World");
-			ImGui::Text("This is a window");
-			ImGui::End();
-
-			ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);
-			ImVec2 vpdims = ImGui::GetContentRegionAvail();
-			if (m_Renderer.getCompositeRenderTargetTextureName() != NULL)
-				ImGui::Image((void*)(uintptr_t)m_Renderer.getCompositeRenderTargetTextureName(),
-					ImVec2((float)m_Renderer.getFrameWidth(), (float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
-			ImGui::End();
-
-			if (vpdims.y > 14)vpdims.y -= 12;//TODO: make this sensible var; not a constant
-			if (vpdims.y < 5)vpdims.y = 10;
-			m_Renderer.resizeResolution((int)vpdims.x, (int)vpdims.y);
-			m_Renderer.renderFrame();
-		}
+		m_EditorSandbox.onRender(delta_time_secs);
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -80,13 +75,27 @@ void Application::run()
 			glfwMakeContextCurrent(backup_current_context);
 		}
 
+		//printf("secs: %.3f\n", (float)glfwGetTime());
+
+		float currentFrame_secs = glfwGetTime();
+		delta_time_secs = currentFrame_secs - last_frame_secs;
+
+		//printf("delta secs: %.3f\n", (float)delta_time_secs);
+
+		last_frame_secs = currentFrame_secs;
+
 		glfwSwapBuffers(m_MainWindow);
 	}
 }
 
+float Application::getDeltaTimeSeconds()
+{
+	return delta_time_secs;
+}
+
 void Application::initialize()
 {
-	printf("initializing app\n");
+	fprintf(stdout, "initializing app\n");
 	glfwSetErrorCallback(glfw_error_callback);
 
 	if (!glfwInit()) exit(EXIT_FAILURE);
@@ -96,7 +105,8 @@ void Application::initialize()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	const char* glsl_version = "#version 460";
 
-	m_width = m_height = 600;
+	m_width = 640 + 16;
+	m_height = 700;
 	m_MainWindow = glfwCreateWindow(m_width, m_height, "MainWindow", NULL, NULL);
 
 	if (!m_MainWindow) {
@@ -121,17 +131,20 @@ void Application::initialize()
 	// Setup Platform/Renderer backends
 	ImGui_ImplOpenGL3_Init(glsl_version);
 	ImGui_ImplGlfw_InitForOpenGL(m_MainWindow, true);
+
+	m_EditorSandbox.initialise();
 }
 
 void Application::close()
 {
-	printf("closing app\n");
+	fprintf(stdout, "closing app\n");
 
-	ImGui_ImplGlfw_Shutdown();
+	m_EditorSandbox.destroy();
+
 	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
 	glfwDestroyWindow(m_MainWindow);
 	glfwTerminate();
-	exit(EXIT_SUCCESS);
 }

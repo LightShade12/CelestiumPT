@@ -10,8 +10,90 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="thirdparty\glad\src\glad.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\acceleration_structure\BLAS.cu" />
+    <CudaCompile Include="src\acceleration_structure\BLAS_builder.cu" />
+    <CudaCompile Include="src\acceleration_structure\BVH_cache.cu" />
+    <CudaCompile Include="src\acceleration_structure\GAS.cu" />
+    <CudaCompile Include="src\acceleration_structure\GAS_builder.cu" />
+    <CudaCompile Include="src\acceleration_structure\TLAS.cu" />
+    <CudaCompile Include="src\bounds.cu" />
+    <CudaCompile Include="src\bsdf.cu" />
+    <CudaCompile Include="src\camera.cu" />
+    <CudaCompile Include="src\cuda_utility.cu" />
+    <CudaCompile Include="src\denoiser\variance_estimation.cu" />
+    <CudaCompile Include="src\error_check.cu" />
+    <CudaCompile Include="src\film.cu" />
+    <CudaCompile Include="src\integrator.cu" />
+    <CudaCompile Include="src\light.cu" />
+    <CudaCompile Include="src\material.cu" />
+    <CudaCompile Include="src\maths\linear_algebra.cu" />
+    <CudaCompile Include="src\maths\sampling.cu" />
+    <CudaCompile Include="src\maths\vector_maths.cu" />
+    <CudaCompile Include="src\mesh.cu" />
+    <CudaCompile Include="src\ray_stages.cu" />
+    <CudaCompile Include="src\renderer.cu" />
+    <CudaCompile Include="src\samplers.cu" />
+    <CudaCompile Include="src\scene.cu" />
+    <CudaCompile Include="src\shape_intersection.cu" />
+    <CudaCompile Include="src\spectrum.cu" />
+    <CudaCompile Include="src\denoiser\svgf_atrous.cu" />
+    <CudaCompile Include="src\denoiser\svgf_weight_functions.cu" />
+    <CudaCompile Include="src\denoiser\temporal_accumulation.cu" />
+    <CudaCompile Include="src\triangle.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\celestium_pt.hpp" />
+    <ClInclude Include="src\acceleration_structure\BLAS.cuh" />
+    <ClInclude Include="src\acceleration_structure\BLAS_builder.hpp" />
+    <ClInclude Include="src\acceleration_structure\BVH_cache.cuh" />
+    <ClInclude Include="src\acceleration_structure\BVH_node.cuh" />
+    <ClInclude Include="src\acceleration_structure\GAS.cuh" />
+    <ClInclude Include="src\acceleration_structure\GAS_builder.hpp" />
+    <ClInclude Include="src\acceleration_structure\TLAS.cuh" />
+    <ClInclude Include="src\acceleration_structure\TLAS_node.cuh" />
+    <ClInclude Include="src\bounds.cuh" />
+    <ClInclude Include="src\bsdf.cuh" />
+    <ClInclude Include="src\cuda_utility.cuh" />
+    <ClInclude Include="src\device_camera.cuh" />
+    <ClInclude Include="src\device_material.cuh" />
+    <ClInclude Include="src\device_mesh.cuh" />
+    <ClInclude Include="src\device_scene.cuh" />
+    <ClInclude Include="src\error_check.cuh" />
+    <ClInclude Include="src\film.cuh" />
+    <ClInclude Include="src\host_camera.hpp" />
+    <ClInclude Include="src\host_material.hpp" />
+    <ClInclude Include="src\host_mesh.hpp" />
+    <ClInclude Include="src\host_scene.hpp" />
+    <ClInclude Include="src\integrator.cuh" />
+    <ClInclude Include="src\integrator_settings.hpp" />
+    <ClInclude Include="src\light.cuh" />
+    <ClInclude Include="src\light_sampler.cuh" />
+    <ClInclude Include="src\maths\constants.cuh" />
+    <ClInclude Include="src\maths\linear_algebra.cuh" />
+    <ClInclude Include="src\maths\matrix_maths.cuh" />
+    <ClInclude Include="src\maths\sampling.cuh" />
+    <ClInclude Include="src\maths\vector_maths.cuh" />
+    <ClInclude Include="src\maths\vector_types_extension.cuh" />
+    <ClInclude Include="src\ray.cuh" />
+    <ClInclude Include="src\ray_stages.cuh" />
+    <ClInclude Include="src\renderer.hpp" />
+    <ClInclude Include="src\render_passes.cuh" />
+    <ClInclude Include="src\samplers.cuh" />
+    <ClInclude Include="src\scene_geometry.cuh" />
+    <ClInclude Include="src\shape_intersection.cuh" />
+    <ClInclude Include="src\spectrum.cuh" />
+    <ClInclude Include="src\storage.cuh" />
+    <ClInclude Include="src\denoiser\svgf_weight_functions.cuh" />
+    <ClInclude Include="src\denoiser\denoiser.cuh" />
+    <ClInclude Include="src\triangle.cuh" />
+    <ClInclude Include="src\utility.hpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{7A15F594-8EF8-4FF8-889E-7503E6171302}</ProjectGuid>
+    <ProjectGuid>{9B7BA236-EA40-4E46-B069-5E190827F9C5}</ProjectGuid>
     <RootNamespace>CelestiumPT</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -56,8 +138,7 @@
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(ProjectDir)thirdparty;$(ProjectDir)src;$(ProjectDir)thirdparty\glad\include</AdditionalIncludeDirectories>
-      <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(ProjectDir)src;$(ProjectDir)thirdparty;$(ProjectDir)thirdparty/glad/include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -66,18 +147,9 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <Include>$(ProjectDir)src;$(ProjectDir)thirdparty;$(ProjectDir)thirdparty/glad/include;</Include>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
-      <Runtime>InheritFromHost</Runtime>
-      <CompileOut>$(SolutionDir)intermediate\$(Configuration)\$(ProjectName)\CUDA\%(Filename)%(Extension).obj</CompileOut>
-      <KeepDir>$(SolutionDir)intermediate\$(Configuration)\$(ProjectName)\CUDA\</KeepDir>
-      <Include>
-      </Include>
     </CudaCompile>
-    <CudaLink>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(CudaToolkitBinDir)/crt;</AdditionalLibraryDirectories>
-    </CudaLink>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -88,8 +160,7 @@
       <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(ProjectDir)thirdparty;$(ProjectDir)src;$(ProjectDir)thirdparty\glad\include</AdditionalIncludeDirectories>
-      <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(ProjectDir)src;$(ProjectDir)thirdparty;$(ProjectDir)thirdparty/glad/include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -100,32 +171,12 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CompileOut>$(SolutionDir)intermediate\$(Configuration)\$(ProjectName)\CUDA\%(Filename)%(Extension).obj</CompileOut>
-      <KeepDir>$(SolutionDir)intermediate\$(Configuration)\$(ProjectName)\CUDA\</KeepDir>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
-      <Include>
-      </Include>
+      <Include>$(ProjectDir)src;$(ProjectDir)thirdparty;$(ProjectDir)thirdparty/glad/include;</Include>
+      <FastMath>true</FastMath>
+      <CompileOut>$(SolutionDir)intermediate\$(Configuration)\$(ProjectName)\cuda\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
-    <CudaLink>
-      <AdditionalLibraryDirectories>$(CudaToolkitBinDir)/crt;</AdditionalLibraryDirectories>
-    </CudaLink>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <CudaCompile Include="src\kernel.cu" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="include\CelestiumPT.hpp" />
-    <ClInclude Include="src\kernel.hpp" />
-    <ClInclude Include="src\Renderer.hpp" />
-    <ClInclude Include="thirdparty\glad\include\glad\glad.h" />
-    <ClInclude Include="thirdparty\glad\include\KHR\khrplatform.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="src\Renderer.cpp">
-      <FileType>Document</FileType>
-    </ClCompile>
-    <ClCompile Include="thirdparty\glad\src\glad.c" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.4.targets" />
