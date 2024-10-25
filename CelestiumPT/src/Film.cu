@@ -170,7 +170,7 @@ __device__ RGBSpectrum gammaCorrection(const RGBSpectrum linear_color)
 	return gamma_space_color;
 }
 
-__device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si)
+__device__ void recordGBufferHit(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si)
 {
 	const Triangle& triangle = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTrianglesBuffer[si.triangle_idx];
 	DeviceMaterial& material = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMaterialBuffer[triangle.mat_idx];
@@ -240,8 +240,16 @@ __device__ float3 hueToRGB(float hue) {
 	return color;
 }
 
-__device__ void recordGBufferAny(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si)
+__device__ void recordGBufferAny(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si)
 {
+	//Gbuffer
+	texWrite(make_float4(make_float3(si.object_idx), 1),
+		globals.FrameBuffer.objectID_surfobject, ppixel);
+	texWrite(make_float4(make_float3(si.triangle_idx), 1),
+		globals.FrameBuffer.triangleID_surfobject, ppixel);
+
+	//DebugViews===================================
+	
 	//float2 uv = ppixel / make_float2(globals.FrameBuffer.resolution);
 	//float3 dbg_uv_col = make_float3(uv);
 	float3 heatmap;
@@ -264,11 +272,10 @@ __device__ void recordGBufferAny(const IntegratorGlobals& globals, float2 ppixel
 		globals.FrameBuffer.debugview_tri_test_heatmap_surfobject, ppixel);
 	texWrite(make_float4(si.GAS_debug, 1),
 		globals.FrameBuffer.debugview_GAS_overlap_surfobject, ppixel);
-	texWrite(make_float4(make_float3(si.object_idx), 1),
-		globals.FrameBuffer.objectID_surfobject, ppixel);
+
 }
 
-__device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixel)
+__device__ void recordGBufferMiss(const IntegratorGlobals& globals, int2 ppixel)
 {
 	texWrite(make_float4(0, 0, 0, 1),
 		globals.FrameBuffer.world_positions_surfobject, ppixel);

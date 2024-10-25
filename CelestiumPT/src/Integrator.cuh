@@ -17,6 +17,7 @@ __device__ RGBSpectrum staticAccumulation(const IntegratorGlobals& globals, RGBS
 
 namespace IntegratorPipeline {
 	__device__ RGBSpectrum evaluatePixelSample(const IntegratorGlobals& globals, float2 ppixel);
+	__device__ RGBSpectrum deferredEvaluatePixelSample(const IntegratorGlobals& globals, int2 ppixel, uint32_t seed);
 
 	//TraceRay function
 	__device__ ShapeIntersection Intersect(const IntegratorGlobals& globals, const Ray& ray, float tmax = FLT_MAX);
@@ -24,7 +25,6 @@ namespace IntegratorPipeline {
 
 	__device__ bool Unoccluded(const IntegratorGlobals& globals, const ShapeIntersection& p0, float3 p1);
 
-	__device__ RGBSpectrum Li(const IntegratorGlobals& globals, const Ray& ray, uint32_t seed, float2 ppixel);
 	__device__ RGBSpectrum LiPathIntegrator(const IntegratorGlobals& globals, const Ray& in_ray, uint32_t seed, float2 ppixel);
 
 	__device__ RGBSpectrum SampleLd(const IntegratorGlobals& globals, const Ray& ray, const ShapeIntersection& payload,

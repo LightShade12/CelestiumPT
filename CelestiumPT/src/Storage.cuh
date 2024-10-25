@@ -44,6 +44,7 @@ public:
 	cudaSurfaceObject_t UVs_surfobject;
 	cudaSurfaceObject_t bary_surfobject;
 	cudaSurfaceObject_t objectID_surfobject;
+	cudaSurfaceObject_t triangleID_surfobject;
 	cudaSurfaceObject_t velocity_surfobject;
 
 	//debugviews

@@ -107,14 +107,13 @@ struct CelestiumPT_API
 	FrameBuffer RawIrradianceRenderBuffer;
 
 	//SVGF
-	FrameBuffer SVGFFilteredVarianceRenderFrontBuffer;
-	FrameBuffer SVGFFilteredVarianceRenderBackBuffer;
 	FrameBuffer SVGFFilteredIrradianceFrontBuffer;
 	FrameBuffer SVGFFilteredIrradianceBackBuffer;
-
-	FrameBuffer AlbedoRenderBuffer;
+	FrameBuffer SVGFFilteredVarianceRenderFrontBuffer;
+	FrameBuffer SVGFFilteredVarianceRenderBackBuffer;
 
 	//GBUFFER
+	FrameBuffer AlbedoRenderBuffer;
 	FrameBuffer LocalNormalsRenderBuffer;//used for normals reject
 	FrameBuffer LocalPositionsRenderBuffer;//used for reproj & depth reject
 	FrameBuffer WorldNormalsRenderBuffer;
@@ -125,9 +124,10 @@ struct CelestiumPT_API
 	FrameBuffer UVsRenderBuffer;
 	FrameBuffer BarycentricsRenderBuffer;
 	FrameBuffer ObjectIDRenderBuffer; //used for reproj & reject
+	FrameBuffer TriangleIDRenderBuffer;
 	FrameBuffer VelocityRenderBuffer;//used for reproj
 
-	//temporal accum
+	//temporal filter
 	FrameBuffer IntegratedMomentsFrontBuffer;
 	FrameBuffer IntegratedMomentsBackBuffer;
 	FrameBuffer IntegratedIrradianceRenderFrontBuffer;//read
@@ -195,6 +195,7 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->UVsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->BarycentricsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->TriangleIDRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->VelocityRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	//temporal filter
@@ -279,6 +280,8 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bary_surfobject));
 		m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_surfobject));
+		m_CelestiumPTResourceAPI->TriangleIDRenderBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.triangleID_surfobject));
 		m_CelestiumPTResourceAPI->VelocityRenderBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_surfobject));
 
@@ -320,6 +323,15 @@ void Renderer::renderFrame()
 
 	//Launch RenderChain
 	{
+		//Compute primary visbility=========================================
+		{
+			computePrimaryVisibility << < m_CudaResourceAPI->m_BlockGridDimensions,
+				m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
+		}
+
 		//Compute pathtrace samples==========================================
 		{
 			tracePathSample << < m_CudaResourceAPI->m_BlockGridDimensions,
@@ -445,6 +457,8 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bary_surfobject));
 		m_CelestiumPTResourceAPI->ObjectIDRenderBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.objectID_surfobject));
+		m_CelestiumPTResourceAPI->TriangleIDRenderBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.triangleID_surfobject));
 		m_CelestiumPTResourceAPI->VelocityRenderBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.velocity_surfobject));
 

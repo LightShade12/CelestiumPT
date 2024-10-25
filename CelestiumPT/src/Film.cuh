@@ -17,11 +17,11 @@ __device__ RGBSpectrum toneMapping(RGBSpectrum HDR_color, float exposure = 2.f);
 
 __device__ RGBSpectrum gammaCorrection(const RGBSpectrum linear_color);
 
-__device__ void recordGBufferHit(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si);
+__device__ void recordGBufferHit(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si);
 
-__device__ void recordGBufferAny(const IntegratorGlobals& globals, float2 ppixel, const ShapeIntersection& si);
+__device__ void recordGBufferAny(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si);
 
-__device__ void recordGBufferMiss(const IntegratorGlobals& globals, float2 ppixel);
+__device__ void recordGBufferMiss(const IntegratorGlobals& globals, int2 ppixel);
 
 class Film {
 public:
