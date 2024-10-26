@@ -2,6 +2,7 @@
 #include "storage.cuh"
 #define __CUDACC__
 #include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 
 // SVGF kernel that applies spatial filtering
 __global__ void atrousSVGF(const IntegratorGlobals globals, int stepsize);

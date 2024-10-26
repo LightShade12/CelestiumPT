@@ -260,7 +260,7 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		//miss--
 		if (payload.hit_distance < 0)//TODO: standardize invalid/miss payload definition
 		{
-			light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray) * RGBSpectrum(0.8, 1, 1.5) * throughtput;
+			//light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray) * RGBSpectrum(0.8, 1, 1.5) * throughtput;
 			break;
 		}
 
@@ -337,7 +337,7 @@ __device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& glo
 	//handle empty buffer
 	if (!sampled_light)return Ld;
 
-	LightLiSample ls = sampled_light.light->SampleLi(payload, Samplers::get2D_PCGHash(seed));
+	LightLiSample ls = sampled_light.light->SampleLi(globals, payload, Samplers::get2D_PCGHash(seed));
 
 	if (ls.pdf <= 0)return Ld;
 

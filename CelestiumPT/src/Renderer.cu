@@ -127,6 +127,13 @@ struct CelestiumPT_API
 	FrameBuffer TriangleIDRenderBuffer;
 	FrameBuffer VelocityRenderBuffer;//used for reproj
 
+	//adaptive filter
+	//FrameBuffer SeedsBuffer;
+	//FrameBuffer HistoryShadingBuffer;
+	//FrameBuffer HistorySeedsBuffer;
+	//FrameBuffer HistoryObjectIDBuffer;
+	//FrameBuffer HistoryTriangleIDBuffer;
+
 	//temporal filter
 	FrameBuffer IntegratedMomentsFrontBuffer;
 	FrameBuffer IntegratedMomentsBackBuffer;

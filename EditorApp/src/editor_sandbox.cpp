@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTFfromFile("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -103,11 +103,11 @@ void EditorSandbox::onUpdate(float delta)
 				translation.y = mesh.translation.y + (0.15 * sinf(glfwGetTime()));
 				updatemesh |= true;
 			}
-			//if (mesh.host_mesh_handle.name == "Light") {
-			//	translation.x = mesh.translation.x + (1 * sinf(glfwGetTime()));
-			//	translation.z = mesh.translation.x + (1 * cosf(glfwGetTime()));
-			//	updatemesh |= true;
-			//}
+			if (mesh.host_mesh_handle.name == "Light") {
+				translation.x = mesh.translation.x + (1.45 * sinf(glfwGetTime() * 2));
+				translation.z = mesh.translation.x + (1.45 * cosf(glfwGetTime() * 2));
+				updatemesh |= true;
+			}
 
 			if (updatemesh) {
 				glm::mat4 trans = (glm::translate(glm::mat4(1), translation));

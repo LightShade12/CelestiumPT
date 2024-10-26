@@ -12,11 +12,11 @@ static std::string GetFilePathExtension(const std::string& FileName) {
 }
 
 //TODO:more coordinated loading
-bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
+bool ModelImporter::loadGLTFfromFile(const char* filepath, HostScene* scene_object)
 {
 	m_WorkingScene = scene_object;
 	bool status = false;
-	status = loadGLTFModel(filepath);
+	status = loadModel(filepath);
 	if (!status)return false;
 
 	loadTextures(m_SceneModel);
@@ -69,7 +69,7 @@ bool ModelImporter::loadGLTF(const char* filepath, HostScene* scene_object)
 	return status;
 }
 
-bool ModelImporter::loadGLTFModel(const char* filename)
+bool ModelImporter::loadModel(const char* filename)
 {
 	tinygltf::TinyGLTF loader;
 	std::string err;

@@ -1,5 +1,8 @@
 #include "light.cuh"
 #include "shape_intersection.cuh"
+#include "storage.cuh"
+#include "scene_geometry.cuh"
+#include "device_mesh.cuh"
 #include "maths/constants.cuh"
 #include "ray.cuh"
 
@@ -25,18 +28,23 @@ __device__ RGBSpectrum Light::PhiPower() const
 {
 	return scale * Lemit * area * PI * 2.f;
 }
-__device__ LightLiSample Light::SampleLi(LightSampleContext ctx, float2 u2) const
+__device__ LightLiSample Light::SampleLi(const IntegratorGlobals& t_globals, LightSampleContext ctx, float2 u2) const
 {
-	ShapeSampleContext shape_ctx{};
-	ShapeSample ss = m_triangle->sample(shape_ctx, u2);
+	ShapeSampleContext shape_ctx{};//TODO: retarded stuff
+	const Triangle& tri = t_globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTrianglesBuffer[tri_id];
+	ShapeSample ss = tri.sample(shape_ctx, u2);
+
 	//transform p&n by model mat here
+	const Mat4& model = t_globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMeshesBuffer[object_id].modelMatrix;
+	ss.p = make_float3(model * make_float4(ss.p, 1));
+	ss.n = make_float3(model * make_float4(ss.n, 0));
 
 	if (ss.pdf == 0 || dot(ss.p - ctx.pos, ss.p - ctx.pos) == 0)return {};
 	float3 wi = normalize(ss.p - ctx.pos);
 	RGBSpectrum Le = L(ss.p, ss.n, -wi);
 	if (!Le)return {};
-	//also transform tri face normal
-	return LightLiSample(Le, wi, ss.p, m_triangle->face_normal, ss.pdf);
+
+	return LightLiSample(Le, wi, ss.p, ss.n, ss.pdf);
 }
 
 __device__ float Light::PDF_Li(LightSampleContext ctx, float3 wi) const

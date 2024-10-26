@@ -3,6 +3,7 @@
 #include "spectrum.cuh"
 
 struct ShapeIntersection;
+struct IntegratorGlobals;
 class Ray;
 
 struct LightSampleContext {
@@ -37,20 +38,21 @@ public:
 class Light {
 public:
 
-	__host__ __device__ Light(Triangle* triangle, /*Mat4 transform,*/ float3 color, float power) :
-		m_triangle(triangle), /*m_transform(transform),*/ Lemit(color), scale(power)
+	__host__ __device__ Light(Triangle* triangle, int t_triID, int t_object_id, float3 color, float power) :
+		object_id(t_object_id), Lemit(color), scale(power), tri_id(t_triID)
 	{
 		area = triangle->area();
 	};
 
 	__device__ RGBSpectrum PhiPower() const;
 	__device__ RGBSpectrum L(float3 p, float3 n, float3 w) const { return scale * Lemit; };
-	__device__ LightLiSample SampleLi(LightSampleContext ctx, float2 u2) const;
+	__device__ LightLiSample SampleLi(const IntegratorGlobals& t_globals, LightSampleContext ctx, float2 u2) const;
 	__device__ float PDF_Li(LightSampleContext ctx, float3 wi) const;//TODO:call tri pdf
 
-	//Mat4 m_transform;
+private:
+	int object_id = -1;
+	int tri_id = -1;
 	RGBSpectrum Lemit;
 	float scale;
-	Triangle* m_triangle;
 	float area;
 };
