@@ -12,22 +12,27 @@ __global__ void createGradientSamples(const IntegratorGlobals t_globals)
 	int2 frame_res = t_globals.FrameBuffer.resolution;
 	float2 screen_uv = { (float)current_pix.x / (float)frame_res.x, (float)current_pix.y / (float)frame_res.y };
 
-	if ((current_pix.x >= frame_res.x) || (current_pix.y >= frame_res.y)) return;
+	if ((current_pix.x >= frame_res.x / ASVGF_STRATUM_SIZE) || (current_pix.y >= frame_res.y / ASVGF_STRATUM_SIZE)) return;
 	//=========================================================
 
-	int current_objID = texReadNearest(t_globals.FrameBuffer.objectID_surfobject, current_pix).x;
+	int2 pos_in_stratum = make_int2(1);
+	int2 grad_pix = current_pix;
+	int2 sampling_pix = grad_pix * ASVGF_STRATUM_SIZE + pos_in_stratum;
+	sampling_pix = clamp(sampling_pix, { 0,0 }, frame_res - 1);
+
+	int current_objID = texReadNearest(t_globals.FrameBuffer.objectID_surfobject, sampling_pix).x;
 
 	//void sample/ miss/ sky
 	if (current_objID < 0)
 	{
 		texWrite(make_float4(0, 0, 0, 1),
-			t_globals.FrameBuffer.asvgf_sparse_gradient_surfobject, current_pix);
+			t_globals.FrameBuffer.asvgf_sparse_gradient_surfobject, grad_pix);
 		return;
 	}
 
 	//full-res samples
-	float4 current_shading = texReadNearest(t_globals.FrameBuffer.raw_irradiance_surfobject, current_pix);
-	float4 prev_shading = texReadNearest(t_globals.FrameBuffer.history_shading_surfobject, current_pix);
+	float4 current_shading = texReadNearest(t_globals.FrameBuffer.raw_irradiance_surfobject, sampling_pix);
+	float4 prev_shading = texReadNearest(t_globals.FrameBuffer.history_shading_surfobject, sampling_pix);
 
 	float c_lum = getLuminance(RGBSpectrum(current_shading));
 	float p_lum = getLuminance(RGBSpectrum(prev_shading));
@@ -41,5 +46,5 @@ __global__ void createGradientSamples(const IntegratorGlobals t_globals)
 		0);
 
 	texWrite(make_float4(delta_col, normalization_factor),
-		t_globals.FrameBuffer.asvgf_sparse_gradient_surfobject, current_pix);
+		t_globals.FrameBuffer.asvgf_sparse_gradient_surfobject, grad_pix);
 }

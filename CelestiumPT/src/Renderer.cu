@@ -214,7 +214,9 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->IntegratedMomentsBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	//asvgf
-	m_CelestiumPTResourceAPI->SparseGradientBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->SparseGradientBuffer.resizeResolution(
+		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
 	m_CelestiumPTResourceAPI->HistoryShadingBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	//debugviews
