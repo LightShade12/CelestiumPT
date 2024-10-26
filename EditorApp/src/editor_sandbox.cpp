@@ -104,8 +104,8 @@ void EditorSandbox::onUpdate(float delta)
 				updatemesh |= true;
 			}
 			if (mesh.host_mesh_handle.name == "Light") {
-				translation.x = mesh.translation.x + (1.4 * sinf(glfwGetTime() * 2));
-				translation.z = mesh.translation.x + (1.4 * cosf(glfwGetTime() * 2));
+				translation.x = mesh.translation.x + (1.4 * sinf(glfwGetTime() * 4));
+				translation.z = mesh.translation.x + (1.4 * cosf(glfwGetTime() * 4));
 				updatemesh |= true;
 			}
 

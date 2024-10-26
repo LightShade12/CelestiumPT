@@ -18,7 +18,7 @@
 */
 
 constexpr int SVGF_MAX_ITERATIONS = 4;
-constexpr int ASVGF_MAX_ITERATIONS = 4;
+constexpr int ASVGF_MAX_ITERATIONS = 5;
 
 class FrameBuffer {
 public:

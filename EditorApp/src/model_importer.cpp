@@ -183,7 +183,7 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 		if (!(mat.emission_color_factor.x == 0 && mat.emission_color_factor.y == 0 && mat.emission_color_factor.z == 0)) {
 			m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1,
 				m_WorkingScene->getMeshesCount() - 1,
-				mat.emission_color_factor, mat.emission_strength * 20);
+				mat.emission_color_factor, mat.emission_strength * 30);
 		}
 	}
 
