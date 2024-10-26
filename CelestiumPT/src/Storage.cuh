@@ -27,6 +27,10 @@ public:
 	cudaSurfaceObject_t integrated_irradiance_back_surfobject;//write only
 	cudaSurfaceObject_t integrated_moments_front_surfobject;//read only
 	cudaSurfaceObject_t integrated_moments_back_surfobject;//write only
+	
+	//asvgf
+	cudaSurfaceObject_t asvgf_sparse_gradient_surfobject;
+	cudaSurfaceObject_t history_shading_surfobject;
 
 	//svgf
 	cudaSurfaceObject_t svgf_filtered_variance_back_surfobject;

@@ -397,7 +397,7 @@ __global__ void tracePathSample(const IntegratorGlobals t_globals)
 	//--------------------------------------------------
 
 	uint32_t seed = current_pix.x + current_pix.y * frame_res.x;
-	seed *= t_globals.FrameIndex;
+	//seed *= t_globals.FrameIndex;
 
 	//--------------------------------------------------
 

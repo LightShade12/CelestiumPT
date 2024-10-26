@@ -4,6 +4,7 @@
 #include "integrator.cuh"
 #include "denoiser/denoiser.cuh"
 #include "render_passes.cuh"
+#include "maths/constants.cuh"
 
 #include "scene_geometry.cuh"
 #include "device_scene.cuh"
@@ -129,10 +130,11 @@ struct CelestiumPT_API
 
 	//adaptive filter
 	//FrameBuffer SeedsBuffer;
-	//FrameBuffer HistoryShadingBuffer;
+	FrameBuffer HistoryShadingBuffer;
 	//FrameBuffer HistorySeedsBuffer;
 	//FrameBuffer HistoryObjectIDBuffer;
 	//FrameBuffer HistoryTriangleIDBuffer;
+	FrameBuffer SparseGradientBuffer;
 
 	//temporal filter
 	FrameBuffer IntegratedMomentsFrontBuffer;
@@ -210,6 +212,10 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->IntegratedIrradianceRenderBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->IntegratedMomentsFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->IntegratedMomentsBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+
+	//asvgf
+	m_CelestiumPTResourceAPI->SparseGradientBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->HistoryShadingBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	//debugviews
 	m_CelestiumPTResourceAPI->GASDebugRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -302,6 +308,12 @@ void Renderer::renderFrame()
 		m_CelestiumPTResourceAPI->IntegratedMomentsBackBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.integrated_moments_back_surfobject));
 
+		// ASVGF -------------------------------
+		m_CelestiumPTResourceAPI->SparseGradientBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_sparse_gradient_surfobject));
+		m_CelestiumPTResourceAPI->HistoryShadingBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_shading_surfobject));
+
 		// History Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_surfobject));
@@ -354,7 +366,16 @@ void Renderer::renderFrame()
 					m_NativeRenderResolutionHeight);
 		}
 
-		//Temporal accumulation=====================
+		//Compute gradient samples==========================================
+		{
+			createGradientSamples << < m_CudaResourceAPI->m_BlockGridDimensions,
+				m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
+		}
+
+		//Temporal accumulation===========================================
 		if (m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.svgf_enabled ||
 			m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.temporal_filter_enabled)
 		{
@@ -479,6 +500,12 @@ void Renderer::renderFrame()
 		m_CelestiumPTResourceAPI->IntegratedMomentsBackBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.integrated_moments_back_surfobject));
 
+		//ASVGF---------------------------------------------
+		m_CelestiumPTResourceAPI->SparseGradientBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_sparse_gradient_surfobject));
+		m_CelestiumPTResourceAPI->HistoryShadingBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_shading_surfobject));
+
 		// History Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_surfobject));
@@ -497,6 +524,10 @@ void Renderer::renderFrame()
 	}
 
 	//UPDATE HISTORY
+	//shading
+	texCopy(m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer,
+		m_CelestiumPTResourceAPI->HistoryShadingBuffer, m_NativeRenderResolutionWidth,
+		m_NativeRenderResolutionHeight);
 
 	//depth
 	texCopy(m_CelestiumPTResourceAPI->DepthRenderBuffer,
@@ -594,6 +625,11 @@ GLuint Renderer::getAlbedoTargetTextureName() const
 GLuint Renderer::getIntegratedVarianceTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->SVGFFilteredVarianceRenderFrontBuffer.m_RenderTargetTextureName;
+}
+
+GLuint Renderer::getSparseGradientTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->SparseGradientBuffer.m_RenderTargetTextureName;
 }
 
 int Renderer::getSPP() const

@@ -36,6 +36,7 @@ public:
 	GLuint getBarycentricsDebugTargetTextureName() const;
 	GLuint getAlbedoTargetTextureName() const;
 	GLuint getIntegratedVarianceTargetTextureName() const;
+	GLuint getSparseGradientTargetTextureName() const;
 
 	int getSPP() const;
 	void setCamera(int idx);

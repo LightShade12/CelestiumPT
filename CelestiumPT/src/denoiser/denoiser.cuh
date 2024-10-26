@@ -11,3 +11,5 @@ __global__ void atrousSVGF(const IntegratorGlobals globals, int stepsize);
 __global__ void temporalAccumulate(const IntegratorGlobals globals);
 
 __global__ void estimateVariance(const IntegratorGlobals t_globals);
+
+__global__ void createGradientSamples(const IntegratorGlobals t_globals);
