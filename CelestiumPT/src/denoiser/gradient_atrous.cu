@@ -78,12 +78,14 @@ __global__ void atrousGradient(const IntegratorGlobals t_globals, int t_stepsize
 
 			float w = nw * dw * (sampled_objID == tap_objID);
 			float h = box_kernel[(x + radius) + (y + radius) * ((2 * radius) + 1)];
-
-			sum_gradient += tap_gradient * h * w;
-			wsum += h * w;
+			float hw = h * w;
+			
+			sum_gradient += tap_gradient * hw;
+			wsum += hw;
 		}
 	}
 	sum_gradient /= wsum;
 
-	texWrite(sum_gradient, t_globals.FrameBuffer.asvgf_dense_gradient_back_surfobject, grad_pix);
+	texWrite(sum_gradient, t_globals.FrameBuffer.asvgf_dense_gradient_back_surfobject,
+		grad_pix);
 }
