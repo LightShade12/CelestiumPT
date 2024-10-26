@@ -37,7 +37,8 @@ public:
 		VARIANCE = 11,
 		HEATMAP = 12,
 		BBOXHEATMAP = 13,
-		SPARSE_GRAD = 14
+		SPARSE_GRAD = 14,
+		DENSE_GRAD = 15
 	};
 
 private:

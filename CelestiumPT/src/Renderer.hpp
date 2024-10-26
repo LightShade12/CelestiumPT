@@ -37,6 +37,7 @@ public:
 	GLuint getAlbedoTargetTextureName() const;
 	GLuint getIntegratedVarianceTargetTextureName() const;
 	GLuint getSparseGradientTargetTextureName() const;
+	GLuint getDenseGradientTargetTextureName() const;
 
 	int getSPP() const;
 	void setCamera(int idx);

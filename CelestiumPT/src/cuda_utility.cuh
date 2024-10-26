@@ -9,8 +9,8 @@ __device__ void texWrite(float4 data, cudaSurfaceObject_t tex_surf, int2 pix);
 __device__ void texWrite(float4 data, cudaSurfaceObject_t tex_surf, float2 pix);
 
 // Functions to compute screen-space derivatives
-__device__ float4 dFdx(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res);
-__device__ float4 dFdy(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res);
+__device__ float4 dFdx(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res, int stride = 1);
+__device__ float4 dFdy(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res, int stride = 1);
 
 __device__ float4 texReadBilinear(const cudaSurfaceObject_t& tex_surface,
 	float2 fpix, int2 t_res, bool lerp_alpha);

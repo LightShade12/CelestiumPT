@@ -18,6 +18,7 @@
 */
 
 constexpr int SVGF_MAX_ITERATIONS = 4;
+constexpr int ASVGF_MAX_ITERATIONS = 4;
 
 class FrameBuffer {
 public:
@@ -135,6 +136,8 @@ struct CelestiumPT_API
 	//FrameBuffer HistoryObjectIDBuffer;
 	//FrameBuffer HistoryTriangleIDBuffer;
 	FrameBuffer SparseGradientBuffer;
+	FrameBuffer DenseGradientFrontBuffer;
+	FrameBuffer DenseGradientBackBuffer;
 
 	//temporal filter
 	FrameBuffer IntegratedMomentsFrontBuffer;
@@ -217,6 +220,13 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->SparseGradientBuffer.resizeResolution(
 		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
 		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+	m_CelestiumPTResourceAPI->DenseGradientFrontBuffer.resizeResolution(
+		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+	m_CelestiumPTResourceAPI->DenseGradientBackBuffer.resizeResolution(
+		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+
 	m_CelestiumPTResourceAPI->HistoryShadingBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	//debugviews
@@ -248,7 +258,7 @@ void texCopy(const FrameBuffer& src, const FrameBuffer& dst, int t_width, int t_
 	glFinish();
 	GLenum err = glGetError();
 	if (err != GL_NO_ERROR) {
-		printf("%s\n", glErrorString(err));
+		printf("[TEXCOPY]: %s\n", glErrorString(err));
 	}
 }
 
@@ -313,6 +323,10 @@ void Renderer::renderFrame()
 		// ASVGF -------------------------------
 		m_CelestiumPTResourceAPI->SparseGradientBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_sparse_gradient_surfobject));
+		m_CelestiumPTResourceAPI->DenseGradientFrontBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_dense_gradient_front_surfobject));
+		m_CelestiumPTResourceAPI->DenseGradientBackBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_dense_gradient_back_surfobject));
 		m_CelestiumPTResourceAPI->HistoryShadingBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_shading_surfobject));
 
@@ -375,6 +389,30 @@ void Renderer::renderFrame()
 			//sync
 			checkCudaErrors(cudaGetLastError());
 			checkCudaErrors(cudaDeviceSynchronize());
+			texCopy(m_CelestiumPTResourceAPI->SparseGradientBuffer,
+				m_CelestiumPTResourceAPI->DenseGradientFrontBuffer,
+				(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+				(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+		}
+
+		//Gradient atrous===================================================
+		{
+			for (int iter = 0; iter < ASVGF_MAX_ITERATIONS; iter++)
+			{
+				int stepsize = pow(2, iter);
+
+				atrousGradient << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals, stepsize);
+				//sync-------
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+
+				//working buffers swap----------
+				texCopy(m_CelestiumPTResourceAPI->DenseGradientBackBuffer,
+					m_CelestiumPTResourceAPI->DenseGradientFrontBuffer,
+					(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+					(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+			}
 		}
 
 		//Temporal accumulation===========================================
@@ -408,7 +446,8 @@ void Renderer::renderFrame()
 		//SVGF atrous====================================
 		if (m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.svgf_enabled)
 		{
-			for (int iter = 0; iter < SVGF_MAX_ITERATIONS; iter++) {
+			for (int iter = 0; iter < SVGF_MAX_ITERATIONS; iter++)
+			{
 				int stepsize = pow(2, iter);
 
 				atrousSVGF << < m_CudaResourceAPI->m_BlockGridDimensions,
@@ -505,6 +544,10 @@ void Renderer::renderFrame()
 		//ASVGF---------------------------------------------
 		m_CelestiumPTResourceAPI->SparseGradientBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_sparse_gradient_surfobject));
+		m_CelestiumPTResourceAPI->DenseGradientFrontBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_dense_gradient_front_surfobject));
+		m_CelestiumPTResourceAPI->DenseGradientBackBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_dense_gradient_back_surfobject));
 		m_CelestiumPTResourceAPI->HistoryShadingBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_shading_surfobject));
 
@@ -632,6 +675,11 @@ GLuint Renderer::getIntegratedVarianceTargetTextureName() const
 GLuint Renderer::getSparseGradientTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->SparseGradientBuffer.m_RenderTargetTextureName;
+}
+
+GLuint Renderer::getDenseGradientTargetTextureName() const
+{
+	return m_CelestiumPTResourceAPI->DenseGradientFrontBuffer.m_RenderTargetTextureName;
 }
 
 int Renderer::getSPP() const

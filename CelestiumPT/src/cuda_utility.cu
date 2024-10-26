@@ -17,19 +17,17 @@ __device__ void texWrite(float4 data, cudaSurfaceObject_t tex_surf, float2 pix) 
 	surf2Dwrite<float4>(data, tex_surf, ipix.x * (int)sizeof(float4), ipix.y);
 }
 
-//ensure this is not oob
-__device__ float4 dFdx(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res) {
+__device__ float4 dFdx(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res, int stride) {
 	float4 d0 = texReadNearest(data_surfobj, c_pix);
-	int2 next = c_pix + make_int2(1, 0);
+	int2 next = c_pix + make_int2(stride, 0);
 	next.x = clamp(next.x, 0, res.x - 1);
 	float4 d1 = texReadNearest(data_surfobj, next);
 	return d1 - d0;
 }
 
-//ensure this is not oob
-__device__ float4 dFdy(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res) {
+__device__ float4 dFdy(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res, int stride) {
 	float4 d0 = texReadNearest(data_surfobj, c_pix);
-	int2 next = c_pix + make_int2(0, 1);
+	int2 next = c_pix + make_int2(0, stride);
 	next.y = clamp(next.y, 0, res.y - 1);
 	float4 d1 = texReadNearest(data_surfobj, next);
 	return d1 - d0;

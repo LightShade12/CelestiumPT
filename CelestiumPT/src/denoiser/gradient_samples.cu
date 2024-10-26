@@ -44,7 +44,7 @@ __global__ void createGradientSamples(const IntegratorGlobals t_globals)
 	float3 delta_col = make_float3((delta < 0) ? fabsf(delta) : 0,
 		(delta > 0) ? fabsf(delta) : 0,
 		0);
-
+	//delta_col = make_float3(fabsf(delta));
 	texWrite(make_float4(delta_col, normalization_factor),
 		t_globals.FrameBuffer.asvgf_sparse_gradient_surfobject, grad_pix);
 }

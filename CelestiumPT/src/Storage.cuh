@@ -30,6 +30,8 @@ public:
 	
 	//asvgf
 	cudaSurfaceObject_t asvgf_sparse_gradient_surfobject;
+	cudaSurfaceObject_t asvgf_dense_gradient_front_surfobject;
+	cudaSurfaceObject_t asvgf_dense_gradient_back_surfobject;
 	cudaSurfaceObject_t history_shading_surfobject;
 
 	//svgf

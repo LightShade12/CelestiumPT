@@ -24,6 +24,7 @@
     <CudaCompile Include="src\bsdf.cu" />
     <CudaCompile Include="src\camera.cu" />
     <CudaCompile Include="src\cuda_utility.cu" />
+    <CudaCompile Include="src\denoiser\gradient_atrous.cu" />
     <CudaCompile Include="src\denoiser\gradient_merging.cu" />
     <CudaCompile Include="src\denoiser\gradient_samples.cu" />
     <CudaCompile Include="src\denoiser\variance_estimation.cu" />
