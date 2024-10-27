@@ -397,9 +397,6 @@ __global__ void tracePathSample(const IntegratorGlobals t_globals)
 	//--------------------------------------------------
 
 	uint32_t seed = texReadNearest(t_globals.FrameBuffer.seeds_surfobject, current_pix).x;
-	//seed *= t_globals.FrameIndex;
-
-	//--------------------------------------------------
 
 	//RGBSpectrum sampled_radiance = IntegratorPipeline::evaluatePixelSample(t_globals, make_float2(current_pix));
 
