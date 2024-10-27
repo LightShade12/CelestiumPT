@@ -38,6 +38,7 @@ public:
 	GLuint getIntegratedVarianceTargetTextureName() const;
 	GLuint getSparseGradientTargetTextureName() const;
 	GLuint getDenseGradientTargetTextureName() const;
+	GLuint getMiscDebugTextureName() const;
 
 	int getSPP() const;
 	void setCamera(int idx);

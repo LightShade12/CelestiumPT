@@ -27,6 +27,7 @@
     <CudaCompile Include="src\denoiser\gradient_atrous.cu" />
     <CudaCompile Include="src\denoiser\gradient_merging.cu" />
     <CudaCompile Include="src\denoiser\gradient_samples.cu" />
+    <CudaCompile Include="src\denoiser\merge_samples.cu" />
     <CudaCompile Include="src\denoiser\variance_estimation.cu" />
     <CudaCompile Include="src\error_check.cu" />
     <CudaCompile Include="src\film.cu" />

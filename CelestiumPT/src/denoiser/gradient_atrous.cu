@@ -35,7 +35,7 @@ __global__ void atrousGradient(const IntegratorGlobals t_globals, int t_stepsize
 	if (sampled_objID < 0) {
 		//no filter
 
-		texWrite(make_float4(0, 0, 0, 1),
+		texWrite(make_float4(0, 0, 0, 0),
 			t_globals.FrameBuffer.asvgf_dense_gradient_back_surfobject, grad_pix);
 		return;
 	}

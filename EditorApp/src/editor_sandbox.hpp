@@ -38,7 +38,8 @@ public:
 		HEATMAP = 12,
 		BBOXHEATMAP = 13,
 		SPARSE_GRAD = 14,
-		DENSE_GRAD = 15
+		DENSE_GRAD = 15,
+		MISC_DBG = 16
 	};
 
 private:

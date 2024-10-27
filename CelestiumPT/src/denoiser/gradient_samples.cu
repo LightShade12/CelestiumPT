@@ -21,11 +21,12 @@ __global__ void createGradientSamples(const IntegratorGlobals t_globals)
 	sampling_pix = clamp(sampling_pix, { 0,0 }, frame_res - 1);
 
 	int current_objID = texReadNearest(t_globals.FrameBuffer.objectID_surfobject, sampling_pix).x;
+	float4 seed = texReadNearest(t_globals.FrameBuffer.seeds_surfobject, sampling_pix);
 
-	//void sample/ miss/ sky
-	if (current_objID < 0)
+	//void sample/ miss/ sky; invalid grad sample
+	if (current_objID < 0 || seed.w < 0)
 	{
-		texWrite(make_float4(0, 0, 0, 1),
+		texWrite(make_float4(0, 0, 0, 0),
 			t_globals.FrameBuffer.asvgf_sparse_gradient_surfobject, grad_pix);
 		return;
 	}

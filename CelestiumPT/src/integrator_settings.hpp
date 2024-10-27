@@ -3,6 +3,7 @@
 struct IntegratorSettings {
 	bool accumulate = false;
 	bool temporal_filter_enabled = false;
+	bool adaptive_temporal_filter_enabled = false;
 	bool svgf_enabled = false;
 	bool use_5x5_filter = false;
 

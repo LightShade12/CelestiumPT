@@ -177,7 +177,7 @@ void EditorSandbox::onRender(float delta_secs)
 					ImGui::Text("SPP:%d\n", m_Renderer.getSPP());
 					ImGui::SliderInt("max SPP", &g_max_spp, 1, 100);
 					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0Albedo\0Variance\0Heatmap\0bbox heatmap\0sparse grads\0dense grads\0");
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0Albedo\0Variance\0Heatmap\0bbox heatmap\0sparse grads\0dense grads\0Misc debugview\0");
 					if (curent_renderview == RenderView::GAS) {
 						ImGui::SliderFloat("GAS shading brightness",
 							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 0.1);
@@ -200,6 +200,7 @@ void EditorSandbox::onRender(float delta_secs)
 					ImGui::Checkbox("Accumulation", &(m_Renderer.getIntegratorSettings()->accumulate));
 					ImGui::Checkbox("Temporal accumulation", &(m_Renderer.getIntegratorSettings()->temporal_filter_enabled));
 					ImGui::Checkbox("SVGF denoiser", &(m_Renderer.getIntegratorSettings()->svgf_enabled));
+					ImGui::Checkbox("Adaptive filter", &(m_Renderer.getIntegratorSettings()->adaptive_temporal_filter_enabled));
 					ImGui::Indent();
 					if (m_Renderer.getIntegratorSettings()->svgf_enabled) {
 						ImGui::Checkbox("Use 5x5 filter", &(m_Renderer.getIntegratorSettings()->use_5x5_filter));
@@ -358,6 +359,12 @@ void EditorSandbox::onRender(float delta_secs)
 			else if (curent_renderview == RenderView::DENSE_GRAD) {
 				if (m_Renderer.getDenseGradientTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getDenseGradientTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::MISC_DBG) {
+				if (m_Renderer.getMiscDebugTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getMiscDebugTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(),
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
