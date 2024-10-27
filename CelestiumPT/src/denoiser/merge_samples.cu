@@ -1,6 +1,17 @@
 #include "denoiser.cuh"
 #include "cuda_utility.cuh"
+#include "samplers.cuh"
 #include "maths/constants.cuh"
+
+__device__ int2 randomPosStratum(uint32_t seed) {
+	float2 rand_offset = Samplers::get2D_PCGHash(seed);  // Already in [0, 1] range
+
+	int2 pos;
+	pos.x = int(rand_offset.x * ASVGF_STRATUM_SIZE);
+	pos.y = int(rand_offset.y * ASVGF_STRATUM_SIZE);
+
+	return pos;
+}
 
 __global__ void mergeSamples(const IntegratorGlobals t_globals)
 {
@@ -15,10 +26,17 @@ __global__ void mergeSamples(const IntegratorGlobals t_globals)
 	if ((current_pix.x >= frame_res.x / ASVGF_STRATUM_SIZE) || (current_pix.y >= frame_res.y / ASVGF_STRATUM_SIZE)) return;
 	//=========================================================
 
-	int2 grad_pix = current_pix;
+	const int2 grad_pix = current_pix;
 
 	//sample selection------------------
-	int2 pos_in_stratum = make_int2(1);//hardcoded centre selection
+	uint32_t seed = grad_pix.x + grad_pix.y * frame_res.x;
+	seed *= t_globals.FrameIndex + 2;
+	//int2 pos_in_stratum = make_int2(1);//hardcoded centre selection
+	int2 pos_in_stratum = randomPosStratum(seed);
+	//store stratum pos
+	texWrite(make_float4(make_float3(packStratumPos(pos_in_stratum)), 1),
+		t_globals.FrameBuffer.asvgf_gradient_sample_surfobject,
+		grad_pix);
 
 	int2 sampling_pix = grad_pix * ASVGF_STRATUM_SIZE + pos_in_stratum;
 	sampling_pix = clamp(sampling_pix, { 0,0 }, frame_res - 1);

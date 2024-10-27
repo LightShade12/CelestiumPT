@@ -18,3 +18,7 @@ __device__ float4 texReadBilinear(const cudaSurfaceObject_t& tex_surface,
 // computes a 3x3 gaussian blur of the texture_data, centered around
 // the current pixel
 __device__ float texReadGaussianWeighted(cudaSurfaceObject_t t_texture, int2 t_res, int2 t_current_pix);
+
+__device__ float packStratumPos(int2 pos);
+
+__device__ int2 unpackStratumPos(int d);

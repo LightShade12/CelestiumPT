@@ -16,8 +16,11 @@ __global__ void createGradientSamples(const IntegratorGlobals t_globals)
 	if ((current_pix.x >= frame_res.x / ASVGF_STRATUM_SIZE) || (current_pix.y >= frame_res.y / ASVGF_STRATUM_SIZE)) return;
 	//=========================================================
 
-	int2 pos_in_stratum = make_int2(1);
 	int2 grad_pix = current_pix;
+
+	float4 gradFB = texReadNearest(t_globals.FrameBuffer.asvgf_gradient_sample_surfobject, grad_pix);
+
+	int2 pos_in_stratum = unpackStratumPos(gradFB.x);
 	int2 sampling_pix = grad_pix * ASVGF_STRATUM_SIZE + pos_in_stratum;
 	sampling_pix = clamp(sampling_pix, { 0,0 }, frame_res - 1);
 

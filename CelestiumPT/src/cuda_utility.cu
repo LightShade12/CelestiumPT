@@ -1,5 +1,6 @@
 #include "cuda_utility.cuh"
 #include "maths/vector_maths.cuh"
+#include "maths/constants.cuh"
 #include "storage.cuh"
 
 __device__ float4 texReadNearest(cudaSurfaceObject_t tex_surf, int2 pix) {
@@ -95,4 +96,14 @@ __device__ float texReadGaussianWeighted(cudaSurfaceObject_t t_texture, int2 t_r
 	}
 
 	return sum;
+}
+
+__device__ float packStratumPos(int2 pos)
+{
+	return pos.x + (pos.y * (int)ASVGF_STRATUM_SIZE);
+}
+
+__device__ int2 unpackStratumPos(int d)
+{
+	return make_int2(d % (int)ASVGF_STRATUM_SIZE, d / ASVGF_STRATUM_SIZE);
 }

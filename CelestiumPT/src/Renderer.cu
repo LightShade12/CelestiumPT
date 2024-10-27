@@ -150,6 +150,7 @@ struct CelestiumPT_API
 	FrameBuffer ASVGFLuminanceFrontBuffer;
 	FrameBuffer ASVGFLuminanceBackBuffer;
 
+	FrameBuffer GradientSampleBuffer;
 	FrameBuffer SparseGradientBuffer;
 	FrameBuffer DenseGradientFrontBuffer;
 	FrameBuffer DenseGradientBackBuffer;
@@ -233,6 +234,9 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->IntegratedMomentsBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	//asvgf
+	m_CelestiumPTResourceAPI->GradientSampleBuffer.resizeResolution(
+		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
 	m_CelestiumPTResourceAPI->SparseGradientBuffer.resizeResolution(
 		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
 		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
@@ -374,6 +378,8 @@ void Renderer::renderFrame()
 		m_CelestiumPTResourceAPI->ASVGFVarianceBackBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_variance_back_surfobject));
 
+		m_CelestiumPTResourceAPI->GradientSampleBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_gradient_sample_surfobject));
 		m_CelestiumPTResourceAPI->SparseGradientBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_sparse_gradient_surfobject));
 		m_CelestiumPTResourceAPI->DenseGradientFrontBuffer.beginRender(
@@ -653,6 +659,8 @@ void Renderer::renderFrame()
 		m_CelestiumPTResourceAPI->ASVGFVarianceBackBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_variance_back_surfobject));
 
+		m_CelestiumPTResourceAPI->GradientSampleBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_gradient_sample_surfobject));
 		m_CelestiumPTResourceAPI->SparseGradientBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_sparse_gradient_surfobject));
 		m_CelestiumPTResourceAPI->DenseGradientFrontBuffer.endRender(

@@ -29,6 +29,7 @@ public:
 	cudaSurfaceObject_t integrated_moments_back_surfobject;//write only
 
 	//asvgf
+	cudaSurfaceObject_t asvgf_gradient_sample_surfobject;
 	cudaSurfaceObject_t asvgf_sparse_gradient_surfobject;
 	cudaSurfaceObject_t asvgf_dense_gradient_front_surfobject;
 	cudaSurfaceObject_t asvgf_dense_gradient_back_surfobject;
