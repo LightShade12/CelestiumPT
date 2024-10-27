@@ -145,6 +145,11 @@ struct CelestiumPT_API
 	FrameBuffer HistoryUVsBuffer;
 	FrameBuffer HistoryBarycentricsBuffer;
 
+	FrameBuffer ASVGFVarianceFrontBuffer;
+	FrameBuffer ASVGFVarianceBackBuffer;
+	FrameBuffer ASVGFLuminanceFrontBuffer;
+	FrameBuffer ASVGFLuminanceBackBuffer;
+
 	FrameBuffer SparseGradientBuffer;
 	FrameBuffer DenseGradientFrontBuffer;
 	FrameBuffer DenseGradientBackBuffer;
@@ -235,6 +240,22 @@ void Renderer::resizeResolution(int width, int height)
 		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
 		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
 	m_CelestiumPTResourceAPI->DenseGradientBackBuffer.resizeResolution(
+		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+
+	m_CelestiumPTResourceAPI->ASVGFVarianceFrontBuffer.resizeResolution(
+		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+
+	m_CelestiumPTResourceAPI->ASVGFVarianceBackBuffer.resizeResolution(
+		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+
+	m_CelestiumPTResourceAPI->ASVGFLuminanceFrontBuffer.resizeResolution(
+		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+
+	m_CelestiumPTResourceAPI->ASVGFLuminanceBackBuffer.resizeResolution(
 		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
 		(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
 
@@ -343,6 +364,16 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.integrated_moments_back_surfobject));
 
 		// ASVGF -------------------------------
+		m_CelestiumPTResourceAPI->ASVGFLuminanceFrontBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_luminance_front_surfobject));
+		m_CelestiumPTResourceAPI->ASVGFLuminanceBackBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_luminance_back_surfobject));
+
+		m_CelestiumPTResourceAPI->ASVGFVarianceFrontBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_variance_front_surfobject));
+		m_CelestiumPTResourceAPI->ASVGFVarianceBackBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_variance_back_surfobject));
+
 		m_CelestiumPTResourceAPI->SparseGradientBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_sparse_gradient_surfobject));
 		m_CelestiumPTResourceAPI->DenseGradientFrontBuffer.beginRender(
@@ -467,6 +498,14 @@ void Renderer::renderFrame()
 				//working buffers swap----------
 				texCopy(m_CelestiumPTResourceAPI->DenseGradientBackBuffer,
 					m_CelestiumPTResourceAPI->DenseGradientFrontBuffer,
+					(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+					(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+				texCopy(m_CelestiumPTResourceAPI->ASVGFLuminanceBackBuffer,
+					m_CelestiumPTResourceAPI->ASVGFLuminanceFrontBuffer,
+					(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
+					(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
+				texCopy(m_CelestiumPTResourceAPI->ASVGFVarianceBackBuffer,
+					m_CelestiumPTResourceAPI->ASVGFVarianceFrontBuffer,
 					(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
 					(m_NativeRenderResolutionHeight + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE);
 			}
@@ -604,6 +643,16 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.integrated_moments_back_surfobject));
 
 		//ASVGF---------------------------------------------
+		m_CelestiumPTResourceAPI->ASVGFLuminanceFrontBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_luminance_front_surfobject));
+		m_CelestiumPTResourceAPI->ASVGFLuminanceBackBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_luminance_back_surfobject));
+
+		m_CelestiumPTResourceAPI->ASVGFVarianceFrontBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_variance_front_surfobject));
+		m_CelestiumPTResourceAPI->ASVGFVarianceBackBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_variance_back_surfobject));
+
 		m_CelestiumPTResourceAPI->SparseGradientBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.asvgf_sparse_gradient_surfobject));
 		m_CelestiumPTResourceAPI->DenseGradientFrontBuffer.endRender(

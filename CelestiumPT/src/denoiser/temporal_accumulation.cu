@@ -37,7 +37,7 @@ __device__ bool testReprojectedNormals(float3 n1, float3 n2)
 //from RTGL1
 __device__ float getAntilagAlpha(const float gradSample, const float normFactor)
 {
-	const float lambda = normFactor > 0.0001 ?
+	const float lambda = normFactor > 0.01 ?
 		clamp(fabsf(gradSample) / normFactor, 0.0, 1.0) :
 		0.0;
 

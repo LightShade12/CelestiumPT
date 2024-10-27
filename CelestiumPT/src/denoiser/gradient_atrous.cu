@@ -1,6 +1,7 @@
 #include "denoiser.cuh"
 #include "storage.cuh"
 #include "maths/constants.cuh"
+#include "maths/linear_algebra.cuh"
 #include "cuda_utility.cuh"
 #include "svgf_weight_functions.cuh"
 
@@ -46,11 +47,17 @@ __global__ void atrousGradient(const IntegratorGlobals t_globals, int t_stepsize
 		dFdy(t_globals.FrameBuffer.depth_surfobject, sampling_pix, frame_res, ASVGF_STRATUM_SIZE).x);
 
 	float4 sampled_gradient = texReadNearest(t_globals.FrameBuffer.asvgf_dense_gradient_front_surfobject, grad_pix);
+	float sampled_luminance = texReadNearest(t_globals.FrameBuffer.asvgf_luminance_front_surfobject, grad_pix).x;
+	float sampled_variance = texReadNearest(t_globals.FrameBuffer.asvgf_variance_front_surfobject, grad_pix).x;
+	float sampled_filtered_variance = texReadGaussianWeighted(t_globals.FrameBuffer.asvgf_variance_front_surfobject, grad_res,
+		grad_pix);
 
 	float3 sampled_normal = make_float3(texReadNearest(t_globals.FrameBuffer.world_normals_surfobject, sampling_pix));
 	float sampled_depth = texReadNearest(t_globals.FrameBuffer.depth_surfobject, sampling_pix).x;
 
 	float4 sum_gradient = sampled_gradient;
+	float sum_lum = sampled_luminance;
+	float sum_var = sampled_variance;
 	float wsum = 1;
 
 	int radius = 1;//3x3 filter
@@ -68,6 +75,8 @@ __global__ void atrousGradient(const IntegratorGlobals t_globals, int t_stepsize
 			sampling_tap_pix = clamp(sampling_tap_pix, make_int2(0, 0), (frame_res - 1));
 
 			float4 tap_gradient = texReadNearest(t_globals.FrameBuffer.asvgf_dense_gradient_front_surfobject, grad_tap_pix);
+			float tap_luminance = texReadNearest(t_globals.FrameBuffer.asvgf_luminance_front_surfobject, grad_tap_pix).x;
+			float tap_variance = texReadNearest(t_globals.FrameBuffer.asvgf_variance_front_surfobject, grad_tap_pix).x;
 
 			float3 tap_normal = make_float3(texReadNearest(t_globals.FrameBuffer.world_normals_surfobject, sampling_tap_pix));
 			float tap_depth = texReadNearest(t_globals.FrameBuffer.depth_surfobject, sampling_tap_pix).x;
@@ -75,17 +84,26 @@ __global__ void atrousGradient(const IntegratorGlobals t_globals, int t_stepsize
 
 			float nw = normalWeight(sampled_normal, tap_normal);
 			float dw = depthWeight(sampled_depth, tap_depth, dgrad, make_float2(offset * ASVGF_STRATUM_SIZE));
+			float lw = luminanceWeight(sampled_luminance, tap_luminance, sampled_filtered_variance);
 
-			float w = nw * dw * (sampled_objID == tap_objID);
+			float w = nw * dw * lw * (sampled_objID == tap_objID);
 			float h = box_kernel[(x + radius) + (y + radius) * ((2 * radius) + 1)];
 			float hw = h * w;
-			
+
 			sum_gradient += tap_gradient * hw;
+			sum_lum += tap_luminance * hw;
+			sum_var += tap_variance * Sqr(hw);
 			wsum += hw;
 		}
 	}
 	sum_gradient /= wsum;
+	sum_lum /= wsum;
+	sum_var /= Sqr(wsum);
 
 	texWrite(sum_gradient, t_globals.FrameBuffer.asvgf_dense_gradient_back_surfobject,
+		grad_pix);
+	texWrite(make_float4(make_float3(sum_lum), 1), t_globals.FrameBuffer.asvgf_luminance_back_surfobject,
+		grad_pix);
+	texWrite(make_float4(make_float3(sum_var), 1), t_globals.FrameBuffer.asvgf_variance_back_surfobject,
 		grad_pix);
 }

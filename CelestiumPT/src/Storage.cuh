@@ -33,6 +33,11 @@ public:
 	cudaSurfaceObject_t asvgf_dense_gradient_front_surfobject;
 	cudaSurfaceObject_t asvgf_dense_gradient_back_surfobject;
 
+	cudaSurfaceObject_t asvgf_luminance_front_surfobject;
+	cudaSurfaceObject_t asvgf_luminance_back_surfobject;
+	cudaSurfaceObject_t asvgf_variance_back_surfobject;
+	cudaSurfaceObject_t asvgf_variance_front_surfobject;
+
 	cudaSurfaceObject_t history_shading_surfobject;
 	cudaSurfaceObject_t history_seeds_surfobject;
 	cudaSurfaceObject_t seeds_surfobject;

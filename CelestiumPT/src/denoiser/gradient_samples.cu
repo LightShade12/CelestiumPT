@@ -1,6 +1,7 @@
 #include "denoiser.cuh"
 #include "cuda_utility.cuh"
 #include "maths/constants.cuh"
+#include "maths/linear_algebra.cuh"
 
 __global__ void createGradientSamples(const IntegratorGlobals t_globals)
 {
@@ -31,6 +32,39 @@ __global__ void createGradientSamples(const IntegratorGlobals t_globals)
 		return;
 	}
 
+	//init luminance estimates
+
+	float stratum_luminance_estimate = 0;
+	float stratum_variance_estimate = 0;
+
+	float s = 0, s2 = 0;
+	constexpr int stratum_radius = ASVGF_STRATUM_SIZE / 2.f;
+	int samples = 0;
+
+	//stratum scan
+	for (int y = -stratum_radius; y <= stratum_radius; y++) {
+		for (int x = -stratum_radius; x <= stratum_radius; x++)
+		{
+			int2 offset = make_int2(x, y);
+			int2 tap_pix = sampling_pix + offset;
+			tap_pix = clamp(tap_pix, make_int2(0, 0), (frame_res - 1));
+
+			//at this point history contains current frame shading
+			float3 color = make_float3(texReadNearest(t_globals.FrameBuffer.raw_irradiance_surfobject, tap_pix));
+			float lum = getLuminance(RGBSpectrum(color));
+
+			//TODO: include weight factor for objectID check
+			stratum_luminance_estimate += lum;
+			s += lum;
+			s2 += Sqr(lum);
+
+			samples++;
+		}
+	}
+
+	stratum_luminance_estimate /= samples;
+	stratum_variance_estimate = fabsf((s2 / samples) - Sqr(s / samples));
+
 	//full-res samples
 	float4 current_shading = texReadNearest(t_globals.FrameBuffer.raw_irradiance_surfobject, sampling_pix);
 	float4 prev_shading = texReadNearest(t_globals.FrameBuffer.history_shading_surfobject, sampling_pix);
@@ -46,6 +80,11 @@ __global__ void createGradientSamples(const IntegratorGlobals t_globals)
 		(delta > 0) ? fabsf(delta) : 0,
 		0);
 	//delta_col = make_float3(fabsf(delta));
+
 	texWrite(make_float4(delta_col, normalization_factor),
 		t_globals.FrameBuffer.asvgf_sparse_gradient_surfobject, grad_pix);
+	texWrite(make_float4(make_float3(stratum_luminance_estimate), 1),
+		t_globals.FrameBuffer.asvgf_luminance_front_surfobject, grad_pix);
+	texWrite(make_float4(make_float3(stratum_variance_estimate), 1),
+		t_globals.FrameBuffer.asvgf_variance_front_surfobject, grad_pix);
 }
