@@ -3,6 +3,7 @@
 #include "storage.cuh"
 #include "integrator.cuh"
 #include "denoiser/denoiser.cuh"
+#include "histogram.cuh"
 #include "render_passes.cuh"
 #include "maths/constants.cuh"
 
@@ -186,6 +187,9 @@ Renderer::Renderer()
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
 	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate, sizeof(SceneGeometry));
+	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.GlobalHistogramBuffer, sizeof(uint32_t) * HISTOGRAM_SIZE);
+	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.AverageLuminance, sizeof(float));
+	*m_CelestiumPTResourceAPI->m_IntegratorGlobals.AverageLuminance = 0;
 
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate->SkyLight = InfiniteLight();
 
@@ -311,6 +315,7 @@ void texCopy(const FrameBuffer& src, const FrameBuffer& dst, int t_width, int t_
 
 void Renderer::renderFrame()
 {
+	//printf("avg lum: %.3f\n", *(m_CelestiumPTResourceAPI->m_IntegratorGlobals.AverageLuminance));
 	//pre render-------------------------------------------------------------
 	{
 		// Post ---------------------------------
@@ -583,6 +588,34 @@ void Renderer::renderFrame()
 		//Compose=====================
 		{
 			composeCompositeImage << < m_CudaResourceAPI->m_BlockGridDimensions,
+				m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
+		}
+		{
+			//launching with 16x16 thread blocks
+			dim3 tb1 = dim3(16, 16);
+			dim3 gd1((m_NativeRenderResolutionWidth + tb1.x - 1) / tb1.x,
+				(m_NativeRenderResolutionHeight + tb1.y - 1) / tb1.y);
+
+			computeHistogram << < gd1, tb1 >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
+			//-------------------------
+			//launching with 256 x 1 threads, 1 block
+			dim3 tb2 = dim3(256, 1);
+			dim3 gd2 = dim3(1);
+
+			computeAverageLuminance << < gd2, tb2 >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
+		}
+		//Tonemap===================
+		{
+			toneMap << < m_CudaResourceAPI->m_BlockGridDimensions,
 				m_CudaResourceAPI->m_ThreadBlockDimensions >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);
 			//sync
 			checkCudaErrors(cudaGetLastError());
@@ -891,6 +924,8 @@ IntegratorSettings* Renderer::getIntegratorSettings()
 
 Renderer::~Renderer()
 {
+	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.AverageLuminance);
+	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.GlobalHistogramBuffer);
 	cudaFree(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate);//TODO: non critical ownership issues with devicescene
 	delete m_CudaResourceAPI;
 	m_CelestiumPTResourceAPI->DeviceScene.DeviceCameras.clear();

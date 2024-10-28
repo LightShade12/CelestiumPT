@@ -98,6 +98,7 @@ __global__ void composeCompositeImage(const IntegratorGlobals t_globals)
 	if ((current_pix.x >= frame_res.x) || (current_pix.y >= frame_res.y)) return;
 	//----------------------------------------------
 
+	//MODULATE
 	float4 sampled_irradiance = texReadNearest(t_globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
 		current_pix);
 	RGBSpectrum sampled_radiance = RGBSpectrum(sampled_irradiance);
@@ -105,11 +106,14 @@ __global__ void composeCompositeImage(const IntegratorGlobals t_globals)
 	float4 sampled_albedo = texReadNearest(t_globals.FrameBuffer.albedo_surfobject, current_pix);
 
 	sampled_radiance *= RGBSpectrum(sampled_albedo);//MODULATE assume BRDF normalised
+	//--------------
 
-	RGBSpectrum frag_spectrum = sampled_radiance;
-	//EOTF
-	frag_spectrum = gammaCorrection(frag_spectrum);
-	frag_spectrum = toneMapping(frag_spectrum, t_globals.SceneDescriptor.ActiveCamera->exposure);
+	RGBSpectrum frag_spectrum = sampled_radiance;//TODO: retardation
+
+	////normalize
+	//frag_spectrum = toneMapping(frag_spectrum, t_globals.SceneDescriptor.ActiveCamera->exposure);
+	////EOTF
+	//frag_spectrum = gammaCorrection(frag_spectrum);
 
 	float4 frag_color = make_float4(frag_spectrum, 1);
 

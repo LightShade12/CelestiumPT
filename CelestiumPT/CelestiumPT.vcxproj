@@ -31,6 +31,7 @@
     <CudaCompile Include="src\device_texture.cu" />
     <CudaCompile Include="src\error_check.cu" />
     <CudaCompile Include="src\film.cu" />
+    <CudaCompile Include="src\histogram.cu" />
     <CudaCompile Include="src\integrator.cu" />
     <CudaCompile Include="src\light.cu" />
     <CudaCompile Include="src\material.cu" />
@@ -69,6 +70,7 @@
     <ClInclude Include="src\device_texture.cuh" />
     <ClInclude Include="src\error_check.cuh" />
     <ClInclude Include="src\film.cuh" />
+    <ClInclude Include="src\histogram.cuh" />
     <ClInclude Include="src\host_camera.hpp" />
     <ClInclude Include="src\host_material.hpp" />
     <ClInclude Include="src\host_mesh.hpp" />
