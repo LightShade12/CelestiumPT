@@ -593,6 +593,9 @@ void Renderer::renderFrame()
 			checkCudaErrors(cudaGetLastError());
 			checkCudaErrors(cudaDeviceSynchronize());
 		}
+
+		//Histogram compute================
+		if (m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.auto_exposure_enabled)
 		{
 			//launching with 16x16 thread blocks
 			dim3 tb1 = dim3(16, 16);
@@ -613,6 +616,7 @@ void Renderer::renderFrame()
 			checkCudaErrors(cudaGetLastError());
 			checkCudaErrors(cudaDeviceSynchronize());
 		}
+
 		//Tonemap===================
 		{
 			toneMap << < m_CudaResourceAPI->m_BlockGridDimensions,

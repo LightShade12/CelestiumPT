@@ -261,7 +261,9 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		//miss--
 		if (payload.hit_distance < 0)//TODO: standardize invalid/miss payload definition
 		{
-			light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray) * RGBSpectrum(0.8, 1, 1.5) * throughtput;
+			if (t_globals.IntegratorCFG.skylight_enabled)
+				light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray)
+				* RGBSpectrum(0.8, 1, 1.5) * throughtput * t_globals.IntegratorCFG.skylight_intensity;
 			break;
 		}
 
@@ -293,13 +295,13 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 			light_sampler, t_seed, primary_surface);
 		light += Ld * throughtput;
 
-		if (true) {
+		if (t_globals.IntegratorCFG.sunlight_enabled) {
 			bool sunhit = !IntersectP(t_globals, Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
 				sunpos + make_float3(Samplers::get2D_PCGHash(t_seed), Samplers::get1D_PCGHash(t_seed)) * 5.f),
 				100);
 			if (sunhit) {
 				RGBSpectrum f_c = suncol * bsdf.f(wo, normalize(sunpos), primary_surface)
-					* dot(payload.w_shading_norm, normalize(sunpos)) * 20.f;
+					* dot(payload.w_shading_norm, normalize(sunpos)) * t_globals.IntegratorCFG.sunlight_intensity;
 				light += f_c * throughtput;
 			}
 		}

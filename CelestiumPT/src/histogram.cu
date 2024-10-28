@@ -28,9 +28,8 @@ __device__ uint colorToBin(float3 hdrColor, float minLogLum, float inverseLogLum
 	return uint(log_lum * 254.0 + 1.0);
 }
 
-__constant__ constexpr float LOG_LUM_RANGE = 15.f;//TODO: what values for these?
-__constant__ constexpr float MIN_LOG_LUM = -10.f;
-__constant__ constexpr float TIME_COEFF = 0.1;
+//__constant__ constexpr float LOG_LUM_RANGE = 15.f;//TODO: what values for these?
+//__constant__ constexpr float MIN_LOG_LUM = -10.f;
 
 //Launch with thread dims 16x16=256
 __global__ void computeHistogram(const IntegratorGlobals t_globals)
@@ -59,7 +58,8 @@ __global__ void computeHistogram(const IntegratorGlobals t_globals)
 		float3 linear_col = make_float3(texReadNearest(t_globals.FrameBuffer.composite_surfobject,
 			current_pix));
 
-		uint bin_idx = colorToBin(linear_col, MIN_LOG_LUM, 1.f / LOG_LUM_RANGE);
+		uint bin_idx = colorToBin(linear_col, t_globals.IntegratorCFG.auto_exposure_min_comp,
+			(1.f / t_globals.IntegratorCFG.auto_exposure_max_comp));
 
 		atomicAdd(&(shared_histogram[bin_idx]), 1);
 
@@ -117,12 +117,13 @@ __global__ void computeAverageLuminance(const IntegratorGlobals t_globals)
 			float weightedLogAverage = (shared_histogram[0] / max((frame_res.x * frame_res.y) - float(count_for_this_bin), 1.0)) - 1.0;
 
 			// Map from our histogram space to actual luminance
-			float weightedAvgLum = exp2(((weightedLogAverage / 254.0) * LOG_LUM_RANGE) + MIN_LOG_LUM);
+			float weightedAvgLum = exp2(((weightedLogAverage / 254.0) * t_globals.IntegratorCFG.auto_exposure_max_comp) +
+				t_globals.IntegratorCFG.auto_exposure_min_comp);
 
 			// The new stored value will be interpolated using the last frames value
 			// to prevent sudden shifts in the exposure.
 			float lumLastFrame = *(t_globals.AverageLuminance);
-			float adaptedLum = lumLastFrame + (weightedAvgLum - lumLastFrame) * TIME_COEFF;//TODO: lerp?
+			float adaptedLum = lumLastFrame + (weightedAvgLum - lumLastFrame) * t_globals.IntegratorCFG.auto_exposure_speed;//TODO: lerp?
 			*(t_globals.AverageLuminance) = adaptedLum;
 		}
 	}
@@ -146,7 +147,7 @@ __global__ void toneMap(const IntegratorGlobals t_globals)
 	RGBSpectrum frag_spectrum = RGBSpectrum(col);
 
 	float exposure = t_globals.SceneDescriptor.ActiveCamera->exposure;
-	exposure /= *(t_globals.AverageLuminance);
+	if (t_globals.IntegratorCFG.auto_exposure_enabled)exposure /= *(t_globals.AverageLuminance);
 
 	//normalize
 	frag_spectrum = toneMapping(frag_spectrum, exposure);
