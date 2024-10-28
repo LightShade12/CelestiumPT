@@ -2,6 +2,7 @@
 
 #include "triangle.cuh"
 #include "device_mesh.cuh"
+#include "device_texture.cuh"
 #include "device_material.cuh"
 #include "device_camera.cuh"
 #include "light.cuh"
@@ -23,10 +24,13 @@ public:
 
 	void syncDeviceGeometry();
 
+	~DeviceScene();
+
 public:
 
 	SceneGeometry* DeviceSceneGeometry = nullptr;
 	thrust::universal_vector<Triangle>DeviceTriangles;
+	thrust::universal_vector<DeviceTexture>DeviceTextures;
 	thrust::universal_vector<Light>DeviceLights;
 	thrust::universal_vector<BVHNode>DeviceBVHNodes;
 	thrust::universal_vector<BLAS>DeviceBLASes;

@@ -27,7 +27,7 @@ public:
 public:
 	std::string name;
 	DeviceMesh* m_deviceMesh = nullptr;
-	//TODO: guarded access to sensitive data modification
+	//TODO: guarded access to sensitive m_data modification
 	int triangle_offset_idx = 1;
 	size_t tri_count = 0;
 

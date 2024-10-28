@@ -2,6 +2,7 @@
 #include "shape_intersection.cuh"
 #include "scene_geometry.cuh"
 #include "device_material.cuh"
+#include "device_texture.cuh"
 #include "storage.cuh"
 #include "samplers.cuh"
 #include "cuda_utility.cuh"
@@ -207,10 +208,16 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, int2 ppixel, 
 	const Triangle& triangle = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTrianglesBuffer[si.triangle_idx];
 	DeviceMaterial& material = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMaterialBuffer[triangle.mat_idx];
 
-	texWrite((material.emission_color_factor) ?
-		//make_float4(material.emission_color_factor * material.emission_strength, 1)
+	float3 albedo = make_float3(material.albedo_color_factor);
+	if (material.albedo_color_texture_id >= 0)
+	{
+		const auto& tex = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTexturesBuffer[material.albedo_color_texture_id];
+		albedo = (tex.sampleNearest(si.uv, false));
+	}
+
+	texWrite((material.emission_color_factor * material.emission_strength) ?
 		make_float4(1)
-		: make_float4(make_float3(material.albedo_color_factor) / PI, 1),
+		: make_float4(albedo / PI, 1),
 		globals.FrameBuffer.albedo_surfobject, ppixel);
 
 	texWrite(make_float4(si.w_pos, 1),

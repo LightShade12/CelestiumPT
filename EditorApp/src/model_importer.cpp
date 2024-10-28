@@ -3,6 +3,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/quaternion.hpp"
 
+#include "stb/stb_image.h"
 #include <iostream>
 
 static std::string GetFilePathExtension(const std::string& FileName) {
@@ -181,9 +182,9 @@ bool ModelImporter::parseMesh(tinygltf::Node mesh_node)
 		HostMaterial mat = m_WorkingScene->getMaterial(mtidx);
 
 		if (!(mat.emission_color_factor.x == 0 && mat.emission_color_factor.y == 0 && mat.emission_color_factor.z == 0)) {
-			m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1,
-				m_WorkingScene->getMeshesCount() - 1,
-				mat.emission_color_factor, mat.emission_strength * 100);
+			//	m_WorkingScene->addLight(m_WorkingScene->getTrianglesCount() - 1,
+			//		m_WorkingScene->getMeshesCount() - 1,
+			//		mat.emission_color_factor, mat.emission_strength * 100);
 		}
 	}
 
@@ -251,25 +252,33 @@ bool ModelImporter::loadTextures(const tinygltf::Model& model)
 		tinygltf::Image gltf_image = model.images[texture_idx];
 		printf("loading image: %s\n", gltf_image.name.c_str());
 
-		const unsigned char* imgdata = nullptr;
-		size_t byte_len = 0;
+		int width = 0, height = 0, numcolch = 0;
+		const unsigned char* finalimgdata = nullptr;
 
 		if (is_binary_file)
 		{
 			tinygltf::BufferView imgbufferview = model.bufferViews[gltf_image.bufferView];
-			imgdata = model.buffers[imgbufferview.buffer].data.data() + imgbufferview.byteOffset;
-			byte_len = imgbufferview.byteLength;
+			const unsigned char* imgdata = model.buffers[imgbufferview.buffer].data.data() + imgbufferview.byteOffset;
+			size_t byte_len = imgbufferview.byteLength;
+
+			finalimgdata = stbi_load_from_memory(imgdata, byte_len,
+				&width, &height, &numcolch, STBI_default);
 		}
 		else
 		{
-			//invoke stb to load
-			//drt_texture = Texture((image_reference_directory + gltf_image.uri).c_str());
+			finalimgdata = stbi_load((image_reference_directory + gltf_image.uri).c_str(),
+				&width, &height, &numcolch, STBI_default);
 		}
-		if (imgdata == nullptr) {
+		if (finalimgdata == nullptr) {
 			printf("Image data null\n"); return false;
 		}
-		m_WorkingScene->addTexture(imgdata, byte_len, gltf_image.name.c_str(),
-			gltf_image.bits);//whitespace will be incorrectly parsed
+
+		printf("dims: %d x %d | channels: %d\n------\n", width, height, numcolch);
+
+		m_WorkingScene->addTexture(finalimgdata, width, height,
+			numcolch, gltf_image.name.c_str());
+
+		stbi_image_free((void*)finalimgdata);
 	}
 	return true;
 }

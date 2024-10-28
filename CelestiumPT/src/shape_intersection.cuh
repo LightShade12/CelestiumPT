@@ -27,7 +27,7 @@ struct ShapeIntersection {
 
 	bool front_face = true;
 
-	//debug data
+	//debug m_data
 	float3 GAS_debug = make_float3(0);
 	int bbox_hit_count = 0;
 	int hit_count = 0;

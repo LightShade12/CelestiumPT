@@ -1,6 +1,7 @@
 #include "shape_intersection.cuh"
 #include "bsdf.cuh"
 #include "device_material.cuh"
+#include "device_texture.cuh"
 #include "ray.cuh"
 #include "spectrum.cuh"
 #include "scene_geometry.cuh"
@@ -31,9 +32,14 @@ __device__ BSDF ShapeIntersection::getBSDF(const IntegratorGlobals& globals)
 	const Triangle& triangle = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTrianglesBuffer[triangle_idx];
 	DeviceMaterial material = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceMaterialBuffer[triangle.mat_idx];
 
+	RGBSpectrum diff_col = material.albedo_color_factor;
+	if (material.albedo_color_texture_id >= 0)
+	{
+		const auto& tex = globals.SceneDescriptor.DeviceGeometryAggregate->DeviceTexturesBuffer[material.albedo_color_texture_id];
+		diff_col = RGBSpectrum(tex.sampleNearest(uv, false));
+	}
 
-
-	return BSDF(getTBNMatrix(w_shading_norm, triangle), material.albedo_color_factor);
+	return BSDF(getTBNMatrix(w_shading_norm, triangle), diff_col);
 }
 
 __device__ RGBSpectrum ShapeIntersection::Le(float3 w)

@@ -18,6 +18,7 @@ public:
 	size_t getMeshesCount();
 	size_t getMaterialsCount();
 	size_t getCamerasCount();
+	size_t getTexturesCount();
 
 	void addCamera(HostCamera camera);
 
@@ -31,8 +32,7 @@ public:
 	void addLight(int triangle_idx, int object_idx, glm::vec3 color, float scale);
 	void addMesh(HostMesh hmesh);
 	//add texture
-	void addTexture(const unsigned char* t_img_data, size_t t_byte_length, const char* tex_name, 
-		uint32_t t_channel_bit_depth);
+	void addTexture(const unsigned char* t_img_data, size_t t_width, size_t t_height, int t_channels, const char* tex_name);
 	void LogStatus();
 
 	HostMesh getMesh(size_t mesh_idx);

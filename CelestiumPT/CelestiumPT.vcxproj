@@ -28,6 +28,7 @@
     <CudaCompile Include="src\denoiser\gradient_samples.cu" />
     <CudaCompile Include="src\denoiser\merge_samples.cu" />
     <CudaCompile Include="src\denoiser\variance_estimation.cu" />
+    <CudaCompile Include="src\device_texture.cu" />
     <CudaCompile Include="src\error_check.cu" />
     <CudaCompile Include="src\film.cu" />
     <CudaCompile Include="src\integrator.cu" />
@@ -65,6 +66,7 @@
     <ClInclude Include="src\device_material.cuh" />
     <ClInclude Include="src\device_mesh.cuh" />
     <ClInclude Include="src\device_scene.cuh" />
+    <ClInclude Include="src\device_texture.cuh" />
     <ClInclude Include="src\error_check.cuh" />
     <ClInclude Include="src\film.cuh" />
     <ClInclude Include="src\host_camera.hpp" />

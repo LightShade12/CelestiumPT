@@ -1,6 +1,7 @@
 #include "host_scene.hpp"
 #include "device_scene.cuh"
 #include "device_mesh.cuh"
+#include "device_texture.cuh"
 
 #include "triangle.cuh"
 #include "maths/matrix_maths.cuh"
@@ -50,9 +51,20 @@ void DeviceScene::syncDeviceGeometry()
 	DeviceSceneGeometry->DeviceMeshesBuffer = thrust::raw_pointer_cast(DeviceMeshes.data());
 	DeviceSceneGeometry->DeviceMeshesCount = DeviceMeshes.size();
 
+	DeviceSceneGeometry->DeviceTexturesBuffer = thrust::raw_pointer_cast(DeviceTextures.data());
+	DeviceSceneGeometry->DeviceTexturesCount = DeviceTextures.size();
+
 	DeviceSceneGeometry->DeviceMaterialBuffer = thrust::raw_pointer_cast(DeviceMaterials.data());
 	DeviceSceneGeometry->DeviceMaterialsCount = DeviceMaterials.size();
-};
+}
+DeviceScene::~DeviceScene()
+{
+	//TODO: make copy on iters?
+	for (DeviceTexture tex : DeviceTextures) {
+		tex.destroy();
+	}
+}
+;
 
 HostScene::HostScene(DeviceScene* device_scene)
 {
@@ -74,6 +86,10 @@ size_t HostScene::getMeshesCount() {
 
 size_t HostScene::getMaterialsCount() {
 	return m_DeviceScene->DeviceMaterials.size();
+}
+
+size_t HostScene::getTexturesCount() {
+	return m_DeviceScene->DeviceTextures.size();
 }
 
 size_t HostScene::getCamerasCount()
@@ -147,8 +163,10 @@ void HostScene::addMesh(HostMesh hmesh)
 	m_DeviceScene->syncDeviceGeometry();
 }
 
-void HostScene::addTexture(const unsigned char* t_img_data, size_t t_byte_length, const char* tex_name, uint32_t t_channel_bit_depth)
+void HostScene::addTexture(const unsigned char* t_img_data, size_t t_width, size_t t_height, int t_channels, const char* tex_name)
 {
+	DeviceTexture dtex(t_img_data, t_width, t_height, t_channels);
+	m_DeviceScene->DeviceTextures.push_back(dtex);
 }
 
 void HostScene::LogStatus()
