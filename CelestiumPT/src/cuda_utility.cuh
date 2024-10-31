@@ -1,3 +1,4 @@
+#pragma once
 #define __CUDACC__
 #include <cuda_runtime.h>
 #include <vector_types.h>

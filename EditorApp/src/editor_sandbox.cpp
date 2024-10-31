@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTFfromFile("../models/cs16_dust_unit.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTFfromFile("../models/bloom_test.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -176,8 +176,8 @@ void EditorSandbox::onRender(float delta_secs)
 				if (ImGui::CollapsingHeader("Debug")) {
 					ImGui::Text("SPP:%d\n", m_Renderer.getSPP());
 					ImGui::SliderInt("max SPP", &g_max_spp, 1, 100);
-					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0Albedo\0Variance\0Heatmap\0bbox heatmap\0sparse grads\0dense grads\0Misc debugview\0");
+					ImGui::Combo("Renderer view", (int*)&curent_renderview,
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0Albedo\0Variance\0Heatmap\0bbox heatmap\0sparse grads\0dense grads\0Misc debugview\0Mip0\0");
 					if (curent_renderview == RenderView::GAS) {
 						ImGui::SliderFloat("GAS shading brightness",
 							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 0.1);
@@ -247,7 +247,7 @@ void EditorSandbox::onRender(float delta_secs)
 			if (ImGui::BeginTabItem("Setup")) {
 				if (ImGui::CollapsingHeader("Material")) {
 				};
-				if (ImGui::CollapsingHeader("Sky")) 
+				if (ImGui::CollapsingHeader("Sky"))
 				{
 					ImGui::Checkbox("SkyLight", &(m_Renderer.getIntegratorSettings()->skylight_enabled));
 					ImGui::SliderFloat("SkyLight intensity", &(m_Renderer.getIntegratorSettings()->skylight_intensity), 0, 30);
@@ -380,6 +380,12 @@ void EditorSandbox::onRender(float delta_secs)
 			else if (curent_renderview == RenderView::MISC_DBG) {
 				if (m_Renderer.getMiscDebugTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getMiscDebugTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::MIP0) {
+				if (m_Renderer.getMip0DebugTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getMip0DebugTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(),
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}

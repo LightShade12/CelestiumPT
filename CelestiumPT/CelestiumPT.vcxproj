@@ -60,6 +60,7 @@
     <ClInclude Include="src\acceleration_structure\GAS_builder.hpp" />
     <ClInclude Include="src\acceleration_structure\TLAS.cuh" />
     <ClInclude Include="src\acceleration_structure\TLAS_node.cuh" />
+    <ClInclude Include="src\bloom.cuh" />
     <ClInclude Include="src\bounds.cuh" />
     <ClInclude Include="src\bsdf.cuh" />
     <ClInclude Include="src\cuda_utility.cuh" />

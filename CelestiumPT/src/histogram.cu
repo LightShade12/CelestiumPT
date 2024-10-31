@@ -196,12 +196,14 @@ __global__ void toneMap(const IntegratorGlobals t_globals)
 	//----------------------------------------------
 
 	float4 col = texReadNearest(t_globals.FrameBuffer.composite_surfobject, current_pix);
+	float4 bloom_col = texReadNearest(t_globals.FrameBuffer.bloom_surfobject, current_pix);
+	col = lerp(col, bloom_col, 0.3);
 
 	RGBSpectrum frag_spectrum = RGBSpectrum(col);
 
 	//TODO: proper calibration
 	float exposure = t_globals.SceneDescriptor.ActiveCamera->exposure;
-	if (t_globals.IntegratorCFG.auto_exposure_enabled) 
+	if (t_globals.IntegratorCFG.auto_exposure_enabled)
 	{
 		float l_max = (*t_globals.AverageLuminance) * 9.6;
 		float3 Yxy = convertRGB2Yxy(make_float3(frag_spectrum));

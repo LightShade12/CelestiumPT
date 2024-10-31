@@ -37,8 +37,8 @@ __device__ float4 dFdy(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res, i
 __device__ float4 texReadBilinear(const cudaSurfaceObject_t& tex_surface,
 	float2 fpix, int2 t_res, bool lerp_alpha) {
 	//TODO:consider half pixel for centre sampling
-	// Integer pixel coordinates
-	int2 pix = make_int2(fpix);
+
+	int2 pix = make_int2(fpix);//truncate
 	int x = pix.x;
 	int y = pix.y;
 
@@ -59,12 +59,12 @@ __device__ float4 texReadBilinear(const cudaSurfaceObject_t& tex_surface,
 	float4 cp2 = texReadNearest(tex_surface, { s0, t1 });
 	float4 cp3 = texReadNearest(tex_surface, { s1, t1 });
 
+	//TODO: replace with lerp
 	// Perform bilinear interpolation
 	float4 tc0 = cp0 + (cp1 - cp0) * ws;
 	float4 tc1 = cp2 + (cp3 - cp2) * ws;
 	float4 fc = tc0 + (tc1 - tc0) * wt;
 
-	// Handle alpha channel based on lerp_alpha flag
 	if (!lerp_alpha) {
 		// Nearest neighbor for alpha
 		fc.w = (ws > 0.5f ? (wt > 0.5f ? cp3.w : cp1.w) : (wt > 0.5f ? cp2.w : cp0.w));
