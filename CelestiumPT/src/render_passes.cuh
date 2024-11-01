@@ -110,11 +110,6 @@ __global__ void composeCompositeImage(const IntegratorGlobals t_globals)
 
 	RGBSpectrum frag_spectrum = sampled_radiance;//TODO: retardation
 
-	////normalize
-	//frag_spectrum = toneMapping(frag_spectrum, t_globals.SceneDescriptor.ActiveCamera->exposure);
-	////EOTF
-	//frag_spectrum = gammaCorrection(frag_spectrum);
-
 	float4 frag_color = make_float4(frag_spectrum, 1);
 
 	texWrite(frag_color, t_globals.FrameBuffer.composite_surfobject, current_pix);

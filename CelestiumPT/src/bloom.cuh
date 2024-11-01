@@ -91,6 +91,13 @@ __global__ void downSample(const IntegratorGlobals t_globals,
 	texWrite(color, t_dst, current_pix);
 }
 
+//excludes mip0
+__host__ int getMaxValidMipLevels(int2 t_original_res)
+{
+	int mipx = std::log2(t_original_res.x), mipy = std::log2(t_original_res.y);
+	return std::min(mipx, mipy);
+}
+
 __global__ void upSampleAdd(const IntegratorGlobals t_globals,
 	cudaSurfaceObject_t t_src, int2 t_src_res,
 	cudaSurfaceObject_t t_dst, int2 t_dst_res)
@@ -141,7 +148,7 @@ __global__ void upSampleAdd(const IntegratorGlobals t_globals,
 	float4 col = texReadNearest(t_dst, current_pix);
 
 	//final_col += col;
-	final_col = lerp(col, final_col, 0.85);
+	final_col = lerp(col, final_col, t_globals.IntegratorCFG.bloom_internal_lerp);
 
 	texWrite(final_col, t_dst, current_pix);
 }

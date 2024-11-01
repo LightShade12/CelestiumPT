@@ -19,12 +19,12 @@ public:
 	//post
 	cudaSurfaceObject_t composite_surfobject;
 	cudaSurfaceObject_t bloom_surfobject;
-	cudaSurfaceObject_t mip0_surfobject;
 	cudaSurfaceObject_t mip1_surfobject;
 	cudaSurfaceObject_t mip2_surfobject;
 	cudaSurfaceObject_t mip3_surfobject;
 	cudaSurfaceObject_t mip4_surfobject;
 	cudaSurfaceObject_t mip5_surfobject;
+	cudaSurfaceObject_t mip6_surfobject;
 
 	//raw
 	cudaSurfaceObject_t raw_irradiance_surfobject;

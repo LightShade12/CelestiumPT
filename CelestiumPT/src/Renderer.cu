@@ -106,12 +106,12 @@ struct CelestiumPT_API
 	//post
 	FrameBuffer CompositeRenderBuffer;//srgb view transformed
 	FrameBuffer BloomBuffer;
-	FrameBuffer Mip0;
 	FrameBuffer Mip1;
 	FrameBuffer Mip2;
 	FrameBuffer Mip3;
 	FrameBuffer Mip4;
 	FrameBuffer Mip5;
+	FrameBuffer Mip6;
 
 	//raw
 	FrameBuffer RawIrradianceRenderBuffer;
@@ -204,21 +204,26 @@ Renderer::Renderer()
 	m_CurrentScene = HostScene(&(m_CelestiumPTResourceAPI->DeviceScene));
 }
 
+int g_max_mips = 0;
+
 void Renderer::resizeResolution(int width, int height)
 {
 	if (width == m_NativeRenderResolutionWidth && height == m_NativeRenderResolutionHeight)return;
 	m_NativeRenderResolutionHeight = height;
 	m_NativeRenderResolutionWidth = width;
 
+	g_max_mips = getMaxValidMipLevels(make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight));
+	//printf("max mips: %d\n", g_max_mips);
 	//post
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->BloomBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
-	m_CelestiumPTResourceAPI->Mip0.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 2.0f), (float(m_NativeRenderResolutionHeight + 1) / 2.0f));
-	m_CelestiumPTResourceAPI->Mip1.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 4.0f), (float(m_NativeRenderResolutionHeight + 1) / 4.0f));
-	m_CelestiumPTResourceAPI->Mip2.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 8.0f), (float(m_NativeRenderResolutionHeight + 1) / 8.0f));
-	m_CelestiumPTResourceAPI->Mip3.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 16.0f), (float(m_NativeRenderResolutionHeight + 1) / 16.0f));
-	m_CelestiumPTResourceAPI->Mip4.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 32.0f), (float(m_NativeRenderResolutionHeight + 1) / 32.0f));
-	m_CelestiumPTResourceAPI->Mip5.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 64.0f), (float(m_NativeRenderResolutionHeight + 1) / 64.0f));
+
+	if (g_max_mips >= 1)m_CelestiumPTResourceAPI->Mip1.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 2.0f), (float(m_NativeRenderResolutionHeight + 1) / 2.0f));
+	if (g_max_mips >= 2)m_CelestiumPTResourceAPI->Mip2.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 4.0f), (float(m_NativeRenderResolutionHeight + 1) / 4.0f));
+	if (g_max_mips >= 3)m_CelestiumPTResourceAPI->Mip3.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 8.0f), (float(m_NativeRenderResolutionHeight + 1) / 8.0f));
+	if (g_max_mips >= 4)m_CelestiumPTResourceAPI->Mip4.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 16.0f), (float(m_NativeRenderResolutionHeight + 1) / 16.0f));
+	if (g_max_mips >= 5)m_CelestiumPTResourceAPI->Mip5.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 32.0f), (float(m_NativeRenderResolutionHeight + 1) / 32.0f));
+	if (g_max_mips >= 6)m_CelestiumPTResourceAPI->Mip6.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 64.0f), (float(m_NativeRenderResolutionHeight + 1) / 64.0f));
 
 	//raw
 	m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -251,6 +256,7 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->IntegratedMomentsFrontBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->IntegratedMomentsBackBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
+	//TODO:NOTE: if res dims falls below 3px; it will crash
 	//asvgf
 	m_CelestiumPTResourceAPI->GradientSampleBuffer.resizeResolution(
 		(m_NativeRenderResolutionWidth + ASVGF_STRATUM_SIZE - 1) / ASVGF_STRATUM_SIZE,
@@ -313,7 +319,7 @@ void Renderer::resizeResolution(int width, int height)
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 }
 
-static uint32_t g_frameIndex = 1;
+uint32_t g_frame_index = 1;
 
 void texCopy(const FrameBuffer& src, const FrameBuffer& dst, int t_width, int t_height) {
 	glCopyImageSubData(
@@ -337,18 +343,18 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_surfobject));
 		m_CelestiumPTResourceAPI->BloomBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bloom_surfobject));
-		m_CelestiumPTResourceAPI->Mip0.beginRender(
-			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip0_surfobject));
-		m_CelestiumPTResourceAPI->Mip1.beginRender(
+		if (g_max_mips >= 1)m_CelestiumPTResourceAPI->Mip1.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject));
-		m_CelestiumPTResourceAPI->Mip2.beginRender(
+		if (g_max_mips >= 2)m_CelestiumPTResourceAPI->Mip2.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject));
-		m_CelestiumPTResourceAPI->Mip3.beginRender(
+		if (g_max_mips >= 3)m_CelestiumPTResourceAPI->Mip3.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject));
-		m_CelestiumPTResourceAPI->Mip4.beginRender(
+		if (g_max_mips >= 4)m_CelestiumPTResourceAPI->Mip4.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject));
-		m_CelestiumPTResourceAPI->Mip5.beginRender(
+		if (g_max_mips >= 5)m_CelestiumPTResourceAPI->Mip5.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject));
+		if (g_max_mips >= 6)m_CelestiumPTResourceAPI->Mip6.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip6_surfobject));
 
 		// Raw Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer.beginRender(
@@ -463,7 +469,7 @@ void Renderer::renderFrame()
 	}
 
 	//prepare globals--------------------
-	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameIndex = g_frameIndex;
+	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameIndex = g_frame_index;
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.resolution =
 		make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.accumulation_framebuffer =
@@ -471,7 +477,7 @@ void Renderer::renderFrame()
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.variance_accumulation_framebuffer =
 		thrust::raw_pointer_cast(m_CelestiumPTResourceAPI->VarianceAccumulationFrameBuffer.data());
 
-	//Launch RenderChain
+	//Launch RenderPipeline
 	{
 		//Compute primary visbility=========================================
 		{
@@ -565,7 +571,7 @@ void Renderer::renderFrame()
 				m_NativeRenderResolutionHeight);
 			//potential irradiance feedback
 			if (!m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.svgf_enabled) {
-				texCopy(m_CelestiumPTResourceAPI->SVGFFilteredIrradianceFrontBuffer,
+				texCopy(m_CelestiumPTResourceAPI->SVGFFilteredIrradianceFrontBuffer,//TODO: maybe we dont need filtirrbackbuff
 					m_CelestiumPTResourceAPI->IntegratedIrradianceRenderFrontBuffer, m_NativeRenderResolutionWidth,
 					m_NativeRenderResolutionHeight);
 			}
@@ -624,125 +630,162 @@ void Renderer::renderFrame()
 
 		//bloom
 		{
-			int2 mip0res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 2.0f, float(m_NativeRenderResolutionHeight + 1) / 2.0f);
-			int2 mip1res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 4.0f, float(m_NativeRenderResolutionHeight + 1) / 4.0f);
-			int2 mip2res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 8.0f, float(m_NativeRenderResolutionHeight + 1) / 8.0f);
-			int2 mip3res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 16.0f, float(m_NativeRenderResolutionHeight + 1) / 16.0f);
-			int2 mip4res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 32.0f, float(m_NativeRenderResolutionHeight + 1) / 32.0f);
-			int2 mip5res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 64.0f, float(m_NativeRenderResolutionHeight + 1) / 64.0f);
-			//printf("dim low mip: %d x %d\n", mip5res.x, mip5res.y);
+			int2 mip1res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 2.0f, float(m_NativeRenderResolutionHeight + 1) / 2.0f);
+			int2 mip2res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 4.0f, float(m_NativeRenderResolutionHeight + 1) / 4.0f);
+			int2 mip3res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 8.0f, float(m_NativeRenderResolutionHeight + 1) / 8.0f);
+			int2 mip4res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 16.0f, float(m_NativeRenderResolutionHeight + 1) / 16.0f);
+			int2 mip5res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 32.0f, float(m_NativeRenderResolutionHeight + 1) / 32.0f);
+			int2 mip6res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 64.0f, float(m_NativeRenderResolutionHeight + 1) / 64.0f);
+			//printf("dim low mip: %d x %d\n", mip6res.x, mip6res.y);
 
-			//mip0
-			downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_surfobject,
-					make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight),
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip0_surfobject, mip0res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//mip1
-			downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip0_surfobject, mip0res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject, mip1res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//mip2
-			downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject, mip1res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject, mip2res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//mip3
-			downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject, mip2res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//mip4
-			downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//mip5
-			downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject, mip5res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
+			if (g_max_mips >= 1)
+			{
+				//mip1
+				downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_surfobject,
+						make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight),
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject, mip1res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 2)
+			{
+				//mip2
+				downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject, mip1res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject, mip2res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 3)
+			{
+				//mip3
+				downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject, mip2res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 4)
+			{
+				//mip4
+				downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 5)
+			{
+				//mip5
+				downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject, mip5res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 6)
+			{
+				//mip6
+				downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject, mip5res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip6_surfobject, mip6res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
 			//==============UPSAMPLE==============================================
-			//mip4
-			upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject, mip5res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//mip3
-			upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//mip2
-			upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject, mip2res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//mip1
-			upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject, mip2res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject, mip1res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//mip0
-			upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject, mip1res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip0_surfobject, mip0res);
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
-			//bloom final
-			upSample << < m_CudaResourceAPI->m_BlockGridDimensions,
-				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
-				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip0_surfobject, mip0res,
-					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bloom_surfobject,
-					make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight));
-			//sync
-			checkCudaErrors(cudaGetLastError());
-			checkCudaErrors(cudaDeviceSynchronize());
+
+			if (g_max_mips >= 6)
+			{
+				//mip5
+				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip6_surfobject, mip6res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject, mip5res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 5)
+			{
+				//mip4
+				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject, mip5res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 4)
+			{
+				//mip3
+				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 3)
+			{
+				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject, mip2res);
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 2)
+			{
+				//mip1
+				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject, mip2res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject, mip1res);
+				//sync
+				//mip2
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
+			if (g_max_mips >= 1)
+			{
+				//bloom final
+				upSample << < m_CudaResourceAPI->m_BlockGridDimensions,
+					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject, mip1res,
+						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bloom_surfobject,
+						make_int2(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight));
+				//sync
+				checkCudaErrors(cudaGetLastError());
+				checkCudaErrors(cudaDeviceSynchronize());
+			}
 		}
 
 		//Histogram compute================
@@ -778,7 +821,7 @@ void Renderer::renderFrame()
 		}
 	}
 
-	g_frameIndex++;
+	g_frame_index++;
 
 	//post render cuda---------------------------------------------------------------------------------
 	{
@@ -787,18 +830,18 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_surfobject));
 		m_CelestiumPTResourceAPI->BloomBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bloom_surfobject));
-		m_CelestiumPTResourceAPI->Mip0.endRender(
-			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip0_surfobject));
-		m_CelestiumPTResourceAPI->Mip1.endRender(
+		if (g_max_mips >= 1)m_CelestiumPTResourceAPI->Mip1.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip1_surfobject));
-		m_CelestiumPTResourceAPI->Mip2.endRender(
+		if (g_max_mips >= 2)m_CelestiumPTResourceAPI->Mip2.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject));
-		m_CelestiumPTResourceAPI->Mip3.endRender(
+		if (g_max_mips >= 3)	m_CelestiumPTResourceAPI->Mip3.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject));
-		m_CelestiumPTResourceAPI->Mip4.endRender(
+		if (g_max_mips >= 4)m_CelestiumPTResourceAPI->Mip4.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject));
-		m_CelestiumPTResourceAPI->Mip5.endRender(
+		if (g_max_mips >= 5)m_CelestiumPTResourceAPI->Mip5.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject));
+		if (g_max_mips >= 6)m_CelestiumPTResourceAPI->Mip6.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip6_surfobject));
 		// Raw Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.raw_irradiance_surfobject));
@@ -978,7 +1021,7 @@ void Renderer::clearAccumulation()
 	thrust::fill(m_CelestiumPTResourceAPI->VarianceAccumulationFrameBuffer.begin(),
 		m_CelestiumPTResourceAPI->VarianceAccumulationFrameBuffer.end(), make_float3(0, 0, 0));
 
-	g_frameIndex = 1;
+	g_frame_index = 1;
 }
 
 GLuint Renderer::getCompositeRenderTargetTextureName() const
@@ -1068,7 +1111,7 @@ GLuint Renderer::getDenseGradientTargetTextureName() const
 
 GLuint Renderer::getMiscDebugTextureName() const
 {
-	return m_CelestiumPTResourceAPI->Mip5.m_RenderTargetTextureName;
+	return m_CelestiumPTResourceAPI->Mip6.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getMip0DebugTextureName() const
@@ -1078,7 +1121,7 @@ GLuint Renderer::getMip0DebugTextureName() const
 
 int Renderer::getSPP() const
 {
-	return g_frameIndex;
+	return g_frame_index;
 }
 
 void Renderer::setCamera(int idx)

@@ -197,7 +197,7 @@ __global__ void toneMap(const IntegratorGlobals t_globals)
 
 	float4 col = texReadNearest(t_globals.FrameBuffer.composite_surfobject, current_pix);
 	float4 bloom_col = texReadNearest(t_globals.FrameBuffer.bloom_surfobject, current_pix);
-	col = lerp(col, bloom_col, 0.3);
+	col = lerp(col, bloom_col, t_globals.IntegratorCFG.bloom_lerp);
 
 	RGBSpectrum frag_spectrum = RGBSpectrum(col);
 

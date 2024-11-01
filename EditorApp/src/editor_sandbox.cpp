@@ -204,6 +204,10 @@ void EditorSandbox::onRender(float delta_secs)
 						ImGui::SliderFloat("EV comp speed", &(m_Renderer.getIntegratorSettings()->auto_exposure_speed), 0, 1);
 						ImGui::Unindent();
 					}
+					ImGui::SeparatorText("Bloom");
+					ImGui::SliderFloat("Bloom lerp", &(m_Renderer.getIntegratorSettings()->bloom_lerp), 0, 1);
+					ImGui::SliderFloat("Bloom internal lerp", &(m_Renderer.getIntegratorSettings()->bloom_internal_lerp), 0, 1);
+
 					ImGui::SeparatorText("Motion");
 					ImGui::SliderFloat("Speed", &m_Camera.movement_speed, 0, 10);
 				};
