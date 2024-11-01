@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTFfromFile("../models/bloom_test.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTFfromFile("../models/cs16_dust_unit.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -191,7 +191,8 @@ void EditorSandbox::onRender(float delta_secs)
 						m_Camera.recalculateProjection();
 						s_updateCam |= true;
 					};
-					if (ImGui::SliderFloat("Exposure", &m_Camera.host_camera_handle->exposure, 0.f, 20))
+					if (ImGui::SliderFloat("Exposure", &m_Camera.host_camera_handle->exposure, 0.f, 20, "%.3f",
+						ImGuiSliderFlags_Logarithmic))
 					{
 						s_updateCam |= true;
 					};

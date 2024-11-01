@@ -110,6 +110,8 @@ struct CelestiumPT_API
 	FrameBuffer Mip1;
 	FrameBuffer Mip2;
 	FrameBuffer Mip3;
+	FrameBuffer Mip4;
+	FrameBuffer Mip5;
 
 	//raw
 	FrameBuffer RawIrradianceRenderBuffer;
@@ -215,6 +217,8 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->Mip1.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 4.0f), (float(m_NativeRenderResolutionHeight + 1) / 4.0f));
 	m_CelestiumPTResourceAPI->Mip2.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 8.0f), (float(m_NativeRenderResolutionHeight + 1) / 8.0f));
 	m_CelestiumPTResourceAPI->Mip3.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 16.0f), (float(m_NativeRenderResolutionHeight + 1) / 16.0f));
+	m_CelestiumPTResourceAPI->Mip4.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 32.0f), (float(m_NativeRenderResolutionHeight + 1) / 32.0f));
+	m_CelestiumPTResourceAPI->Mip5.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 64.0f), (float(m_NativeRenderResolutionHeight + 1) / 64.0f));
 
 	//raw
 	m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -341,6 +345,10 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject));
 		m_CelestiumPTResourceAPI->Mip3.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject));
+		m_CelestiumPTResourceAPI->Mip4.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject));
+		m_CelestiumPTResourceAPI->Mip5.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject));
 
 		// Raw Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer.beginRender(
@@ -620,6 +628,9 @@ void Renderer::renderFrame()
 			int2 mip1res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 4.0f, float(m_NativeRenderResolutionHeight + 1) / 4.0f);
 			int2 mip2res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 8.0f, float(m_NativeRenderResolutionHeight + 1) / 8.0f);
 			int2 mip3res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 16.0f, float(m_NativeRenderResolutionHeight + 1) / 16.0f);
+			int2 mip4res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 32.0f, float(m_NativeRenderResolutionHeight + 1) / 32.0f);
+			int2 mip5res = make_int2(float(m_NativeRenderResolutionWidth + 1) / 64.0f, float(m_NativeRenderResolutionHeight + 1) / 64.0f);
+			//printf("dim low mip: %d x %d\n", mip5res.x, mip5res.y);
 
 			//mip0
 			downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
@@ -658,7 +669,43 @@ void Renderer::renderFrame()
 			//sync
 			checkCudaErrors(cudaGetLastError());
 			checkCudaErrors(cudaDeviceSynchronize());
-			//==============UPSAMPLE============
+			//mip4
+			downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
+				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res,
+					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
+			//mip5
+			downSample << < m_CudaResourceAPI->m_BlockGridDimensions,
+				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res,
+					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject, mip5res);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
+			//==============UPSAMPLE==============================================
+			//mip4
+			upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject, mip5res,
+					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
+			//mip3
+			upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
+				(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
+					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res,
+					m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res);
+			//sync
+			checkCudaErrors(cudaGetLastError());
+			checkCudaErrors(cudaDeviceSynchronize());
 			//mip2
 			upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
 				m_CudaResourceAPI->m_ThreadBlockDimensions >> >
@@ -748,6 +795,10 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject));
 		m_CelestiumPTResourceAPI->Mip3.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject));
+		m_CelestiumPTResourceAPI->Mip4.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject));
+		m_CelestiumPTResourceAPI->Mip5.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject));
 		// Raw Buffers ---------------------------------
 		m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.raw_irradiance_surfobject));
@@ -1017,7 +1068,7 @@ GLuint Renderer::getDenseGradientTargetTextureName() const
 
 GLuint Renderer::getMiscDebugTextureName() const
 {
-	return m_CelestiumPTResourceAPI->Mip3.m_RenderTargetTextureName;
+	return m_CelestiumPTResourceAPI->Mip5.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getMip0DebugTextureName() const

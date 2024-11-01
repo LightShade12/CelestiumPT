@@ -141,7 +141,7 @@ __global__ void upSampleAdd(const IntegratorGlobals t_globals,
 	float4 col = texReadNearest(t_dst, current_pix);
 
 	//final_col += col;
-	final_col = lerp(final_col, col, 0.85);
+	final_col = lerp(col, final_col, 0.85);
 
 	texWrite(final_col, t_dst, current_pix);
 }
