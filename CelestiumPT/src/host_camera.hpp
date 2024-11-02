@@ -40,7 +40,7 @@ public:
 	}
 
 	float fov_y_radians = glm::radians(60.f);
-	float exposure = 1;
+	float exposure = 4;//set default here
 	glm::mat4 m_transform;
 	glm::mat4 m_view;
 	glm::mat4 m_projection;

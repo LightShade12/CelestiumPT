@@ -11,7 +11,7 @@ struct IntegratorSettings {
 	bool sunlight_enabled = false;
 	float sunlight_intensity = 790;
 
-	bool skylight_enabled = false;
+	bool skylight_enabled = true;
 	float skylight_intensity = 1;
 
 	float bloom_lerp = 0.3;
@@ -20,7 +20,9 @@ struct IntegratorSettings {
 	float auto_exposure_speed = 0.1f;
 	float auto_exposure_max_comp = 20.f;
 	float auto_exposure_min_comp = -5.5f;
+
 	int max_bounces = 2;
 	bool MIS = false;
+
 	float GAS_shading_brightness = 0.1;
 };
