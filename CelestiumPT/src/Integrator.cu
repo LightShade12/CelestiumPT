@@ -263,7 +263,7 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		{
 			if (t_globals.IntegratorCFG.skylight_enabled)
 				light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray)
-				* RGBSpectrum(0.8, 1, 1.5) * throughtput * t_globals.IntegratorCFG.skylight_intensity;
+				* throughtput * t_globals.IntegratorCFG.skylight_intensity;
 			break;
 		}
 
@@ -295,7 +295,9 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 			light_sampler, t_seed, primary_surface);
 		light += Ld * throughtput;
 
-		if (t_globals.IntegratorCFG.sunlight_enabled) {
+		//sun sample
+		if (t_globals.IntegratorCFG.sunlight_enabled)
+		{
 			bool sunhit = !IntersectP(t_globals, Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
 				sunpos + make_float3(Samplers::get2D_PCGHash(t_seed), Samplers::get1D_PCGHash(t_seed)) * 5.f),
 				100);

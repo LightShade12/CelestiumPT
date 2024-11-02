@@ -9,7 +9,7 @@ struct IntegratorSettings {
 	bool auto_exposure_enabled = true;
 
 	bool sunlight_enabled = false;
-	float sunlight_intensity = 20;
+	float sunlight_intensity = 790;
 
 	bool skylight_enabled = false;
 	float skylight_intensity = 1;

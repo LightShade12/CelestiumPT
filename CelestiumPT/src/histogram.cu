@@ -203,6 +203,8 @@ __global__ void toneMap(const IntegratorGlobals t_globals)
 
 	//TODO: proper calibration
 	float exposure = t_globals.SceneDescriptor.ActiveCamera->exposure;
+	frag_spectrum *= exposure;
+
 	if (t_globals.IntegratorCFG.auto_exposure_enabled)
 	{
 		float l_max = (*t_globals.AverageLuminance) * 9.6;
@@ -212,9 +214,13 @@ __global__ void toneMap(const IntegratorGlobals t_globals)
 	}
 
 	//normalize
-	frag_spectrum = toneMapping(frag_spectrum, exposure);
+	//frag_spectrum = toneMapping(frag_spectrum, exposure);
+	frag_spectrum = AgxMinimal::agx_fitted(frag_spectrum);
+
+	frag_spectrum = RGBSpectrum(AgxMinimal::agxLook(make_float3(frag_spectrum)));
 	//EOTF
-	frag_spectrum = gammaCorrection(frag_spectrum);
+	//frag_spectrum = gammaCorrection(frag_spectrum);
+	frag_spectrum = AgxMinimal::agx_fitted_Eotf(frag_spectrum);
 
 	float4 frag_color = make_float4(frag_spectrum, 1);
 
