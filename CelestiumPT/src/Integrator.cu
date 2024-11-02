@@ -246,7 +246,8 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 	LightSampleContext prev_ctx{};
 	float eta_scale = 1;
 
-	float3 sunpos = make_float3(0.266, 0.629, 0.257) * 100;
+	float3 sunpos = make_float3(sinf(t_globals.FrameIndex * 0.01f), 1, cosf(t_globals.FrameIndex * 0.01f)) * 100;
+	//float3 sunpos = make_float3(0.266, 0.629, 0.257) * 100;
 	RGBSpectrum suncol(1.000, 0.877, 0.822);
 
 	for (int bounce_depth = 0; bounce_depth <= t_globals.IntegratorCFG.max_bounces; bounce_depth++)
@@ -260,7 +261,9 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		//miss--
 		if (payload.hit_distance < 0)//TODO: standardize invalid/miss payload definition
 		{
-			light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray) * RGBSpectrum(0.8, 1, 1.5) * throughtput;
+			if (t_globals.IntegratorCFG.skylight_enabled)
+				light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray)
+				* throughtput * t_globals.IntegratorCFG.skylight_intensity;
 			break;
 		}
 
@@ -292,13 +295,15 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 			light_sampler, t_seed, primary_surface);
 		light += Ld * throughtput;
 
-		if (false) {
+		//sun sample
+		if (t_globals.IntegratorCFG.sunlight_enabled)
+		{
 			bool sunhit = !IntersectP(t_globals, Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
 				sunpos + make_float3(Samplers::get2D_PCGHash(t_seed), Samplers::get1D_PCGHash(t_seed)) * 5.f),
 				100);
 			if (sunhit) {
 				RGBSpectrum f_c = suncol * bsdf.f(wo, normalize(sunpos), primary_surface)
-					* dot(payload.w_shading_norm, normalize(sunpos)) * 20.f;
+					* dot(payload.w_shading_norm, normalize(sunpos)) * t_globals.IntegratorCFG.sunlight_intensity;
 				light += f_c * throughtput;
 			}
 		}
@@ -337,7 +342,7 @@ __device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& glo
 	//handle empty buffer
 	if (!sampled_light)return Ld;
 
-	LightLiSample ls = sampled_light.light->SampleLi(payload, Samplers::get2D_PCGHash(seed));
+	LightLiSample ls = sampled_light.light->SampleLi(globals, payload, Samplers::get2D_PCGHash(seed));
 
 	if (ls.pdf <= 0)return Ld;
 
@@ -396,10 +401,7 @@ __global__ void tracePathSample(const IntegratorGlobals t_globals)
 
 	//--------------------------------------------------
 
-	uint32_t seed = current_pix.x + current_pix.y * frame_res.x;
-	seed *= t_globals.FrameIndex;
-
-	//--------------------------------------------------
+	uint32_t seed = texReadNearest(t_globals.FrameBuffer.seeds_surfobject, current_pix).x;
 
 	//RGBSpectrum sampled_radiance = IntegratorPipeline::evaluatePixelSample(t_globals, make_float2(current_pix));
 

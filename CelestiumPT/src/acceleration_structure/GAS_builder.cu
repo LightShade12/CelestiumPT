@@ -7,7 +7,7 @@
 
 void GASBuilder::build(HostScene* host_scene)
 {
-	host_scene->syncDeviceGeometry();//sync geometry data to device
+	host_scene->syncDeviceGeometry();//sync geometry m_data to device
 	GAS gas;
 	gas.build(host_scene);
 	//TODO: assuming dev_geo is non null

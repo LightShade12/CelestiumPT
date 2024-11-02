@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTF("../models/cornell_box.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTFfromFile("../models/sponza_low.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -104,8 +104,8 @@ void EditorSandbox::onUpdate(float delta)
 				updatemesh |= true;
 			}
 			//if (mesh.host_mesh_handle.name == "Light") {
-			//	translation.x = mesh.translation.x + (1 * sinf(glfwGetTime()));
-			//	translation.z = mesh.translation.x + (1 * cosf(glfwGetTime()));
+			//	translation.x = mesh.translation.x + (1.4 * sinf(glfwGetTime() * 1));
+			//	translation.z = mesh.translation.x + (1.4 * cosf(glfwGetTime() * 1));
 			//	updatemesh |= true;
 			//}
 
@@ -176,8 +176,8 @@ void EditorSandbox::onRender(float delta_secs)
 				if (ImGui::CollapsingHeader("Debug")) {
 					ImGui::Text("SPP:%d\n", m_Renderer.getSPP());
 					ImGui::SliderInt("max SPP", &g_max_spp, 1, 100);
-					ImGui::Combo("Renderer mode", (int*)&curent_renderview,
-						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0Albedo\0Variance\0Heatmap\0bbox heatmap\0");
+					ImGui::Combo("Renderer view", (int*)&curent_renderview,
+						"Composite\0Normals\0Positions\0GAS Debug\0UVs\0Barycentrics\0ObjectID\0LocalPosition\0Velocity\0Depth\0Albedo\0Variance\0Heatmap\0bbox heatmap\0sparse grads\0dense grads\0Misc debugview\0Mip0\0");
 					if (curent_renderview == RenderView::GAS) {
 						ImGui::SliderFloat("GAS shading brightness",
 							&(m_Renderer.getIntegratorSettings()->GAS_shading_brightness), 0.0001, 0.1);
@@ -185,27 +185,45 @@ void EditorSandbox::onRender(float delta_secs)
 				};
 
 				if (ImGui::CollapsingHeader("Camera")) {
-					ImGui::Text("Camera transformations");
+					ImGui::SeparatorText("Camera transformations");
 					s_updateCam |= ImGui::DragFloat3("Camera translation", &m_Camera.position.x);
 					if (ImGui::SliderAngle("FoV", &(m_Camera.fov_y_rad), 20, 120)) {
 						m_Camera.recalculateProjection();
 						s_updateCam |= true;
 					};
-					if (ImGui::SliderFloat("Exposure", &m_Camera.host_camera_handle->exposure, 0.1, 20))
+					if (ImGui::SliderFloat("Exposure", &m_Camera.host_camera_handle->exposure, 0.f, 20, "%.3f",
+						ImGuiSliderFlags_Logarithmic))
+					{
 						s_updateCam |= true;
+					};
+					ImGui::Checkbox("Auto Exposure", &(m_Renderer.getIntegratorSettings()->auto_exposure_enabled));
+					if (m_Renderer.getIntegratorSettings()->auto_exposure_enabled) {
+						ImGui::Indent();
+						ImGui::SliderFloat("EV comp max", &(m_Renderer.getIntegratorSettings()->auto_exposure_max_comp), -20, 20);
+						ImGui::SliderFloat("EV comp min", &(m_Renderer.getIntegratorSettings()->auto_exposure_min_comp), -20, 20);
+						ImGui::SliderFloat("EV comp speed", &(m_Renderer.getIntegratorSettings()->auto_exposure_speed), 0, 1);
+						ImGui::Unindent();
+					}
+					ImGui::SeparatorText("Bloom");
+					ImGui::SliderFloat("Bloom lerp", &(m_Renderer.getIntegratorSettings()->bloom_lerp), 0, 1);
+					ImGui::SliderFloat("Bloom internal lerp", &(m_Renderer.getIntegratorSettings()->bloom_internal_lerp), 0, 1);
+
 					ImGui::SeparatorText("Motion");
 					ImGui::SliderFloat("Speed", &m_Camera.movement_speed, 0, 10);
 				};
-				if (ImGui::CollapsingHeader("Pathtracing")) {
+				if (ImGui::CollapsingHeader("Pathtracing"))
+				{
+					ImGui::InputInt("Ray bounces", &(m_Renderer.getIntegratorSettings()->max_bounces));
 					ImGui::Checkbox("Accumulation", &(m_Renderer.getIntegratorSettings()->accumulate));
+					ImGui::SeparatorText("Denoising");
 					ImGui::Checkbox("Temporal accumulation", &(m_Renderer.getIntegratorSettings()->temporal_filter_enabled));
 					ImGui::Checkbox("SVGF denoiser", &(m_Renderer.getIntegratorSettings()->svgf_enabled));
-					ImGui::Indent();
 					if (m_Renderer.getIntegratorSettings()->svgf_enabled) {
+						ImGui::Indent();
 						ImGui::Checkbox("Use 5x5 filter", &(m_Renderer.getIntegratorSettings()->use_5x5_filter));
+						ImGui::Unindent();
 					}
-					ImGui::Unindent();
-					ImGui::InputInt("Ray bounces", &(m_Renderer.getIntegratorSettings()->max_bounces));
+					ImGui::Checkbox("Adaptive filter", &(m_Renderer.getIntegratorSettings()->adaptive_temporal_filter_enabled));
 				};
 				if (ImGui::CollapsingHeader("Geometry")) {
 					ImGui::Text("Mesh transformations");
@@ -223,8 +241,6 @@ void EditorSandbox::onRender(float delta_secs)
 				};
 				if (ImGui::CollapsingHeader("Post-Processing")) {
 				};
-				if (ImGui::CollapsingHeader("Denoising")) {
-				};
 				if (ImGui::CollapsingHeader("General")) {
 					if (ImGui::Button("Save Frame as PNG")) {
 						saveImagePNG();
@@ -236,7 +252,12 @@ void EditorSandbox::onRender(float delta_secs)
 			if (ImGui::BeginTabItem("Setup")) {
 				if (ImGui::CollapsingHeader("Material")) {
 				};
-				if (ImGui::CollapsingHeader("Sky")) {
+				if (ImGui::CollapsingHeader("Sky"))
+				{
+					ImGui::Checkbox("SkyLight", &(m_Renderer.getIntegratorSettings()->skylight_enabled));
+					ImGui::SliderFloat("SkyLight intensity", &(m_Renderer.getIntegratorSettings()->skylight_intensity), 0, 30);
+					ImGui::Checkbox("SunLight", &(m_Renderer.getIntegratorSettings()->sunlight_enabled));
+					ImGui::SliderFloat("SunLight intensity", &(m_Renderer.getIntegratorSettings()->sunlight_intensity), 0, 30);
 				};
 				ImGui::EndTabItem();
 			}
@@ -346,6 +367,30 @@ void EditorSandbox::onRender(float delta_secs)
 			else if (curent_renderview == RenderView::BBOXHEATMAP) {
 				if (m_Renderer.getBboxHeatmapDebugTargetTextureName() != NULL)
 					ImGui::Image((void*)(uintptr_t)m_Renderer.getBboxHeatmapDebugTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::SPARSE_GRAD) {
+				if (m_Renderer.getSparseGradientTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getSparseGradientTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::DENSE_GRAD) {
+				if (m_Renderer.getDenseGradientTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getDenseGradientTargetTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::MISC_DBG) {
+				if (m_Renderer.getMiscDebugTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getMiscDebugTextureName(),
+						ImVec2((float)m_Renderer.getFrameWidth(),
+							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
+			}
+			else if (curent_renderview == RenderView::MIP0) {
+				if (m_Renderer.getMip0DebugTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getMip0DebugTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(),
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}

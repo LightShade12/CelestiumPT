@@ -6,6 +6,7 @@
 #include "cuda_utility.cuh"
 
 #include "maths/linear_algebra.cuh"
+#include "maths/constants.cuh"
 #include <device_launch_parameters.h>
 
 __constant__ constexpr int MAX_ACCUMULATION_FRAMES = 16;
@@ -31,6 +32,16 @@ __device__ bool testReprojectedNormals(float3 n1, float3 n2)
 	}
 
 	return false;
+}
+
+//from RTGL1
+__device__ float getAntilagAlpha(const float gradSample, const float normFactor)
+{
+	const float lambda = normFactor > 0.01 ?
+		clamp(fabsf(gradSample) / normFactor, 0.0, 1.0) :
+		0.0;
+
+	return clamp(lambda, 0.0, 1.0);
 }
 
 __device__ bool rejectionHeuristic(const IntegratorGlobals& t_globals, int2 t_prev_pix, int2 t_current_pix)
@@ -93,6 +104,10 @@ __global__ void temporalAccumulate(const IntegratorGlobals t_globals)
 	float2 final_moments = make_float2(s, Sqr(s));
 
 	int current_objID = texReadNearest(t_globals.FrameBuffer.objectID_surfobject, current_pix).x;
+
+	//DEBUG
+	texWrite(make_float4(make_float3(0), 0), t_globals.FrameBuffer.debugview_misc_surfobject,
+		current_pix);
 
 	//void sample/ miss/ sky
 	if (current_objID < 0) {
@@ -162,6 +177,25 @@ __global__ void temporalAccumulate(const IntegratorGlobals t_globals)
 
 	float irr_alpha = 1.f / fminf(float(irradiance_hist_len + 1), MAX_ACCUMULATION_FRAMES);
 	float mom_alpha = 1.f / fminf(float(moments_hist_len + 1), MAX_ACCUMULATION_FRAMES);
+
+	if (t_globals.IntegratorCFG.adaptive_temporal_filter_enabled)
+	{
+		int2 grad_pix = current_pix / ASVGF_STRATUM_SIZE;
+		float4 grad = texReadNearest(t_globals.FrameBuffer.asvgf_dense_gradient_front_surfobject,
+			grad_pix);
+		float abs_delta = grad.x + grad.y;
+		float antilag_alpha = getAntilagAlpha(abs_delta, grad.w);
+		//DEBUG
+		texWrite(make_float4(make_float3(antilag_alpha), 1), t_globals.FrameBuffer.debugview_misc_surfobject,
+			current_pix);
+		//AA=1->full drop
+		irr_alpha = lerp(irr_alpha, 1, antilag_alpha);
+		mom_alpha = lerp(mom_alpha, 1, antilag_alpha);
+
+		//history lenth sync with AA
+		//irradiance_hist_len *= powf(1.0 - antilag_alpha, 10);
+		//moments_hist_len *= powf(1.0 - antilag_alpha, 10);
+	}
 
 	final_irradiance = RGBSpectrum(
 		lerp(make_float3(hist_irradiance), make_float3(final_irradiance), irr_alpha)

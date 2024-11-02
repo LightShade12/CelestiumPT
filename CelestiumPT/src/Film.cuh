@@ -4,10 +4,15 @@
 struct IntegratorGlobals;
 struct ShapeIntersection;
 
-__device__ RGBSpectrum agx_fitted(RGBSpectrum col);
-__device__ RGBSpectrum agx_fitted_Eotf(RGBSpectrum col);
+namespace AgxMinimal {
+	__device__ RGBSpectrum agx_fitted(RGBSpectrum col);
+	__device__ float3 agxLook(float3 val);
+	__device__ RGBSpectrum agx_fitted_Eotf(RGBSpectrum col);
+}
 
-__device__ RGBSpectrum agx_tonemapping(RGBSpectrum /*Linear BT.709*/col);
+namespace AgxAlgebraic {
+	__device__ RGBSpectrum agx_tonemapping(RGBSpectrum /*Linear BT.709*/col);
+}
 
 __device__ RGBSpectrum uncharted2_tonemap_partial(RGBSpectrum x);
 

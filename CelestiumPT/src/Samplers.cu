@@ -7,6 +7,7 @@ namespace Samplers {
 		uint32_t word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
 		return (word >> 22u) ^ word;
 	}
+	//0->1
 	__device__ float randF_PCGHash(uint32_t& seed)
 	{
 		seed = pcg_hash(seed);

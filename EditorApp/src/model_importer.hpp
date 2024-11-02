@@ -7,7 +7,7 @@ class ModelImporter
 public:
 	ModelImporter() = default;
 
-	bool loadGLTF(const char* filepath, HostScene* scene_object);
+	bool loadGLTFfromFile(const char* filepath, HostScene* scene_object);
 
 private:
 	HostScene* m_WorkingScene = nullptr;
@@ -23,7 +23,7 @@ private:
 		std::vector<int>& primitive_mat_idx);
 
 
-	bool loadGLTFModel(const char* filename);
+	bool loadModel(const char* filename);
 
 	//TODO: remove model parameters; we already have it as member
 	bool loadMaterials(const tinygltf::Model& model);

@@ -62,6 +62,8 @@ __global__ void computePrimaryVisibility(const IntegratorGlobals t_globals) {
 
 	if ((current_pix.x >= frame_res.x) || (current_pix.y >= frame_res.y)) return;
 	//----------------------------------------------
+	uint32_t seed = current_pix.x + current_pix.y * frame_res.x;
+	seed *= t_globals.FrameIndex;
 
 	float2 ndc_uv = screen_uv * 2 - 1;
 	Ray primary_ray = t_globals.SceneDescriptor.ActiveCamera->generateRay(frame_res.x, frame_res.y, ndc_uv);
@@ -78,6 +80,9 @@ __global__ void computePrimaryVisibility(const IntegratorGlobals t_globals) {
 	}
 
 	computeVelocity(t_globals, current_pix);
+
+	//out seeds---------
+	texWrite(make_float4(make_float3(seed), 1), t_globals.FrameBuffer.seeds_surfobject, current_pix);
 }
 
 __global__ void composeCompositeImage(const IntegratorGlobals t_globals)
@@ -93,6 +98,7 @@ __global__ void composeCompositeImage(const IntegratorGlobals t_globals)
 	if ((current_pix.x >= frame_res.x) || (current_pix.y >= frame_res.y)) return;
 	//----------------------------------------------
 
+	//MODULATE
 	float4 sampled_irradiance = texReadNearest(t_globals.FrameBuffer.svgf_filtered_irradiance_front_surfobject,
 		current_pix);
 	RGBSpectrum sampled_radiance = RGBSpectrum(sampled_irradiance);
@@ -100,11 +106,9 @@ __global__ void composeCompositeImage(const IntegratorGlobals t_globals)
 	float4 sampled_albedo = texReadNearest(t_globals.FrameBuffer.albedo_surfobject, current_pix);
 
 	sampled_radiance *= RGBSpectrum(sampled_albedo);//MODULATE assume BRDF normalised
+	//--------------
 
-	RGBSpectrum frag_spectrum = sampled_radiance;
-	//EOTF
-	frag_spectrum = gammaCorrection(frag_spectrum);
-	frag_spectrum = toneMapping(frag_spectrum, t_globals.SceneDescriptor.ActiveCamera->exposure);
+	RGBSpectrum frag_spectrum = sampled_radiance;//TODO: retardation
 
 	float4 frag_color = make_float4(frag_spectrum, 1);
 

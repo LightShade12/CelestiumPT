@@ -24,9 +24,14 @@
     <CudaCompile Include="src\bsdf.cu" />
     <CudaCompile Include="src\camera.cu" />
     <CudaCompile Include="src\cuda_utility.cu" />
+    <CudaCompile Include="src\denoiser\gradient_atrous.cu" />
+    <CudaCompile Include="src\denoiser\gradient_samples.cu" />
+    <CudaCompile Include="src\denoiser\merge_samples.cu" />
     <CudaCompile Include="src\denoiser\variance_estimation.cu" />
+    <CudaCompile Include="src\device_texture.cu" />
     <CudaCompile Include="src\error_check.cu" />
     <CudaCompile Include="src\film.cu" />
+    <CudaCompile Include="src\histogram.cu" />
     <CudaCompile Include="src\integrator.cu" />
     <CudaCompile Include="src\light.cu" />
     <CudaCompile Include="src\material.cu" />
@@ -55,6 +60,7 @@
     <ClInclude Include="src\acceleration_structure\GAS_builder.hpp" />
     <ClInclude Include="src\acceleration_structure\TLAS.cuh" />
     <ClInclude Include="src\acceleration_structure\TLAS_node.cuh" />
+    <ClInclude Include="src\bloom.cuh" />
     <ClInclude Include="src\bounds.cuh" />
     <ClInclude Include="src\bsdf.cuh" />
     <ClInclude Include="src\cuda_utility.cuh" />
@@ -62,8 +68,10 @@
     <ClInclude Include="src\device_material.cuh" />
     <ClInclude Include="src\device_mesh.cuh" />
     <ClInclude Include="src\device_scene.cuh" />
+    <ClInclude Include="src\device_texture.cuh" />
     <ClInclude Include="src\error_check.cuh" />
     <ClInclude Include="src\film.cuh" />
+    <ClInclude Include="src\histogram.cuh" />
     <ClInclude Include="src\host_camera.hpp" />
     <ClInclude Include="src\host_material.hpp" />
     <ClInclude Include="src\host_mesh.hpp" />

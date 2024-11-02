@@ -18,15 +18,45 @@ public:
 	int2 resolution;
 	//post
 	cudaSurfaceObject_t composite_surfobject;
+	cudaSurfaceObject_t bloom_surfobject;
+	cudaSurfaceObject_t mip1_surfobject;
+	cudaSurfaceObject_t mip2_surfobject;
+	cudaSurfaceObject_t mip3_surfobject;
+	cudaSurfaceObject_t mip4_surfobject;
+	cudaSurfaceObject_t mip5_surfobject;
+	cudaSurfaceObject_t mip6_surfobject;
 
 	//raw
 	cudaSurfaceObject_t raw_irradiance_surfobject;
-	
+
 	//temporal accum
 	cudaSurfaceObject_t integrated_irradiance_front_surfobject;//read only
 	cudaSurfaceObject_t integrated_irradiance_back_surfobject;//write only
 	cudaSurfaceObject_t integrated_moments_front_surfobject;//read only
 	cudaSurfaceObject_t integrated_moments_back_surfobject;//write only
+
+	//asvgf
+	cudaSurfaceObject_t asvgf_gradient_sample_surfobject;
+	cudaSurfaceObject_t asvgf_sparse_gradient_surfobject;
+	cudaSurfaceObject_t asvgf_dense_gradient_front_surfobject;
+	cudaSurfaceObject_t asvgf_dense_gradient_back_surfobject;
+
+	cudaSurfaceObject_t asvgf_luminance_front_surfobject;
+	cudaSurfaceObject_t asvgf_luminance_back_surfobject;
+	cudaSurfaceObject_t asvgf_variance_back_surfobject;
+	cudaSurfaceObject_t asvgf_variance_front_surfobject;
+
+	cudaSurfaceObject_t history_shading_surfobject;
+	cudaSurfaceObject_t history_seeds_surfobject;
+	cudaSurfaceObject_t seeds_surfobject;
+	cudaSurfaceObject_t history_triangleID_surfobject;
+	cudaSurfaceObject_t history_objectID_surfobject;
+
+	cudaSurfaceObject_t history_local_normals_surfobject;
+	cudaSurfaceObject_t history_world_positions_surfobject;
+	cudaSurfaceObject_t history_local_positions_surfobject;
+	cudaSurfaceObject_t history_UVs_surfobject;
+	cudaSurfaceObject_t history_bary_surfobject;
 
 	//svgf
 	cudaSurfaceObject_t svgf_filtered_variance_back_surfobject;
@@ -52,6 +82,7 @@ public:
 	cudaSurfaceObject_t debugview_tri_test_heatmap_surfobject;
 	cudaSurfaceObject_t debugview_bbox_test_heatmap_surfobject;
 	cudaSurfaceObject_t debugview_objectID_surfobject;
+	cudaSurfaceObject_t debugview_misc_surfobject;
 
 	//history
 	cudaSurfaceObject_t history_depth_surfobject;
@@ -72,4 +103,7 @@ struct IntegratorGlobals {
 	DeviceSceneDescriptor SceneDescriptor;
 	IntegratorSettings IntegratorCFG;
 	uint32_t FrameIndex = 0;
+	//must be 256 in size
+	uint* GlobalHistogramBuffer = nullptr;//cuz we need persistent data bewteen kernels
+	float* AverageLuminance = nullptr;//same plus atomics
 };

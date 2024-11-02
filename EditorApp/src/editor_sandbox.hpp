@@ -36,7 +36,11 @@ public:
 		ALBEDO = 10,
 		VARIANCE = 11,
 		HEATMAP = 12,
-		BBOXHEATMAP = 13
+		BBOXHEATMAP = 13,
+		SPARSE_GRAD = 14,
+		DENSE_GRAD = 15,
+		MISC_DBG = 16,
+		MIP0 = 17
 	};
 
 private:

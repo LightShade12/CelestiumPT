@@ -11,6 +11,7 @@ struct BVHNode;
 class BLAS;
 class TLASNode;
 struct DeviceMaterial;
+class DeviceTexture;
 
 //Raw Buffer Data
 struct SceneGeometry {
@@ -37,6 +38,9 @@ struct SceneGeometry {
 
 	DeviceMesh* DeviceMeshesBuffer = nullptr;
 	size_t DeviceMeshesCount = 0;
+
+	DeviceTexture* DeviceTexturesBuffer = nullptr;
+	size_t DeviceTexturesCount = 0;
 
 	DeviceMaterial* DeviceMaterialBuffer = nullptr;
 	size_t DeviceMaterialsCount = 0;

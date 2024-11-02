@@ -1,5 +1,6 @@
 #include "cuda_utility.cuh"
 #include "maths/vector_maths.cuh"
+#include "maths/constants.cuh"
 #include "storage.cuh"
 
 __device__ float4 texReadNearest(cudaSurfaceObject_t tex_surf, int2 pix) {
@@ -17,19 +18,17 @@ __device__ void texWrite(float4 data, cudaSurfaceObject_t tex_surf, float2 pix) 
 	surf2Dwrite<float4>(data, tex_surf, ipix.x * (int)sizeof(float4), ipix.y);
 }
 
-//ensure this is not oob
-__device__ float4 dFdx(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res) {
+__device__ float4 dFdx(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res, int stride) {
 	float4 d0 = texReadNearest(data_surfobj, c_pix);
-	int2 next = c_pix + make_int2(1, 0);
+	int2 next = c_pix + make_int2(stride, 0);
 	next.x = clamp(next.x, 0, res.x - 1);
 	float4 d1 = texReadNearest(data_surfobj, next);
 	return d1 - d0;
 }
 
-//ensure this is not oob
-__device__ float4 dFdy(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res) {
+__device__ float4 dFdy(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res, int stride) {
 	float4 d0 = texReadNearest(data_surfobj, c_pix);
-	int2 next = c_pix + make_int2(0, 1);
+	int2 next = c_pix + make_int2(0, stride);
 	next.y = clamp(next.y, 0, res.y - 1);
 	float4 d1 = texReadNearest(data_surfobj, next);
 	return d1 - d0;
@@ -38,8 +37,8 @@ __device__ float4 dFdy(cudaSurfaceObject_t data_surfobj, int2 c_pix, int2 res) {
 __device__ float4 texReadBilinear(const cudaSurfaceObject_t& tex_surface,
 	float2 fpix, int2 t_res, bool lerp_alpha) {
 	//TODO:consider half pixel for centre sampling
-	// Integer pixel coordinates
-	int2 pix = make_int2(fpix);
+
+	int2 pix = make_int2(fpix);//truncate
 	int x = pix.x;
 	int y = pix.y;
 
@@ -60,12 +59,12 @@ __device__ float4 texReadBilinear(const cudaSurfaceObject_t& tex_surface,
 	float4 cp2 = texReadNearest(tex_surface, { s0, t1 });
 	float4 cp3 = texReadNearest(tex_surface, { s1, t1 });
 
+	//TODO: replace with lerp
 	// Perform bilinear interpolation
 	float4 tc0 = cp0 + (cp1 - cp0) * ws;
 	float4 tc1 = cp2 + (cp3 - cp2) * ws;
 	float4 fc = tc0 + (tc1 - tc0) * wt;
 
-	// Handle alpha channel based on lerp_alpha flag
 	if (!lerp_alpha) {
 		// Nearest neighbor for alpha
 		fc.w = (ws > 0.5f ? (wt > 0.5f ? cp3.w : cp1.w) : (wt > 0.5f ? cp2.w : cp0.w));
@@ -97,4 +96,14 @@ __device__ float texReadGaussianWeighted(cudaSurfaceObject_t t_texture, int2 t_r
 	}
 
 	return sum;
+}
+
+__device__ float packStratumPos(int2 pos)
+{
+	return pos.x + (pos.y * (int)ASVGF_STRATUM_SIZE);
+}
+
+__device__ int2 unpackStratumPos(int d)
+{
+	return make_int2(d % (int)ASVGF_STRATUM_SIZE, d / ASVGF_STRATUM_SIZE);
 }
