@@ -194,10 +194,11 @@ Renderer::Renderer()
 	m_CudaResourceAPI->m_ThreadBlockDimensions = dim3(m_ThreadBlock_x, m_ThreadBlock_y);
 
 	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate, sizeof(SceneGeometry));
-	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.GlobalHistogramBuffer, sizeof(uint32_t) * HISTOGRAM_SIZE);
+	//metering
+	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.GlobalHistogramBuffer, sizeof(float) * HISTOGRAM_SIZE);
 	cudaMallocManaged(&m_CelestiumPTResourceAPI->m_IntegratorGlobals.AverageLuminance, sizeof(float));
 	*m_CelestiumPTResourceAPI->m_IntegratorGlobals.AverageLuminance = 0;
-
+	//------
 	m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate->SkyLight = InfiniteLight();
 
 	m_CelestiumPTResourceAPI->DeviceScene = DeviceScene(m_CelestiumPTResourceAPI->m_IntegratorGlobals.SceneDescriptor.DeviceGeometryAggregate);
@@ -802,7 +803,7 @@ void Renderer::renderFrame()
 			checkCudaErrors(cudaDeviceSynchronize());
 			//-------------------------
 			//launching with 256 x 1 threads, 1 block
-			dim3 tb2 = dim3(256, 1);
+			dim3 tb2 = dim3(HISTOGRAM_SIZE, 1);
 			dim3 gd2 = dim3(1);
 
 			computeAverageLuminance << < gd2, tb2 >> > (m_CelestiumPTResourceAPI->m_IntegratorGlobals);

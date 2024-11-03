@@ -31,13 +31,15 @@ __device__ uint colorToBin(float3 hdrColor, float minLogLum, float inverseLogLum
 //__constant__ constexpr float LOG_LUM_RANGE = 15.f;//TODO: what values for these?
 //__constant__ constexpr float MIN_LOG_LUM = -10.f;
 
-__device__ float lumWeight(const IntegratorGlobals& t_globals, int2 pix)
+__device__ float meteringWeight(const IntegratorGlobals& t_globals, int2 pix)
 {
+	//return 1.0f;
+
 	int2 centre_spot = t_globals.FrameBuffer.resolution / 2;
 
 	float distance = length(make_float2(centre_spot - pix));
 
-	float max_distance = fmaxf(t_globals.FrameBuffer.resolution.x, t_globals.FrameBuffer.resolution.y) / 2.0f;//not using width?
+	float max_distance = fminf(t_globals.FrameBuffer.resolution.x, t_globals.FrameBuffer.resolution.y) / 2.0f;//not using width?
 	float normalized_distance = distance / max_distance;
 
 	float weight = 1.0f - smoothstep(0.0f, 1.0f, normalized_distance);
@@ -59,7 +61,7 @@ __global__ void computeHistogram(const IntegratorGlobals t_globals)
 	if ((current_pix.x >= frame_res.x) || (current_pix.y >= frame_res.y)) return;
 	//----------------------------------------------
 
-	__shared__ uint shared_histogram[HISTOGRAM_SIZE];
+	__shared__ float shared_histogram[HISTOGRAM_SIZE];
 
 	{
 		int2 local_id = make_int2(threadIdx.x, threadIdx.y);
@@ -75,7 +77,10 @@ __global__ void computeHistogram(const IntegratorGlobals t_globals)
 		uint bin_idx = colorToBin(linear_col, t_globals.IntegratorCFG.auto_exposure_min_comp,
 			(1.f / t_globals.IntegratorCFG.auto_exposure_max_comp));
 
-		atomicAdd(&(shared_histogram[bin_idx]), 1);
+		float w = meteringWeight(t_globals, current_pix);
+		w = bin_idx >= 0 ? w : 1;//store pixels count for black pixels instead of weights sum
+
+		atomicAdd(&(shared_histogram[bin_idx]), w);
 
 		__syncthreads();
 
@@ -97,7 +102,8 @@ __global__ void computeAverageLuminance(const IntegratorGlobals t_globals)
 	if ((current_pix.x >= frame_res.x) || (current_pix.y >= frame_res.y)) return;
 	//----------------------------------------------
 
-	__shared__ uint shared_histogram[HISTOGRAM_SIZE];
+	__shared__ float shared_weighted_luminance_histogram[HISTOGRAM_SIZE];
+	__shared__ float shared_net_weights[HISTOGRAM_SIZE];
 
 	{
 		int2 local_id = make_int2(threadIdx.x, threadIdx.y);
@@ -105,8 +111,11 @@ __global__ void computeAverageLuminance(const IntegratorGlobals t_globals)
 		//----------
 
 		// Get the count from the histogram buffer
-		uint count_for_this_bin = t_globals.GlobalHistogramBuffer[local_index];
-		shared_histogram[local_index] = count_for_this_bin * local_index;//net luminance in the bin
+		float weights_sum_for_this_bin = t_globals.GlobalHistogramBuffer[local_index];
+		const int& bin_luminance_value = local_index;
+
+		shared_weighted_luminance_histogram[local_index] = weights_sum_for_this_bin * bin_luminance_value;//net metering weighted luminance in the bin
+		shared_net_weights[local_index] = weights_sum_for_this_bin;
 
 		__syncthreads();
 
@@ -117,18 +126,21 @@ __global__ void computeAverageLuminance(const IntegratorGlobals t_globals)
 #pragma unroll
 		for (uint cutoff = HISTOGRAM_SIZE / 2; cutoff > 0; cutoff >>= 1) {
 			if (uint(local_index) < cutoff) {
-				shared_histogram[local_index] += shared_histogram[local_index + cutoff];
+				shared_weighted_luminance_histogram[local_index] += shared_weighted_luminance_histogram[local_index + cutoff];
+				shared_net_weights[local_index] += shared_net_weights[local_index + cutoff];
 			}
 
 			__syncthreads();
 		}
 
 		// We only need to calculate this once, so only a single thread is needed.
-		if ((current_pix.x + current_pix.y) == 0) {
+		if (local_index == 0) {//TODO: use local_index
 			// Here we take our weighted sum and divide it by the number of pixels
 			// that had luminance greater than zero (since the index == 0, we can
 			// use count_for_this_bin to find the number of black pixels)
-			float weighted_log_average = (shared_histogram[0] / max((frame_res.x * frame_res.y) - float(count_for_this_bin), 1.0)) - 1.0;
+			//float denom = max((frame_res.x * frame_res.y) - float(weights_sum_for_this_bin), 1.0);//works cuz we dont store weight sum for black px
+			float denom = max(shared_net_weights[0] - float(weights_sum_for_this_bin), 1.0);//works cuz we dont store weight sum for black px
+			float weighted_log_average = (shared_weighted_luminance_histogram[0] / denom) - 1.0;
 
 			// Map from our histogram space to actual luminance
 			float weighted_avg_lum = exp2(((weighted_log_average / 254.0) * t_globals.IntegratorCFG.auto_exposure_max_comp) +
@@ -228,13 +240,13 @@ __global__ void toneMap(const IntegratorGlobals t_globals)
 	}
 
 	//normalize
-	//frag_spectrum = toneMapping(frag_spectrum, exposure);
-	frag_spectrum = AgxMinimal::agx_fitted(frag_spectrum);
+	frag_spectrum = toneMapping(frag_spectrum, 1);
+	//frag_spectrum = AgxMinimal::agx_fitted(frag_spectrum);
 
-	frag_spectrum = RGBSpectrum(AgxMinimal::agxLook(make_float3(frag_spectrum)));
+	//frag_spectrum = RGBSpectrum(AgxMinimal::agxLook(make_float3(frag_spectrum)));
 	//EOTF
-	//frag_spectrum = gammaCorrection(frag_spectrum);
-	frag_spectrum = AgxMinimal::agx_fitted_Eotf(frag_spectrum);
+	frag_spectrum = gammaCorrection(frag_spectrum);
+	//frag_spectrum = AgxMinimal::agx_fitted_Eotf(frag_spectrum);
 
 	float4 frag_color = make_float4(frag_spectrum, 1);
 

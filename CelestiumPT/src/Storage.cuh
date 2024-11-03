@@ -104,6 +104,6 @@ struct IntegratorGlobals {
 	IntegratorSettings IntegratorCFG;
 	uint32_t FrameIndex = 0;
 	//must be 256 in size
-	uint* GlobalHistogramBuffer = nullptr;//cuz we need persistent data bewteen kernels
+	float* GlobalHistogramBuffer = nullptr;//cuz we need persistent data bewteen kernels
 	float* AverageLuminance = nullptr;//same plus atomics
 };

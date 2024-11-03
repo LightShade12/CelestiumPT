@@ -201,7 +201,6 @@ __device__ RGBSpectrum uncharted2_filmic(RGBSpectrum v, float exposure)
 __device__ RGBSpectrum toneMapping(RGBSpectrum HDR_color, float exposure)
 {
 	RGBSpectrum LDR_color = uncharted2_filmic(HDR_color, exposure);
-	//RGBSpectrum LDR_color = AgxMinimal::agx_fitted(HDR_color);
 	return LDR_color;
 }
 
