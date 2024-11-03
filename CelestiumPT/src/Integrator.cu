@@ -228,6 +228,92 @@ __device__ ShapeIntersection initializePayloadFromGBuffer(const IntegratorGlobal
 	return out_payload;
 };
 
+__device__ bool intersectSphere(float3 t_orig, float3 t_dir, float t_radius, float& r_t0, float& r_t1)
+{
+}
+
+struct Atmosphere {
+	Atmosphere(float3 t_sunpos, float t_sun_intensity) :
+		sun_pos(t_sunpos), sun_intensity(t_sun_intensity) {};
+
+	RGBSpectrum Le(float3 orig, float3 dir, float t_tmin, float t_tmax) const
+	{
+		float3 sun_dir = normalize(sun_pos);
+		float t0, t1;
+
+		//miss atmosphere
+		if (!intersectSphere(orig, dir, atmosphere_radius, t0, t1) || t1 < 0)
+		{
+			return RGBSpectrum(0);
+		}
+		//hit atmosphere
+
+		if (t0 > t_tmin && t0 > 0) t_tmin = t0;
+		if (t1 < t_tmax) t_tmax = t1;
+
+		uint32_t numSamples = 16;
+		uint32_t numSamplesLight = 8;
+
+		float segmentLength = (t_tmax - t_tmin) / numSamples;
+		float tCurrent = t_tmin;
+		float3 sumR = make_float3(0), sumM = make_float3(0);  //mie and rayleigh contribution
+		float opticalDepthR = 0, opticalDepthM = 0;
+		float mu = dot(dir, sun_dir);  //mu in the paper which is the cosine of the angle between the sun direction and the ray direction
+		float phaseR = 3.f / (16.f * PI) * (1 + mu * mu);
+		float g = 0.76f;
+		float phaseM = 3.f / (8.f * PI) * ((1.f - g * g) * (1.f + mu * mu)) / ((2.f + g * g) * pow(1.f + g * g - 2.f * g * mu, 1.5f));
+		for (uint32_t i = 0; i < numSamples; ++i) {
+			float3 samplePosition = orig + (tCurrent + segmentLength * 0.5f) * dir;
+			float height = length(samplePosition) - earth_radius;
+			// compute optical depth for light
+			float hr = exp(-height / Hr) * segmentLength;
+			float hm = exp(-height / Hm) * segmentLength;
+			opticalDepthR += hr;
+			opticalDepthM += hm;
+			// light optical depth
+			float t0Light, t1Light;
+			intersectSphere(samplePosition, sun_dir, atmosphere_radius, t0Light, t1Light);
+			float segmentLengthLight = t1Light / numSamplesLight, tCurrentLight = 0;
+			float opticalDepthLightR = 0, opticalDepthLightM = 0;
+			uint32_t j;
+			for (j = 0; j < numSamplesLight; ++j) {
+				float3 samplePositionLight = samplePosition + (tCurrentLight + segmentLengthLight * 0.5f) * sun_dir;
+				float heightLight = length(samplePositionLight) - earth_radius;
+				if (heightLight < 0) break;
+				opticalDepthLightR += exp(-heightLight / Hr) * segmentLengthLight;
+				opticalDepthLightM += exp(-heightLight / Hm) * segmentLengthLight;
+				tCurrentLight += segmentLengthLight;
+			}
+			if (j == numSamplesLight) {
+				float3 tau = make_float3(beta_R * (opticalDepthR + opticalDepthLightR) + beta_M * 1.1f * (opticalDepthM + opticalDepthLightM));
+				float3 attenuation = make_float3(exp(-tau.x), exp(-tau.y), exp(-tau.z));
+				sumR += attenuation * hr;
+				sumM += attenuation * hm;
+			}
+			tCurrent += segmentLength;
+		}
+
+		// We use a magic number here for the intensity of the sun (20). We will make it more
+		// scientific in a future revision of this lesson/code
+		return RGBSpectrum(sumR * beta_R * phaseR + sumM * beta_M * phaseM) * sun_intensity;
+	}
+
+	float3 sun_pos;
+	float sun_intensity;
+	float Hr, Hm;
+	float earth_radius, atmosphere_radius;
+	static const RGBSpectrum beta_R, beta_M;
+};
+
+__device__ RGBSpectrum sampleSkyLe(const IntegratorGlobals& t_globals, Ray t_ray, float3 t_sunpos, uint32_t t_seed)
+{
+	Atmosphere atmosphere(t_sunpos, t_globals.IntegratorCFG.sunlight_intensity);
+	RGBSpectrum light = atmosphere.Le(
+		make_float3(0, atmosphere.earth_radius + 1, 0),
+		t_ray.getDirection(), 0, FLT_MAX);
+	return light;
+}
+
 __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const IntegratorGlobals& t_globals, int2 t_current_pix, uint32_t t_seed)
 {
 	float3 cpos = make_float3(t_globals.SceneDescriptor.ActiveCamera->invViewMatrix[3]);
@@ -263,8 +349,8 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		{
 			if (t_globals.IntegratorCFG.skylight_enabled)
 			{
-				light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray)
-					* throughtput * t_globals.IntegratorCFG.skylight_intensity;
+				RGBSpectrum sky_radiance = sampleSkyLe(t_globals, ray, sunpos, t_seed);
+				light += sky_radiance * throughtput;
 			}
 			break;
 		}
