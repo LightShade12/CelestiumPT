@@ -31,6 +31,20 @@ __device__ uint colorToBin(float3 hdrColor, float minLogLum, float inverseLogLum
 //__constant__ constexpr float LOG_LUM_RANGE = 15.f;//TODO: what values for these?
 //__constant__ constexpr float MIN_LOG_LUM = -10.f;
 
+__device__ float lumWeight(const IntegratorGlobals& t_globals, int2 pix)
+{
+	int2 centre_spot = t_globals.FrameBuffer.resolution / 2;
+
+	float distance = length(make_float2(centre_spot - pix));
+
+	float max_distance = fmaxf(t_globals.FrameBuffer.resolution.x, t_globals.FrameBuffer.resolution.y) / 2.0f;//not using width?
+	float normalized_distance = distance / max_distance;
+
+	float weight = 1.0f - smoothstep(0.0f, 1.0f, normalized_distance);
+
+	return weight;
+}
+
 //Launch with thread dims 16x16=256
 __global__ void computeHistogram(const IntegratorGlobals t_globals)
 {
@@ -114,17 +128,17 @@ __global__ void computeAverageLuminance(const IntegratorGlobals t_globals)
 			// Here we take our weighted sum and divide it by the number of pixels
 			// that had luminance greater than zero (since the index == 0, we can
 			// use count_for_this_bin to find the number of black pixels)
-			float weightedLogAverage = (shared_histogram[0] / max((frame_res.x * frame_res.y) - float(count_for_this_bin), 1.0)) - 1.0;
+			float weighted_log_average = (shared_histogram[0] / max((frame_res.x * frame_res.y) - float(count_for_this_bin), 1.0)) - 1.0;
 
 			// Map from our histogram space to actual luminance
-			float weightedAvgLum = exp2(((weightedLogAverage / 254.0) * t_globals.IntegratorCFG.auto_exposure_max_comp) +
+			float weighted_avg_lum = exp2(((weighted_log_average / 254.0) * t_globals.IntegratorCFG.auto_exposure_max_comp) +
 				t_globals.IntegratorCFG.auto_exposure_min_comp);
 
 			// The new stored value will be interpolated using the last frames value
 			// to prevent sudden shifts in the exposure.
-			float lumLastFrame = *(t_globals.AverageLuminance);
-			float adaptedLum = lumLastFrame + (weightedAvgLum - lumLastFrame) * t_globals.IntegratorCFG.auto_exposure_speed;//TODO: lerp?
-			*(t_globals.AverageLuminance) = adaptedLum;
+			float lum_last_frame = *(t_globals.AverageLuminance);
+			float adapted_lum = lum_last_frame + (weighted_avg_lum - lum_last_frame) * t_globals.IntegratorCFG.auto_exposure_speed;//TODO: lerp?
+			*(t_globals.AverageLuminance) = adapted_lum;
 		}
 	}
 }

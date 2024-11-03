@@ -98,7 +98,7 @@ __host__ int getMaxValidMipLevels(int2 t_original_res)
 	return std::min(mipx, mipy);
 }
 
-__global__ void upSampleAdd(const IntegratorGlobals t_globals,
+__global__ void upSampleCombine(const IntegratorGlobals t_globals,
 	cudaSurfaceObject_t t_src, int2 t_src_res,
 	cudaSurfaceObject_t t_dst, int2 t_dst_res)
 {

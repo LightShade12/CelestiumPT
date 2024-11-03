@@ -262,8 +262,10 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		if (payload.hit_distance < 0)//TODO: standardize invalid/miss payload definition
 		{
 			if (t_globals.IntegratorCFG.skylight_enabled)
+			{
 				light += t_globals.SceneDescriptor.DeviceGeometryAggregate->SkyLight.Le(ray)
-				* throughtput * t_globals.IntegratorCFG.skylight_intensity;
+					* throughtput * t_globals.IntegratorCFG.skylight_intensity;
+			}
 			break;
 		}
 

@@ -716,7 +716,7 @@ void Renderer::renderFrame()
 			if (g_max_mips >= 6)
 			{
 				//mip5
-				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+				upSampleCombine << < m_CudaResourceAPI->m_BlockGridDimensions,
 					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
 					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
 						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip6_surfobject, mip6res,
@@ -728,7 +728,7 @@ void Renderer::renderFrame()
 			if (g_max_mips >= 5)
 			{
 				//mip4
-				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+				upSampleCombine << < m_CudaResourceAPI->m_BlockGridDimensions,
 					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
 					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
 						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip5_surfobject, mip5res,
@@ -740,7 +740,7 @@ void Renderer::renderFrame()
 			if (g_max_mips >= 4)
 			{
 				//mip3
-				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+				upSampleCombine << < m_CudaResourceAPI->m_BlockGridDimensions,
 					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
 					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
 						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip4_surfobject, mip4res,
@@ -751,7 +751,7 @@ void Renderer::renderFrame()
 			}
 			if (g_max_mips >= 3)
 			{
-				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+				upSampleCombine << < m_CudaResourceAPI->m_BlockGridDimensions,
 					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
 					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
 						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip3_surfobject, mip3res,
@@ -763,7 +763,7 @@ void Renderer::renderFrame()
 			if (g_max_mips >= 2)
 			{
 				//mip1
-				upSampleAdd << < m_CudaResourceAPI->m_BlockGridDimensions,
+				upSampleCombine << < m_CudaResourceAPI->m_BlockGridDimensions,
 					m_CudaResourceAPI->m_ThreadBlockDimensions >> >
 					(m_CelestiumPTResourceAPI->m_IntegratorGlobals,
 						m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.mip2_surfobject, mip2res,
