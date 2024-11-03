@@ -65,7 +65,7 @@ namespace AgxMinimal
 			- 0.00232;
 	}
 
-	__device__ RGBSpectrum agx_fitted(RGBSpectrum	col) {
+	__device__ RGBSpectrum agx_fitted(RGBSpectrum col) {
 		float3 val = make_float3(col);
 		const Mat3 agx_mat = Mat3(
 			0.842479062253094, 0.0423282422610123, 0.0423756549057051,
@@ -106,7 +106,7 @@ namespace AgxMinimal
 		return RGBSpectrum(val);
 	}
 
-	__device__ float3 agxLook(float3 val) 
+	__device__ float3 agxLook(float3 val)
 	{
 		const float3 lw = make_float3(0.2126, 0.7152, 0.0722);
 		float luma = dot(val, lw);

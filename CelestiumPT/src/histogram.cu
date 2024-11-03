@@ -37,7 +37,10 @@ __device__ float meteringWeight(const IntegratorGlobals& t_globals, int2 pix)
 
 	int2 centre_spot = t_globals.FrameBuffer.resolution / 2;
 
+	constexpr float radius_factor = 1.0f;//TODO: can be user param
+
 	float distance = length(make_float2(centre_spot - pix));
+	distance *= (1 / radius_factor);
 
 	float max_distance = fminf(t_globals.FrameBuffer.resolution.x, t_globals.FrameBuffer.resolution.y) / 2.0f;//not using width?
 	float normalized_distance = distance / max_distance;
@@ -78,7 +81,10 @@ __global__ void computeHistogram(const IntegratorGlobals t_globals)
 			(1.f / t_globals.IntegratorCFG.auto_exposure_max_comp));
 
 		float w = meteringWeight(t_globals, current_pix);
-		w = bin_idx >= 0 ? w : 1;//store pixels count for black pixels instead of weights sum
+
+		w = bin_idx > 0 ? w : 1;//store pixels count for black pixels instead of weights sum
+
+		texWrite(make_float4(make_float3(w), 1), t_globals.FrameBuffer.debugview_AECW_surfobject, current_pix);
 
 		atomicAdd(&(shared_histogram[bin_idx]), w);
 
@@ -155,58 +161,7 @@ __global__ void computeAverageLuminance(const IntegratorGlobals t_globals)
 	}
 }
 
-__device__ float3 convertRGB2XYZ(float3 _rgb)
-{
-	// Reference(s):
-	// - RGB/XYZ Matrices
-	//   https://web.archive.org/web/20191027010220/http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
-	float3 xyz;
-	xyz.x = dot(make_float3(0.4124564, 0.3575761, 0.1804375), _rgb);
-	xyz.y = dot(make_float3(0.2126729, 0.7151522, 0.0721750), _rgb);
-	xyz.z = dot(make_float3(0.0193339, 0.1191920, 0.9503041), _rgb);
-	return xyz;
-}
-
-__device__ float3 convertXYZ2RGB(float3 _xyz)
-{
-	float3 rgb;
-	rgb.x = dot(make_float3(3.2404542, -1.5371385, -0.4985314), _xyz);
-	rgb.y = dot(make_float3(-0.9692660, 1.8760108, 0.0415560), _xyz);
-	rgb.z = dot(make_float3(0.0556434, -0.2040259, 1.0572252), _xyz);
-	return rgb;
-}
-
-__device__ float3 convertXYZ2Yxy(float3 _xyz)
-{
-	// Reference(s):
-	// - XYZ to xyY
-	//   https://web.archive.org/web/20191027010144/http://www.brucelindbloom.com/index.html?Eqn_XYZ_to_xyY.html
-	float inv = 1.0 / dot(_xyz, make_float3(1.0, 1.0, 1.0));
-	return make_float3(_xyz.y, _xyz.x * inv, _xyz.y * inv);
-}
-
-__device__ float3 convertYxy2XYZ(float3 _Yxy)
-{
-	// Reference(s):
-	// - xyY to XYZ
-	//   https://web.archive.org/web/20191027010036/http://www.brucelindbloom.com/index.html?Eqn_xyY_to_XYZ.html
-	float3 xyz;
-	xyz.x = _Yxy.x * _Yxy.y / _Yxy.z;
-	xyz.y = _Yxy.x;
-	xyz.z = _Yxy.x * (1.0 - _Yxy.y - _Yxy.z) / _Yxy.z;
-	return xyz;
-}
-
-__device__ float3 convertRGB2Yxy(float3 _rgb)
-{
-	return convertXYZ2Yxy(convertRGB2XYZ(_rgb));
-}
-
-__device__ float3 convertYxy2RGB(float3 _Yxy)
-{
-	return convertXYZ2RGB(convertYxy2XYZ(_Yxy));
-}
-
+//TODO:proper exposure-luminance calculations
 //TODO: standardize color operations
 __global__ void toneMap(const IntegratorGlobals t_globals)
 {
@@ -229,24 +184,41 @@ __global__ void toneMap(const IntegratorGlobals t_globals)
 
 	//TODO: proper calibration
 	float exposure = t_globals.SceneDescriptor.ActiveCamera->exposure;
+	//float exposure_comp_EV = t_globals.SceneDescriptor.ActiveCamera->exposure;
+	//frag_spectrum *= powf(2, exposure_comp_EV);
+
 	frag_spectrum *= exposure;
+
+	constexpr float LUMINANCE_EPSILON = 0.1;
 
 	if (t_globals.IntegratorCFG.auto_exposure_enabled)
 	{
-		float l_max = (*t_globals.AverageLuminance) * 9.6;
+		//ISO=100
+		//K=12.5
+
+		float l_max = ((*t_globals.AverageLuminance) * 9.6) + LUMINANCE_EPSILON;
+		float H = 1 / l_max;
 		float3 Yxy = convertRGB2Yxy(make_float3(frag_spectrum));
-		Yxy.x = Yxy.x / (l_max);//TODO: add epsilon?
+		Yxy.x = Yxy.x * H;//scale luminance
+
 		frag_spectrum = RGBSpectrum(convertYxy2RGB(Yxy));
 	}
+	//DEBUG
+	//if (current_pix == frame_res / 2) {
+	//	printf("color: %.3f %.3f %.3f\n", frag_spectrum.r, frag_spectrum.g, frag_spectrum.b);
+	//}
 
 	//normalize
-	frag_spectrum = toneMapping(frag_spectrum, 1);
-	//frag_spectrum = AgxMinimal::agx_fitted(frag_spectrum);
+	//frag_spectrum = toneMapping(frag_spectrum, 1);
+	frag_spectrum = clampOutput(frag_spectrum);
 
-	//frag_spectrum = RGBSpectrum(AgxMinimal::agxLook(make_float3(frag_spectrum)));
+	frag_spectrum = AgxMinimal::agx_fitted(frag_spectrum);
+
+	frag_spectrum = RGBSpectrum(AgxMinimal::agxLook(make_float3(frag_spectrum)));
+
 	//EOTF
-	frag_spectrum = gammaCorrection(frag_spectrum);
-	//frag_spectrum = AgxMinimal::agx_fitted_Eotf(frag_spectrum);
+	//frag_spectrum = gammaCorrection(frag_spectrum);
+	frag_spectrum = AgxMinimal::agx_fitted_Eotf(frag_spectrum);
 
 	float4 frag_color = make_float4(frag_spectrum, 1);
 

@@ -18,8 +18,8 @@ struct IntegratorSettings {
 	float bloom_internal_lerp = 0.75;
 
 	float auto_exposure_speed = 0.1f;
-	float auto_exposure_max_comp = 20.f;
-	float auto_exposure_min_comp = -5.5f;
+	float auto_exposure_max_comp = 20.f;//-12.47393f
+	float auto_exposure_min_comp = -5.5f;//4.026069f;
 
 	int max_bounces = 2;
 	bool MIS = false;

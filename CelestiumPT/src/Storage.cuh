@@ -18,6 +18,7 @@ public:
 	int2 resolution;
 	//post
 	cudaSurfaceObject_t composite_surfobject;
+	cudaSurfaceObject_t debugview_AECW_surfobject;
 	cudaSurfaceObject_t bloom_surfobject;
 	cudaSurfaceObject_t mip1_surfobject;
 	cudaSurfaceObject_t mip2_surfobject;

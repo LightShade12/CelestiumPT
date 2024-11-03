@@ -106,6 +106,7 @@ struct CelestiumPT_API
 	//post
 	FrameBuffer CompositeRenderBuffer;//srgb view transformed
 	FrameBuffer BloomBuffer;
+	FrameBuffer DebugViewAECWeights;
 	FrameBuffer Mip1;
 	FrameBuffer Mip2;
 	FrameBuffer Mip3;
@@ -217,6 +218,7 @@ void Renderer::resizeResolution(int width, int height)
 	//printf("max mips: %d\n", g_max_mips);
 	//post
 	m_CelestiumPTResourceAPI->CompositeRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->DebugViewAECWeights.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->BloomBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	if (g_max_mips >= 1)m_CelestiumPTResourceAPI->Mip1.resizeResolution((float(m_NativeRenderResolutionWidth + 1) / 2.0f), (float(m_NativeRenderResolutionHeight + 1) / 2.0f));
@@ -336,12 +338,14 @@ void texCopy(const FrameBuffer& src, const FrameBuffer& dst, int t_width, int t_
 
 void Renderer::renderFrame()
 {
-	//printf("avg lum: %.3f\n", *(m_CelestiumPTResourceAPI->m_IntegratorGlobals.AverageLuminance));
+	//printf("avg lum: %.9f\n", *(m_CelestiumPTResourceAPI->m_IntegratorGlobals.AverageLuminance));
 	//pre render-------------------------------------------------------------
 	{
 		// Post ---------------------------------
 		m_CelestiumPTResourceAPI->CompositeRenderBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_surfobject));
+		m_CelestiumPTResourceAPI->DebugViewAECWeights.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.debugview_AECW_surfobject));
 		m_CelestiumPTResourceAPI->BloomBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bloom_surfobject));
 		if (g_max_mips >= 1)m_CelestiumPTResourceAPI->Mip1.beginRender(
@@ -829,6 +833,8 @@ void Renderer::renderFrame()
 		// Post ---------------------------------
 		m_CelestiumPTResourceAPI->CompositeRenderBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.composite_surfobject));
+		m_CelestiumPTResourceAPI->DebugViewAECWeights.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.debugview_AECW_surfobject));
 		m_CelestiumPTResourceAPI->BloomBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.bloom_surfobject));
 		if (g_max_mips >= 1)m_CelestiumPTResourceAPI->Mip1.endRender(
@@ -1112,7 +1118,8 @@ GLuint Renderer::getDenseGradientTargetTextureName() const
 
 GLuint Renderer::getMiscDebugTextureName() const
 {
-	return m_CelestiumPTResourceAPI->Mip6.m_RenderTargetTextureName;
+	//return m_CelestiumPTResourceAPI->Mip6.m_RenderTargetTextureName;
+	return m_CelestiumPTResourceAPI->DebugViewAECWeights.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getMip0DebugTextureName() const

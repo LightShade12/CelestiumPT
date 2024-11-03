@@ -144,7 +144,6 @@ public:
 };
 
 //operators
-//__device__ __host__ RGBSpectrum operator*(float a, RGBSpectrum b);
 
 //vector types extension
 __device__ __host__ float3 make_float3(const RGBSpectrum& rgb);
@@ -157,3 +156,15 @@ __device__ __host__ float4 make_float4(const RGBSpectrum& rgb, float s);
 __device__ RGBSpectrum clampOutput(const RGBSpectrum& rgb);
 
 __device__ float getLuminance(const RGBSpectrum& t_linear_col);
+
+__device__ float3 convertRGB2XYZ(float3 _rgb);
+
+__device__ float3 convertXYZ2RGB(float3 _xyz);
+
+__device__ float3 convertXYZ2Yxy(float3 _xyz);
+
+__device__ float3 convertYxy2XYZ(float3 _Yxy);
+
+__device__ float3 convertRGB2Yxy(float3 _rgb);
+
+__device__ float3 convertYxy2RGB(float3 _Yxy);
