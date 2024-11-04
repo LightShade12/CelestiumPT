@@ -256,8 +256,19 @@ void EditorSandbox::onRender(float delta_secs)
 				{
 					ImGui::Checkbox("SkyLight", &(m_Renderer.getIntegratorSettings()->skylight_enabled));
 					ImGui::SliderFloat("SkyLight intensity", &(m_Renderer.getIntegratorSettings()->skylight_intensity), 0, 30);
+					ImGui::SliderFloat("Rayleigh coeff R", &(m_Renderer.getIntegratorSettings()->rl_coeff_r), 0, 30);
+					ImGui::SliderFloat("Rayleigh coeff G", &(m_Renderer.getIntegratorSettings()->rl_coeff_g), 0, 30);
+					ImGui::SliderFloat("Rayleigh coeff B", &(m_Renderer.getIntegratorSettings()->rl_coeff_b), 0, 30);
+
 					ImGui::Checkbox("SunLight", &(m_Renderer.getIntegratorSettings()->sunlight_enabled));
 					ImGui::SliderFloat("SunLight intensity", &(m_Renderer.getIntegratorSettings()->sunlight_intensity), 0, 30);
+					{
+						ImGui::Indent();
+						ImGui::SliderFloat("Sun distance", &(m_Renderer.getIntegratorSettings()->sun_distance), 0, 100);
+						ImGui::SliderAngle("Sun Phi", &(m_Renderer.getIntegratorSettings()->sun_phi));
+						ImGui::SliderAngle("Sun Theta", &(m_Renderer.getIntegratorSettings()->sun_theta), -10, 90);
+						ImGui::Unindent();
+					}
 				};
 				ImGui::EndTabItem();
 			}

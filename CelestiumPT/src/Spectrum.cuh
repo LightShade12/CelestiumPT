@@ -74,12 +74,10 @@ public:
 	}
 
 	__device__ __host__ RGBSpectrum operator*(float a) const {
-		//DCHECK(!IsNaN(a));
 		return { a * r, a * g, a * b };
 	}
 
 	__device__ __host__ RGBSpectrum& operator*=(float a) {
-		//DCHECK(!IsNaN(a));
 		r *= a;
 		g *= a;
 		b *= a;
@@ -101,8 +99,6 @@ public:
 	}
 
 	__device__ __host__ RGBSpectrum& operator/=(float a) {
-		//DCHECK(!IsNaN(a));
-		//DCHECK_NE(a, 0);
 		r /= a;
 		g /= a;
 		b /= a;
@@ -123,7 +119,6 @@ public:
 	__device__ __host__ bool operator!=(RGBSpectrum s) const { return r != s.r || g != s.g || b != s.b; }
 
 	__device__ __host__ float operator[](int c) const {
-		//DCHECK(c >= 0 && c < 3);
 		if (c == 0)
 			return r;
 		else if (c == 1)
@@ -132,7 +127,6 @@ public:
 	}
 
 	__device__ __host__ float& operator[](int c) {
-		//DCHECK(c >= 0 && c < 3);
 		if (c == 0)
 			return r;
 		else if (c == 1)
