@@ -353,8 +353,8 @@ void EditorSandbox::onRender(float delta_secs)
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}
 			else if (curent_renderview == RenderView::ALBEDO) {
-				if (m_Renderer.getAlbedoRenderTargetTextureName() != NULL)
-					ImGui::Image((void*)(uintptr_t)m_Renderer.getAlbedoRenderTargetTextureName(),
+				if (m_Renderer.getAlbedoTargetTextureName() != NULL)
+					ImGui::Image((void*)(uintptr_t)m_Renderer.getAlbedoTargetTextureName(),
 						ImVec2((float)m_Renderer.getFrameWidth(),
 							(float)m_Renderer.getFrameHeight()), { 0,1 }, { 1,0 });
 			}

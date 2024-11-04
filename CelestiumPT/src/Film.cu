@@ -1,4 +1,5 @@
 #include "film.cuh"
+#include "ray.cuh"
 #include "shape_intersection.cuh"
 #include "scene_geometry.cuh"
 #include "device_material.cuh"
@@ -254,13 +255,15 @@ __device__ void recordGBufferHit(const IntegratorGlobals& globals, int2 ppixel, 
 		globals.FrameBuffer.debugview_objectID_surfobject, ppixel);
 }
 
-__device__ void recordGBufferAny(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si)
+__device__ void recordGBufferAny(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si, const Ray& ray)
 {
 	//Gbuffer
 	texWrite(make_float4(make_float3(si.object_idx), 1),
 		globals.FrameBuffer.objectID_surfobject, ppixel);
 	texWrite(make_float4(make_float3(si.triangle_idx), 1),
 		globals.FrameBuffer.triangleID_surfobject, ppixel);
+	texWrite(make_float4(ray.getDirection(), 1),
+		globals.FrameBuffer.viewdirections_surfobject, ppixel);
 
 	//DebugViews===================================
 

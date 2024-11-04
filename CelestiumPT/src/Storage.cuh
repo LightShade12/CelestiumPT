@@ -67,6 +67,7 @@ public:
 
 	//gbuffer
 	cudaSurfaceObject_t albedo_surfobject;
+	cudaSurfaceObject_t viewdirections_surfobject;
 	cudaSurfaceObject_t world_normals_surfobject;
 	cudaSurfaceObject_t local_normals_surfobject;
 	cudaSurfaceObject_t world_positions_surfobject;
@@ -86,6 +87,7 @@ public:
 	cudaSurfaceObject_t debugview_misc_surfobject;
 
 	//history
+	cudaSurfaceObject_t history_viewdirections_surfobject;
 	cudaSurfaceObject_t history_depth_surfobject;
 	cudaSurfaceObject_t history_world_normals_surfobject;
 

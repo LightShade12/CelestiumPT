@@ -3,6 +3,7 @@
 
 struct IntegratorGlobals;
 struct ShapeIntersection;
+class Ray;
 
 namespace AgxMinimal {
 	__device__ RGBSpectrum agx_fitted(RGBSpectrum col);
@@ -24,7 +25,7 @@ __device__ RGBSpectrum gammaCorrection(const RGBSpectrum linear_color);
 
 __device__ void recordGBufferHit(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si);
 
-__device__ void recordGBufferAny(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si);
+__device__ void recordGBufferAny(const IntegratorGlobals& globals, int2 ppixel, const ShapeIntersection& si, const Ray& ray);
 
 __device__ void recordGBufferMiss(const IntegratorGlobals& globals, int2 ppixel);
 

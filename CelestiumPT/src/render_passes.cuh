@@ -70,7 +70,7 @@ __global__ void computePrimaryVisibility(const IntegratorGlobals t_globals) {
 
 	ShapeIntersection payload = IntegratorPipeline::Intersect(t_globals, primary_ray);
 
-	recordGBufferAny(t_globals, current_pix, payload);
+	recordGBufferAny(t_globals, current_pix, payload,primary_ray);
 
 	if (payload.hit_distance < 0) {
 		recordGBufferMiss(t_globals, current_pix);

@@ -22,7 +22,7 @@ public:
 	void clearAccumulation();
 
 	GLuint getCompositeRenderTargetTextureName() const;
-	GLuint getAlbedoRenderTargetTextureName() const;
+	GLuint getAlbedoTargetTextureName() const;
 	GLuint getNormalsTargetTextureName() const;
 	GLuint getPositionsTargetTextureName() const;
 	GLuint getLocalPositionsTargetTextureName() const;
@@ -34,7 +34,6 @@ public:
 	GLuint getUVsDebugTargetTextureName() const;
 	GLuint getObjectIDDebugTargetTextureName() const;
 	GLuint getBarycentricsDebugTargetTextureName() const;
-	GLuint getAlbedoTargetTextureName() const;
 	GLuint getIntegratedVarianceTargetTextureName() const;
 	GLuint getSparseGradientTargetTextureName() const;
 	GLuint getDenseGradientTargetTextureName() const;

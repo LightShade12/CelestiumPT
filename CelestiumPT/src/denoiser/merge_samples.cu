@@ -98,6 +98,7 @@ __global__ void mergeSamples(const IntegratorGlobals t_globals)
 	float4 old_l_pos = texReadNearest(t_globals.FrameBuffer.history_local_positions_surfobject, prev_px);
 
 	float4 old_depth = texReadNearest(t_globals.FrameBuffer.history_depth_surfobject, prev_px);
+	float4 old_viewdir = texReadNearest(t_globals.FrameBuffer.history_viewdirections_surfobject, prev_px);
 
 	float4 old_triangle_ID = texReadNearest(t_globals.FrameBuffer.history_triangleID_surfobject, prev_px);
 	float4 old_object_ID = texReadNearest(t_globals.FrameBuffer.history_objectID_surfobject, prev_px);
@@ -112,6 +113,7 @@ __global__ void mergeSamples(const IntegratorGlobals t_globals)
 	texWrite(old_l_pos, t_globals.FrameBuffer.local_positions_surfobject, sampling_pix);
 
 	texWrite(old_depth, t_globals.FrameBuffer.depth_surfobject, sampling_pix);
+	texWrite(old_viewdir, t_globals.FrameBuffer.viewdirections_surfobject, sampling_pix);
 
 	texWrite(old_triangle_ID, t_globals.FrameBuffer.triangleID_surfobject, sampling_pix);
 	texWrite(old_object_ID, t_globals.FrameBuffer.objectID_surfobject, sampling_pix);

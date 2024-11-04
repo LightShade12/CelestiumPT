@@ -125,6 +125,7 @@ struct CelestiumPT_API
 
 	//GBUFFER
 	FrameBuffer AlbedoRenderBuffer;
+	FrameBuffer ViewDirectionsRenderBuffer;
 	FrameBuffer LocalNormalsRenderBuffer;//used for normals reject
 	FrameBuffer LocalPositionsRenderBuffer;//used for reproj & depth reject
 	FrameBuffer WorldNormalsRenderBuffer;
@@ -171,6 +172,7 @@ struct CelestiumPT_API
 	FrameBuffer IntegratedIrradianceRenderBackBuffer;//write; Filtered output
 
 	//history
+	FrameBuffer HistoryViewDirectionsRenderBuffer;
 	FrameBuffer HistoryDepthRenderBuffer;
 	FrameBuffer HistoryWorldNormalsRenderBuffer;
 
@@ -239,6 +241,7 @@ void Renderer::resizeResolution(int width, int height)
 
 	//gbuffer
 	m_CelestiumPTResourceAPI->AlbedoRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
+	m_CelestiumPTResourceAPI->ViewDirectionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	m_CelestiumPTResourceAPI->WorldNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->LocalNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
@@ -310,6 +313,7 @@ void Renderer::resizeResolution(int width, int height)
 	m_CelestiumPTResourceAPI->MiscDebugViewBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
 	// History Buffers
+	m_CelestiumPTResourceAPI->HistoryViewDirectionsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 	m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.resizeResolution(m_NativeRenderResolutionWidth, m_NativeRenderResolutionHeight);
 
@@ -378,6 +382,8 @@ void Renderer::renderFrame()
 		// Albedo Buffer ---------------------------------
 		m_CelestiumPTResourceAPI->AlbedoRenderBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.albedo_surfobject));
+		m_CelestiumPTResourceAPI->ViewDirectionsRenderBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.viewdirections_surfobject));
 
 		// G-Buffer ---------------------------------
 		m_CelestiumPTResourceAPI->LocalNormalsRenderBuffer.beginRender(
@@ -454,6 +460,8 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_objectID_surfobject));
 
 		// History Buffers ---------------------------------
+		m_CelestiumPTResourceAPI->HistoryViewDirectionsRenderBuffer.beginRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_viewdirections_surfobject));
 		m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.beginRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_surfobject));
 		m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.beginRender(
@@ -866,6 +874,8 @@ void Renderer::renderFrame()
 		// Albedo Buffer ---------------------------------
 		m_CelestiumPTResourceAPI->AlbedoRenderBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.albedo_surfobject));
+		m_CelestiumPTResourceAPI->ViewDirectionsRenderBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.viewdirections_surfobject));
 
 		// G-Buffer ---------------------------------
 		m_CelestiumPTResourceAPI->LocalNormalsRenderBuffer.endRender(
@@ -942,6 +952,8 @@ void Renderer::renderFrame()
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_objectID_surfobject));
 
 		// History Buffers ---------------------------------
+		m_CelestiumPTResourceAPI->HistoryViewDirectionsRenderBuffer.endRender(
+			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_viewdirections_surfobject));
 		m_CelestiumPTResourceAPI->HistoryDepthRenderBuffer.endRender(
 			&(m_CelestiumPTResourceAPI->m_IntegratorGlobals.FrameBuffer.history_depth_surfobject));
 		m_CelestiumPTResourceAPI->HistoryWorldNormalsRenderBuffer.endRender(
@@ -1016,6 +1028,11 @@ void Renderer::renderFrame()
 		texCopy(m_CelestiumPTResourceAPI->BarycentricsRenderBuffer,
 			m_CelestiumPTResourceAPI->HistoryBarycentricsBuffer, m_NativeRenderResolutionWidth,
 			m_NativeRenderResolutionHeight);
+
+		//view dirs
+		texCopy(m_CelestiumPTResourceAPI->ViewDirectionsRenderBuffer,
+			m_CelestiumPTResourceAPI->HistoryViewDirectionsRenderBuffer, m_NativeRenderResolutionWidth,
+			m_NativeRenderResolutionHeight);
 	}
 }
 
@@ -1034,11 +1051,6 @@ void Renderer::clearAccumulation()
 GLuint Renderer::getCompositeRenderTargetTextureName() const
 {
 	return m_CelestiumPTResourceAPI->CompositeRenderBuffer.m_RenderTargetTextureName;
-}
-
-GLuint Renderer::getAlbedoRenderTargetTextureName() const
-{
-	return m_CelestiumPTResourceAPI->AlbedoRenderBuffer.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getNormalsTargetTextureName() const
@@ -1119,7 +1131,7 @@ GLuint Renderer::getDenseGradientTargetTextureName() const
 GLuint Renderer::getMiscDebugTextureName() const
 {
 	//return m_CelestiumPTResourceAPI->Mip6.m_RenderTargetTextureName;
-	return m_CelestiumPTResourceAPI->DebugViewAECWeights.m_RenderTargetTextureName;
+	return m_CelestiumPTResourceAPI->ViewDirectionsRenderBuffer.m_RenderTargetTextureName;
 }
 
 GLuint Renderer::getMip0DebugTextureName() const
