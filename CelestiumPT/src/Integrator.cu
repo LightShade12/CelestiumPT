@@ -264,45 +264,43 @@ __device__ bool intersectSphere(float3 t_orig, float3 t_dir, float3 t_centre, fl
 
 struct Atmosphere {
 	__device__ Atmosphere(float3 t_sunpos, float t_sun_intensity) :
-		m_sun_pos(t_sunpos), m_sun_intensity(t_sun_intensity) {};
+		m_sun_position(t_sunpos), m_sun_intensity(t_sun_intensity) {};
 
 public:
 
 	__device__ RGBSpectrum Le(float3 t_orig, float3 t_dir, float t_tmin, float t_tmax) const
 	{
 		float t0, t1;
-		//miss atmosphere
-		if (!intersectSphere(t_orig, t_dir,
-			make_float3(0),
-			atmosphere_radius,
-			//	5,
-			t0, t1) || t1 < 0)
+		// miss atmosphere
+		if (!intersectSphere(t_orig, t_dir, make_float3(0), m_atmosphereRadius, t0, t1) || t1 < 0)
 		{
 			return RGBSpectrum(0);
 		}
-		//hit atmosphere
-		if (t0 > t_tmin && t0 > 0) t_tmin = t0;//increase t_min
-		if (t1 < t_tmax) t_tmax = t1;//reduce t_max
+		// hit atmosphere
+		if (t0 > t_tmin && t0 > 0)
+			t_tmin = t0; // increase tmin
+		if (t1 < t_tmax)
+			t_tmax = t1; // reduce tmax
 
-		//return RGBSpectrum(fabsf(t_tmin));
-
-		const float3 sun_dir = normalize(m_sun_pos);
 		const float step_length = (t_tmax - t_tmin) / m_num_samples;
-		const float mu = dot(t_dir, sun_dir);  //cosine of the angle between the sun direction and the ray direction
-		const float g = 0.76f;//anisotropy
+		float current_t = t_tmin;
+		float3 sum_R_transmission = make_float3(0);
+		float3 sum_M_transmission = make_float3(0);             // integrated mie and rayleigh contribution
+		float sum_R_optical_depth = 0, sum_M_optical_depth = 0; // discrete integration for transmittance
+
+		const float3 sun_dir = normalize(m_sun_position);
+
+		const float mu = dot(t_dir, sun_dir); // cosine of the angle between the sun direction and the ray direction
 		const float phaseR = 3.f / (16.f * PI) * (1 + mu * mu);
+		const float g = 0.76f; // anisotropy
 		const float phaseM = 3.f / (8.f * PI) * ((1.f - g * g) * (1.f + mu * mu)) / ((2.f + g * g) * pow(1.f + g * g - 2.f * g * mu, 1.5f));
 
-		float current_t = t_tmin;
-		float3 sum_R_transmission = make_float3(0), sum_M_transmission = make_float3(0);  //integrated mie and rayleigh contribution
-		float sum_R_optical_depth = 0, sum_M_optical_depth = 0;//discrete integration for transmittance
-
-		//sample contrib points along ray;
-		//integrate from t0 to t1 for transmittance and Lsun
+		// sample contrib points along ray;
+		// integrate from t0 to t1 for transmittance and Lsun
 		for (uint32_t i = 0; i < m_num_samples; ++i)
 		{
 			const float3 sample_position = t_orig + (current_t + step_length * 0.5f) * t_dir;
-			const float height = length(sample_position) - earth_radius;//correct height computation?
+			const float height = length(sample_position) - m_earthRadius;
 
 			// compute optical depth for this step
 			const float hr = exp(-height / Hr) * step_length;
@@ -312,61 +310,60 @@ public:
 
 			// optical depth sum for light for this step
 			float t0_light, t1_light;
-			intersectSphere(sample_position, sun_dir, make_float3(0), atmosphere_radius, t0_light, t1_light);
+			intersectSphere(sample_position, sun_dir, make_float3(0),
+				m_atmosphereRadius, t0_light, t1_light);
 			const float step_length_light = t1_light / m_num_samples_light;
 
-			float current_t_light = 0;//assuming t0_light=0
-			float sum_R_optical_depth_light = 0, sum_M_optical_depth_light = 0;
+			float current_t_light = 0;
+			float sum_R_optical_depth_light = 0,
+				sum_M_optical_depth_light = 0;
 
 			uint32_t j;
-			//sample sunlight contrib along sunlight ray
 			for (j = 0; j < m_num_samples_light; ++j)
 			{
-				float3 sample_position_light = sample_position + (current_t_light + step_length_light * 0.5f) * sun_dir;
-				float height_light = length(sample_position_light) - earth_radius;
-				if (height_light < 0) break;//if sun dir points/sample_pos is below horizon/earth
-
+				const float3 sample_position_light = sample_position + (current_t_light + step_length_light * 0.5f) * sun_dir;
+				const float height_light = length(sample_position_light) - m_earthRadius;
+				if (height_light < 0) // if sun dir points/sample_pos is below horizon/earth
+					break;
 				sum_R_optical_depth_light += exp(-height_light / Hr) * step_length_light;
 				sum_M_optical_depth_light += exp(-height_light / Hm) * step_length_light;
-
 				current_t_light += step_length_light;
 			}
-			if (j == m_num_samples_light)//last iter
+			if (j == m_num_samples_light) // last iter
 			{
-				RGBSpectrum	beta_R_extinction = beta_R_scattering;
-				RGBSpectrum	beta_M_extinction = beta_M_scattering * 1.1f;
+				float3 beta_R_extinction = beta_R_scattering;
+				float3 beta_M_extinction = beta_M_scattering * 1.1f;
 
-				//transmittance; grouping optical_depth sum for sunlight and view transmittance calcs
-				float3 tau = make_float3(beta_R_extinction * (sum_R_optical_depth + sum_R_optical_depth_light)
-					+ beta_M_extinction * (sum_M_optical_depth + sum_M_optical_depth_light));
+				// transmittance; grouping optical_depth sum for sunlight and view transmittance calcs
+				float3 tau = beta_R_extinction * (sum_R_optical_depth + sum_R_optical_depth_light) + beta_M_extinction * (sum_M_optical_depth + sum_M_optical_depth_light);
 				float3 transmittance = make_float3(exp(-tau.x), exp(-tau.y), exp(-tau.z));
 
 				const float& optical_depthR = hr, optical_depthM = hm;
-				//transmittance * optical_depth sum; later multiplied with beta to compute beta(h)=beta(0)*optical_depth(h)
+				// transmittance * optical_depth sum; later multiplied with beta to compute beta(h)=beta(0)*optical_depth(h)
 				sum_R_transmission += transmittance * optical_depthR;
 				sum_M_transmission += transmittance * optical_depthM;
 			}
-
 			current_t += step_length;
 		}
 
-		//return RGBSpectrum(0, 0.5, 1);
-		//return RGBSpectrum(sum_R_transmission * beta_R_scattering * phaseR + sum_M_transmission * beta_M_scattering * phaseM) * m_sun_intensity;
-		//return RGBSpectrum(sum_R_transmission * beta_R_scattering * phaseR) * m_sun_intensity;//rayleigh only
-		return RGBSpectrum(sum_M_transmission * beta_M_scattering * phaseM) * m_sun_intensity;//mie only
+		float3 col = (sum_R_transmission * beta_R_scattering * phaseR + sum_M_transmission * beta_M_scattering * phaseM) * m_sun_intensity;
+		return RGBSpectrum(col);
 	}
 
 public:
 
-	uint32_t m_num_samples = 16 * 2;
-	uint32_t m_num_samples_light = 8 * 2;
+	uint32_t m_num_samples = 16;
+	uint32_t m_num_samples_light = 8;
 
-	float3 m_sun_pos;
-	float m_sun_intensity;
-	float Hr = 7994, Hm = 1200;//scale height; Hm=1.2km; Hr=7.9km=8km
-	float earth_radius = 6360e3, atmosphere_radius = 6420e3;
-	RGBSpectrum beta_R_scattering = RGBSpectrum(3.8e-6f, 13.5e-6f, 33.1e-6f),
-		beta_M_scattering = RGBSpectrum(21e-6f);//scattering; precomputed color coeffs
+	float m_sun_intensity = 1;
+	float3 m_sun_position;             // The sun direction (normalized)
+	float m_earthRadius = 6360e3;      // In the paper this is usually Rg or Re (radius ground, eart)
+	float m_atmosphereRadius = 6420e3; // In the paper this is usually R or Ra (radius atmosphere)
+	float Hr = 7994;                   // Thickness of the atmosphere if density was uniform (Hr)
+	float Hm = 1200;                   // Same as above but for Mie scattering (Hm)
+
+	float3 beta_R_scattering = make_float3(3.8e-6f, 13.5e-6f, 33.1e-6f);
+	const float3 beta_M_scattering = make_float3(21e-6f);
 };
 
 //const RGBSpectrum Atmosphere::beta_R_scattering(3.8e-6f, 13.5e-6f, 33.1e-6f);//r=5.8e-6
@@ -375,9 +372,9 @@ public:
 __device__ RGBSpectrum sampleSkyLe(const IntegratorGlobals& t_globals, Ray t_ray, float3 t_sunpos, uint32_t t_seed)
 {
 	Atmosphere atmosphere(t_sunpos, t_globals.IntegratorCFG.skylight_intensity);
-	atmosphere.beta_R_scattering *= RGBSpectrum(t_globals.IntegratorCFG.rl_coeff_r, t_globals.IntegratorCFG.rl_coeff_g, t_globals.IntegratorCFG.rl_coeff_b);
+	atmosphere.beta_R_scattering *= make_float3(t_globals.IntegratorCFG.rl_coeff_r, t_globals.IntegratorCFG.rl_coeff_g, t_globals.IntegratorCFG.rl_coeff_b);
 	RGBSpectrum light = atmosphere.Le(
-		make_float3(0, atmosphere.earth_radius + 1, 0),
+		make_float3(0, atmosphere.m_earthRadius + 1, 0),
 		//	t_ray.getOrigin(),
 		normalize(t_ray.getDirection()), 0, FLT_MAX);
 	return light;
