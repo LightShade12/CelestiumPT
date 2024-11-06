@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTFfromFile("../models/cs16_dust_unit.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTFfromFile("../models/temp.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 

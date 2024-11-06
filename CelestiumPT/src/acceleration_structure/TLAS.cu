@@ -4,6 +4,8 @@
 #include "scene_geometry.cuh"
 #include "shape_intersection.cuh"
 
+__constant__ constexpr int TLAS_TRAVERSAL_MAX_STACK_DEPTH = 16;
+
 TLAS::TLAS(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNode>& tlasnodes)
 {
 	m_BLASCount = read_blases.size();
@@ -77,8 +79,6 @@ void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<
 
 	delete[] TLASnodeIdx;
 }
-
-#define TLAS_TRAVERSAL_MAX_STACK_DEPTH 16
 
 __device__ void TLAS::intersect(const IntegratorGlobals& globals, const Ray& ray, ShapeIntersection* closest_hitpayload) const
 {
@@ -216,5 +216,4 @@ __device__ bool TLAS::intersectP(const IntegratorGlobals& globals, const Ray& ra
 		}
 	}
 	return hit;
-}
-;
+};

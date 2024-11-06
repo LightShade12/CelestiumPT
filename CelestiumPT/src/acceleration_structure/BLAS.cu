@@ -12,6 +12,7 @@
 #include <numeric>
 #include <float.h>
 //#include "DeviceScene.cuh"
+__constant__ constexpr int BLAS_TRAVERSAL_MAX_STACK_DEPTH = 16;
 
 int BLAS::costHeursitic(const BVHNode& left_node, const BVHNode& right_node, const Bounds3f& parent_bbox, BVHBuilderSettings bvhcfg)
 {
@@ -388,8 +389,6 @@ void BLAS::makeFinalPartition(BVHNode& left, BVHNode& right, float bin, Partitio
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
-
-#define BLAS_TRAVERSAL_MAX_STACK_DEPTH 16
 
 __device__ void BLAS::intersect(const IntegratorGlobals& t_globals, const Ray& t_ray, ShapeIntersection* t_closest_hitpayload)
 {
