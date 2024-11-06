@@ -9,13 +9,13 @@ struct IntegratorSettings {
 	bool use_5x5_filter = false;
 
 	bool sunlight_enabled = false;
-	float sunlight_intensity = 2;
-	float sun_theta = 0.78;
-	float sun_phi = 0;//rads
-	float sun_distance = 100;
+	float sunlight_intensity = 6;
+	float sun_theta = 0.785;
+	float sun_phi = -0.890118;//rads
+	float sun_distance = 90;
 
 	bool skylight_enabled = true;
-	float skylight_intensity = 1;
+	float skylight_intensity = 790;
 	float rl_coeff_r = 1;
 	float rl_coeff_g = 1;
 	float rl_coeff_b = 1;

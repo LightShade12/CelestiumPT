@@ -78,7 +78,7 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 	LightSampleContext prev_ctx{};
 	ShapeIntersection payload{};
 	float eta_scale = 1;//TODO: look up russian roulette
-	//float3 sunpos = make_float3(sinf(t_globals.FrameIndex * 0.01f), 1, cosf(t_globals.FrameIndex * 0.01f)) * 100;
+	//float3 sun_position = make_float3(sinf(t_globals.FrameIndex * 0.01f), 1, cosf(t_globals.FrameIndex * 0.01f)) * 100;
 	float3 sunpos = make_float3(0.266, 0.629, 0.257) * 100;
 	RGBSpectrum suncol(1.000, 0.877, 0.822);
 	//suncol *= RGBSpectrum(1, 0.7, 0.4);
@@ -347,6 +347,8 @@ public:
 		}
 
 		float3 col = (sum_R_transmission * beta_R_scattering * phaseR + sum_M_transmission * beta_M_scattering * phaseM) * m_sun_intensity;
+		//float3 col = (sum_R_transmission * beta_R_scattering * phaseR) * m_sun_intensity;//rayleigh only
+		//float3 col = (sum_M_transmission * beta_M_scattering * phaseM) * m_sun_intensity; //mie only
 		return RGBSpectrum(col);
 	}
 
@@ -365,9 +367,6 @@ public:
 	float3 beta_R_scattering = make_float3(3.8e-6f, 13.5e-6f, 33.1e-6f);
 	const float3 beta_M_scattering = make_float3(21e-6f);
 };
-
-//const RGBSpectrum Atmosphere::beta_R_scattering(3.8e-6f, 13.5e-6f, 33.1e-6f);//r=5.8e-6
-//const RGBSpectrum Atmosphere::beta_M_scattering(21e-6f);
 
 __device__ RGBSpectrum sampleSkyLe(const IntegratorGlobals& t_globals, Ray t_ray, float3 t_sunpos, uint32_t t_seed)
 {
@@ -398,13 +397,20 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 	LightSampleContext prev_ctx{};
 	float eta_scale = 1;
 
-	//float3 sunpos = make_float3(sinf(t_globals.FrameIndex * 0.01f), 1, cosf(t_globals.FrameIndex * 0.01f)) * 100;
-	float3 sunpos = make_float3(sinf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta),
-		sinf(t_globals.IntegratorCFG.sun_theta),
-		cosf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta))
+	float sun_theta = t_globals.FrameIndex * 0.001;
+	float sun_phi = t_globals.FrameIndex * 0.005;
+	float3 sun_position = make_float3(
+		sinf(sun_phi) * (cosf(sun_theta)),
+		fabsf(sinf(sun_theta))-0.1f,
+		cosf(sun_phi) * (cosf(sun_theta)))
 		* t_globals.IntegratorCFG.sun_distance;
-	//float3 sunpos = make_float3(0.266, 0.629, 0.257) * 100;
-	RGBSpectrum suncol(1.000, 0.877, 0.822);
+	//float3 sun_position = make_float3(sinf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta),
+	//	sinf(t_globals.IntegratorCFG.sun_theta),
+	//	cosf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta))
+	//	* t_globals.IntegratorCFG.sun_distance;
+
+	//float3 sun_position = make_float3(0.266, 0.629, 0.257) * 100;
+	//RGBSpectrum suncol(1.000, 0.877, 0.822);
 
 	for (int bounce_depth = 0; bounce_depth <= t_globals.IntegratorCFG.max_bounces; bounce_depth++)
 	{
@@ -419,10 +425,25 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		{
 			if (t_globals.IntegratorCFG.skylight_enabled)
 			{
-				RGBSpectrum sky_radiance = sampleSkyLe(t_globals, ray,
-					sunpos,
-					//	make_float3(0, 1, 0),
-					t_seed);
+				RGBSpectrum sky_radiance(0);
+
+				sky_radiance = sampleSkyLe(t_globals, ray,
+					sun_position, t_seed);
+
+				light += sky_radiance;
+
+				if (primary_surface)
+				{
+					float threshold = 0.987;
+					float factor = (powf(max(0.0, dot(ray.getDirection(), normalize(sun_position))), 128));
+					factor = factor > threshold ? 1 : 0;
+
+					Atmosphere atmosphere(sun_position, t_globals.IntegratorCFG.skylight_intensity);
+					RGBSpectrum sampled_sun_col = atmosphere.Le(make_float3(0, atmosphere.m_earthRadius + 1, 0),
+						normalize(sun_position), 0, FLT_MAX);
+
+					light += sampled_sun_col * factor * 100.f;
+				}
 
 				light += sky_radiance * throughtput;
 			}
@@ -460,12 +481,19 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		//sun sample
 		if (t_globals.IntegratorCFG.sunlight_enabled)
 		{
-			bool sunhit = !IntersectP(t_globals, Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
-				sunpos + make_float3(Samplers::get2D_PCGHash(t_seed), Samplers::get1D_PCGHash(t_seed)) * 5.f),
-				100);
-			if (sunhit) {
-				RGBSpectrum f_c = suncol * bsdf.f(wo, normalize(sunpos), primary_surface)
-					* dot(payload.w_shading_norm, normalize(sunpos)) * t_globals.IntegratorCFG.sunlight_intensity;
+			Ray shadow_ray = Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
+				sun_position + make_float3(Samplers::get2D_PCGHash(t_seed), Samplers::get1D_PCGHash(t_seed)) * 5.f);
+			bool sunhit = !IntersectP(t_globals, shadow_ray, 100);
+			if (sunhit)
+			{
+				Atmosphere atmosphere(sun_position, t_globals.IntegratorCFG.skylight_intensity);
+
+				RGBSpectrum sampled_sun_col = atmosphere.Le(make_float3(0, atmosphere.m_earthRadius + 1, 0),
+					normalize(shadow_ray.getDirection()), 0, FLT_MAX);
+
+				RGBSpectrum f_c = sampled_sun_col * bsdf.f(wo, normalize(sun_position), primary_surface)
+					* dot(payload.w_shading_norm, normalize(sun_position)) * t_globals.IntegratorCFG.sunlight_intensity;
+
 				light += f_c * throughtput;
 			}
 		}
