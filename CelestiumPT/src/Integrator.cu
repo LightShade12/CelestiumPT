@@ -565,10 +565,8 @@ __device__ RGBSpectrum IntegratorPipeline::SampleLd(const IntegratorGlobals& glo
 	if (!f || !Unoccluded(globals, payload, ls.pLight)) return Ld;
 
 	float dist = length(payload.w_pos - ls.pLight);
-	float dist_sq = dist * dist;
 	float cosTheta_emitter = AbsDot(wi, ls.n);
-	float Li_sample_pdf = (sampled_light.p * ls.pdf) * (1 / cosTheta_emitter) * dist_sq;
-	float p_l = Li_sample_pdf;
+	float p_l = (sampled_light.p * ls.pdf) * (1 / cosTheta_emitter) * Sqr(dist);
 	float p_b = bsdf.pdf(wo, wi);
 	float w_l = powerHeuristic(1, p_l, 1, p_b);
 
