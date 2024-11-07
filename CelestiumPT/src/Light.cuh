@@ -47,7 +47,7 @@ public:
 	__device__ RGBSpectrum PhiPower() const;
 	__device__ RGBSpectrum L(float3 p, float3 n, float3 w) const { return scale * Lemit; };
 	__device__ LightLiSample SampleLi(const IntegratorGlobals& t_globals, LightSampleContext ctx, float2 u2) const;
-	__device__ float PDF_Li(LightSampleContext ctx, float3 wi) const;//TODO:call tri pdf
+	__device__ float PDF_Li(LightSampleContext ctx, float3 wo, float3 confirmed_hit_wpos, float3 confirmed_hit_geo_norm) const;//TODO:call tri pdf
 
 private:
 	int object_id = -1;

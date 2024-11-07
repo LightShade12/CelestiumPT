@@ -520,10 +520,11 @@ void Renderer::renderFrame()
 			checkCudaErrors(cudaDeviceSynchronize());
 			//potential skips----------------
 			if (!m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.svgf_enabled &&
-				!m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.temporal_filter_enabled)
+				!m_CelestiumPTResourceAPI->m_IntegratorGlobals.IntegratorCFG.temporal_filter_enabled){
 				texCopy(m_CelestiumPTResourceAPI->RawIrradianceRenderBuffer,
 					m_CelestiumPTResourceAPI->SVGFFilteredIrradianceFrontBuffer, m_NativeRenderResolutionWidth,
 					m_NativeRenderResolutionHeight);
+			}
 		}
 
 		//Compute gradient samples==========================================

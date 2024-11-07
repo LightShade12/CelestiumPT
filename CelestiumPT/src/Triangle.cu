@@ -27,6 +27,12 @@ __device__ float Triangle::PDF(const ShapeSampleContext& ctx, float3 wi) const
 	//float dist_sq = dist * dist;
 	//float cosTheta_emitter = AbsDot(wi, ls.n);
 	//float Li_sample_pdf = (sampled_light.p * ls.pdf) * (1 / cosTheta_emitter) * dist_sq;
+	
+	/*
+	* float dist = length(prev_ctx.pos - payload.w_pos);
+	  float cosTheta_emitter = AbsDot(-ray.getDirection(), payload.w_geo_norm);
+	  light_pdf = light_pdf * (1.f / cosTheta_emitter) * Sqr(dist);
+	*/
 	return 0;
 }
 ;

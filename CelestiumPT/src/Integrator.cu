@@ -109,16 +109,13 @@ __device__ RGBSpectrum IntegratorPipeline::LiPathIntegrator(const IntegratorGlob
 		RGBSpectrum Le = payload.Le(wo);
 
 		if (Le) {
-			if (primary_surface)
+			if (primary_surface) {
 				light += Le * throughtput;
+			}
 			else {
 				const Light* arealight = payload.arealight;
-				float light_pdf = light_sampler.PMF(arealight) * arealight->PDF_Li(prev_ctx, ray.getDirection());
-				//---
-				float dist = length(prev_ctx.pos - payload.w_pos);
-				float cosTheta_emitter = AbsDot(-ray.getDirection(), payload.w_geo_norm);
-				light_pdf = light_pdf * (1.f / cosTheta_emitter) * Sqr(dist);
-				//---
+				float light_pdf = light_sampler.PMF(arealight) * arealight->PDF_Li(prev_ctx, wo,
+					payload.w_pos, payload.w_geo_norm);
 				float w_l = powerHeuristic(1, p_b, 1, light_pdf);
 				light += Le * throughtput * w_l;
 			}
@@ -228,7 +225,6 @@ __device__ ShapeIntersection initializePayloadFromGBuffer(const IntegratorGlobal
 	return out_payload;
 };
 
-//assuming centre(0,0,0)
 __device__ bool intersectSphere(float3 t_orig, float3 t_dir, float3 t_centre, float t_radius, float& r_t0, float& r_t1)
 {
 	// Compute coefficients of the quadratic equation
@@ -457,7 +453,9 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 
 		bool primary_surface = (bounce_depth == 0);
 
-		if (!primary_surface)payload = IntegratorPipeline::Intersect(t_globals, ray);
+		if (!primary_surface) {
+			payload = IntegratorPipeline::Intersect(t_globals, ray);
+		}
 
 		//miss--
 		if (payload.hit_distance < 0)//TODO: standardize invalid/miss payload definition
@@ -470,10 +468,10 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 					RGBSpectrum sun_Le = renderSun(t_globals, ray, sun_position);
 					light += sun_Le;
 				}
-				RGBSpectrum sky_radiance = IntegratorPipeline::sampleLdSky(t_globals, ray,
+				RGBSpectrum sky_Ld = IntegratorPipeline::sampleLdSky(t_globals, ray,
 					sun_position, t_seed);
 
-				light += sky_radiance * throughtput;
+				light += sky_Ld * throughtput;
 			}
 			break;
 		}
@@ -485,19 +483,17 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		RGBSpectrum Le = payload.Le(wo);
 
 		if (Le) {
-			if (primary_surface)
-				light += Le * throughtput;
-			else {
+			float w_l = 1;
+
+			if (!primary_surface)
+			{
 				const Light* arealight = payload.arealight;
-				float light_pdf = light_sampler.PMF(arealight) * arealight->PDF_Li(prev_ctx, ray.getDirection());
-				//---
-				float dist = length(prev_ctx.pos - payload.w_pos);
-				float cosTheta_emitter = AbsDot(-ray.getDirection(), payload.w_geo_norm);
-				light_pdf = light_pdf * (1.f / cosTheta_emitter) * Sqr(dist);
-				//---
-				float w_l = powerHeuristic(1, p_b, 1, light_pdf);
-				light += Le * throughtput * w_l;
+				float light_pdf = light_sampler.PMF(arealight) *
+					arealight->PDF_Li(prev_ctx, wo, payload.w_pos, payload.w_geo_norm);
+				w_l = powerHeuristic(1, p_b, 1, light_pdf);
 			}
+
+			light += Le * throughtput * w_l;
 		}
 
 		BSDF bsdf = payload.getBSDF(t_globals);
@@ -508,8 +504,8 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 
 		if (t_globals.IntegratorCFG.sunlight_enabled)
 		{
-			RGBSpectrum sun_Ld = IntegratorPipeline::sampleLdSun(t_globals, wo, payload, bsdf, sun_position,
-				primary_surface, t_seed);
+			RGBSpectrum sun_Ld = IntegratorPipeline::sampleLdSun(t_globals, wo, payload, bsdf,
+				sun_position, primary_surface, t_seed);
 
 			light += sun_Ld * throughtput;
 		}

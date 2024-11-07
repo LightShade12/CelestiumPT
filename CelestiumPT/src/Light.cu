@@ -47,7 +47,12 @@ __device__ LightLiSample Light::SampleLi(const IntegratorGlobals& t_globals, Lig
 	return LightLiSample(Le, wi, ss.p, ss.n, ss.pdf);
 }
 
-__device__ float Light::PDF_Li(LightSampleContext ctx, float3 wi) const
+__device__ float Light::PDF_Li(LightSampleContext ctx, float3 wo,
+	float3 confirmed_hit_wpos, float3 confirmed_hit_geo_norm) const
 {
-	return 1.f / area;
+	float area_pdf = 1.f / area;
+	float dist = length(ctx.pos - confirmed_hit_wpos);
+	float cosTheta_emitter = AbsDot(wo, confirmed_hit_geo_norm);
+	float pdf = area_pdf * (1.f / cosTheta_emitter) * Sqr(dist);
+	return pdf;
 }

@@ -140,7 +140,7 @@ __global__ void computeAverageLuminance(const IntegratorGlobals t_globals)
 		}
 
 		// We only need to calculate this once, so only a single thread is needed.
-		if (local_index == 0) {//TODO: use local_index
+		if (local_index == 0) {
 			// Here we take our weighted sum and divide it by the number of pixels
 			// that had luminance greater than zero (since the index == 0, we can
 			// use count_for_this_bin to find the number of black pixels)
