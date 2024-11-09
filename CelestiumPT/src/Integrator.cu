@@ -258,6 +258,12 @@ __device__ bool intersectSphere(float3 t_orig, float3 t_dir, float3 t_centre, fl
 	return true; // Ray intersects the sphere
 }
 
+__constant__ constexpr float SUN_DISTANCE_METERS = 100.0f;
+__device__ float AngularDiameterToPhysicalDiameter(float angle_rad, float distance)
+{
+	return 2.0f * distance * tanf(angle_rad / 2.0f);
+}
+
 struct Atmosphere {
 	__device__ Atmosphere(float3 t_sunpos, float t_sun_intensity) :
 		m_sun_position(t_sunpos), m_sun_intensity(t_sun_intensity) {};
@@ -369,19 +375,32 @@ __device__ RGBSpectrum IntegratorPipeline::sampleLdSun(const IntegratorGlobals& 
 {
 	RGBSpectrum Ld(0);
 
-	Ray shadow_ray = Ray(payload.w_pos + payload.w_geo_norm * 0.001f,
-		sun_position + make_float3(Samplers::get2D_PCGHash(r_seed), Samplers::get1D_PCGHash(r_seed)) * 5.f);
+	float3 sun_direction = normalize(sun_position);
+
+	//[-1,1]
+	float3 sample_offset = make_float3(
+		Samplers::get2D_PCGHash(r_seed) * 2 - 1,
+		Samplers::get1D_PCGHash(r_seed) * 2 - 1);
+
+	float sun_diameter = AngularDiameterToPhysicalDiameter(
+		t_globals.IntegratorCFG.sun_angular_diameter_radians, SUN_DISTANCE_METERS);
+
+	float3 shadow_dir = sun_position + (sample_offset * (sun_diameter / 2.0f));
+
+	Ray shadow_ray = Ray(payload.w_pos + payload.w_geo_norm * HIT_EPSILON,
+		normalize(shadow_dir));
 	bool hit_sun = !IntegratorPipeline::IntersectP(t_globals, shadow_ray, 100);
 
 	if (hit_sun)
 	{
 		Atmosphere atmosphere(sun_position, t_globals.IntegratorCFG.skylight_intensity);
 
-		RGBSpectrum sampled_sun_col = atmosphere.Le(make_float3(0, atmosphere.m_earthRadius + 1, 0),
-			normalize(shadow_ray.getDirection()), 0, FLT_MAX);
+		float3 position_on_earth = make_float3(0, atmosphere.m_earthRadius + 1, 0);
 
-		Ld = sampled_sun_col * bsdf.f(wo, normalize(sun_position), primary_surface)
-			* dot(payload.w_shading_norm, normalize(sun_position)) * t_globals.IntegratorCFG.sunlight_intensity;
+		RGBSpectrum sampled_sun_col = atmosphere.Le(position_on_earth, shadow_ray.getDirection(), 0, FLT_MAX);
+
+		Ld = (sampled_sun_col * t_globals.IntegratorCFG.sunlight_intensity) * bsdf.f(wo, sun_direction, primary_surface) *
+			dot(payload.w_shading_norm, sun_direction);
 	}
 
 	return Ld;
@@ -390,28 +409,31 @@ __device__ RGBSpectrum IntegratorPipeline::sampleLdSun(const IntegratorGlobals& 
 __device__ RGBSpectrum IntegratorPipeline::sampleLdSky(const IntegratorGlobals& t_globals, Ray t_ray, float3 t_sunpos, uint32_t t_seed)
 {
 	Atmosphere atmosphere(t_sunpos, t_globals.IntegratorCFG.skylight_intensity);
-	atmosphere.beta_R_scattering *= make_float3(t_globals.IntegratorCFG.rl_coeff_r, t_globals.IntegratorCFG.rl_coeff_g, t_globals.IntegratorCFG.rl_coeff_b);
-	RGBSpectrum light = atmosphere.Le(
+	atmosphere.beta_R_scattering *= make_float3(
+		t_globals.IntegratorCFG.rl_coeff_r,
+		t_globals.IntegratorCFG.rl_coeff_g,
+		t_globals.IntegratorCFG.rl_coeff_b);
+	RGBSpectrum Ld = atmosphere.Le(
 		make_float3(0, atmosphere.m_earthRadius + 1, 0),
 		normalize(t_ray.getDirection()), 0, FLT_MAX);
-	return light;
+	return Ld;
 }
 
 __device__ RGBSpectrum renderSun(const IntegratorGlobals& t_globals, Ray t_ray, float3 t_sun_position)
 {
-	float3 sun_dir = normalize(t_sun_position);
-	constexpr float sun_power = 100.0f;
-	constexpr float shape_mask_cutoff_threshold = 0.987f;
-	constexpr int mask_exponent = 128;
-	float shape_mask_factor = (powf(max(0.0, dot(t_ray.getDirection(), sun_dir)), mask_exponent));
-	shape_mask_factor = shape_mask_factor > shape_mask_cutoff_threshold ? 1.0f : 0.0f;
+	float3 sun_direction = normalize(t_sun_position);
+	constexpr float SUN_BRIGHTNESS = 100.0f;
+
+	float min_similarity_threshold = cosf(t_globals.IntegratorCFG.sun_angular_diameter_radians / 2.0f);
+	float similarity = dot(t_ray.getDirection(), sun_direction);
+	float shape_mask_factor = (similarity > min_similarity_threshold) ? 1 : 0;//step
 
 	Atmosphere atmosphere(t_sun_position, t_globals.IntegratorCFG.skylight_intensity);
 	RGBSpectrum sampled_sun_col = atmosphere.Le(
 		make_float3(0, atmosphere.m_earthRadius + 1, 0),
-		sun_dir, 0, FLT_MAX);
+		sun_direction, 0, FLT_MAX);
 
-	return sampled_sun_col * shape_mask_factor * sun_power;
+	return sampled_sun_col * SUN_BRIGHTNESS * shape_mask_factor;
 }
 
 __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const IntegratorGlobals& t_globals, int2 t_current_pix, uint32_t t_seed)
@@ -438,7 +460,8 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 		sinf(sun_phi) * (cosf(sun_theta)),
 		fabsf(sinf(sun_theta)) - 0.1f,
 		cosf(sun_phi) * (cosf(sun_theta)))
-		* t_globals.IntegratorCFG.sun_distance;
+		* SUN_DISTANCE_METERS;
+
 	//float3 sun_position = make_float3(sinf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta),
 	//	sinf(t_globals.IntegratorCFG.sun_theta),
 	//	cosf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta))
@@ -482,7 +505,8 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 
 		RGBSpectrum Le = payload.Le(wo);
 
-		if (Le) {
+		if (Le) 
+		{
 			float w_l = 1;
 
 			if (!primary_surface)

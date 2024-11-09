@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTFfromFile("../models/temp.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTFfromFile("../models/cs16_dust.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -264,7 +264,8 @@ void EditorSandbox::onRender(float delta_secs)
 					ImGui::SliderFloat("SunLight intensity", &(m_Renderer.getIntegratorSettings()->sunlight_intensity), 0, 30);
 					{
 						ImGui::Indent();
-						ImGui::SliderFloat("Sun distance", &(m_Renderer.getIntegratorSettings()->sun_distance), 0, 100);
+						ImGui::SliderAngle("Sun angular diameter", &(m_Renderer.getIntegratorSettings()->sun_angular_diameter_radians), 0.01, 90,
+							"%.3f deg", ImGuiSliderFlags_Logarithmic);
 						ImGui::SliderAngle("Sun Phi", &(m_Renderer.getIntegratorSettings()->sun_phi));
 						ImGui::SliderAngle("Sun Theta", &(m_Renderer.getIntegratorSettings()->sun_theta), -10, 90);
 						ImGui::Unindent();

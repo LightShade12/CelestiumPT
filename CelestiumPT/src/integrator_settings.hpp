@@ -12,7 +12,8 @@ struct IntegratorSettings {
 	float sunlight_intensity = 6;
 	float sun_theta = 0.785;
 	float sun_phi = -0.890118;//rads
-	float sun_distance = 90;
+	//float sun_distance = 90;//TODO:remove safely
+	float sun_angular_diameter_radians = 0.00872665;//0.5 deg
 
 	bool skylight_enabled = true;
 	float skylight_intensity = 790;
