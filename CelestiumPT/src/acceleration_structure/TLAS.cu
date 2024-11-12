@@ -12,7 +12,9 @@ TLAS::TLAS(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNo
 	build(read_blases, tlasnodes);
 	m_TLASRootIdx = int(tlasnodes.size() - 1);
 	m_TLASnodesCount = tlasnodes.size();
-	m_BoundingBox = tlasnodes[m_TLASRootIdx].m_BoundingBox;
+	if (m_TLASRootIdx > -1) {
+		m_BoundingBox = tlasnodes[m_TLASRootIdx].m_BoundingBox;
+	}
 };
 
 int TLAS::FindBestMatch(int* TLASwork_idx_list, int work_idx_list_size, int TLAS_A_idx, std::vector<TLASNode>& tlasnodes)
@@ -35,7 +37,9 @@ void TLAS::refresh(const thrust::universal_vector<BLAS>& read_blases, std::vecto
 	build(read_blases, tlasnodes);
 	m_TLASRootIdx = tlasnodes.size() - 1;
 	m_TLASnodesCount = tlasnodes.size();
-	m_BoundingBox = tlasnodes[m_TLASRootIdx].m_BoundingBox;
+	if (m_TLASRootIdx > -1) {
+		m_BoundingBox = tlasnodes[m_TLASRootIdx].m_BoundingBox;
+	}
 }
 void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<TLASNode>& tlasnodes)
 {
@@ -51,6 +55,8 @@ void TLAS::build(const thrust::universal_vector<BLAS>& read_blases, std::vector<
 		tlasnode.leftRight = 0; // makes it a leaf
 		tlasnodes.push_back(tlasnode);
 	}
+
+	if (m_BLASCount < 1)return;
 
 	// use agglomerative clustering to build the TLAS
 	int A = 0, B = FindBestMatch(TLASnodeIdx, nodeIndices, A, tlasnodes);

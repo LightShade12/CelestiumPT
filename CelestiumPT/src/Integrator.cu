@@ -454,18 +454,19 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 	LightSampleContext prev_ctx{};
 	float eta_scale = 1;
 
-	float sun_theta = t_globals.FrameIndex * 0.001;
-	float sun_phi = t_globals.FrameIndex * 0.005;
-	float3 sun_position = make_float3(
-		sinf(sun_phi) * (cosf(sun_theta)),
-		fabsf(sinf(sun_theta)) - 0.1f,
-		cosf(sun_phi) * (cosf(sun_theta)))
-		* SUN_DISTANCE_METERS;
+	//float sun_theta = t_globals.FrameIndex * 0.001;
+	//float sun_phi = t_globals.FrameIndex * 0.005;
+	//sun_phi = 1;
+	//float3 sun_position = make_float3(
+	//	sinf(sun_phi) * (cosf(sun_theta)),
+	//	fabsf(sinf(sun_theta)) - 0.3f,
+	//	cosf(sun_phi) * (cosf(sun_theta)))
+	//	* SUN_DISTANCE_METERS;
 
-	//float3 sun_position = make_float3(sinf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta),
-	//	sinf(t_globals.IntegratorCFG.sun_theta),
-	//	cosf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta))
-	//	* t_globals.IntegratorCFG.sun_distance;
+	float3 sun_position = make_float3(sinf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta),
+		sinf(t_globals.IntegratorCFG.sun_theta),
+		cosf(t_globals.IntegratorCFG.sun_phi) * cosf(t_globals.IntegratorCFG.sun_theta))
+		* SUN_DISTANCE_METERS;
 
 	//float3 sun_position = make_float3(0.266, 0.629, 0.257) * 100;
 	//RGBSpectrum suncol(1.000, 0.877, 0.822);
@@ -505,7 +506,7 @@ __device__ RGBSpectrum IntegratorPipeline::deferredEvaluatePixelSample(const Int
 
 		RGBSpectrum Le = payload.Le(wo);
 
-		if (Le) 
+		if (Le)
 		{
 			float w_l = 1;
 

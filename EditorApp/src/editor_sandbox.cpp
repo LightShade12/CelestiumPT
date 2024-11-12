@@ -20,7 +20,7 @@ void EditorSandbox::initialise()
 {
 	m_HostSceneHandle = m_Renderer.getCurrentScene();//non owning; empty-initialized scene structure
 
-	m_ModelImporter.loadGLTFfromFile("../models/cs16_dust.glb", m_HostSceneHandle);//uses host API to add scene geo
+	m_ModelImporter.loadGLTFfromFile("../models/empty_scene.glb", m_HostSceneHandle);//uses host API to add scene geo
 
 	m_GASBuilder.build(m_HostSceneHandle);
 
@@ -104,8 +104,8 @@ void EditorSandbox::onUpdate(float delta)
 				updatemesh |= true;
 			}
 			//if (mesh.host_mesh_handle.name == "Light") {
-			//	translation.x = mesh.translation.x + (1.4 * sinf(glfwGetTime() * 1));
-			//	translation.z = mesh.translation.x + (1.4 * cosf(glfwGetTime() * 1));
+			//	translation.x = mesh.translation.x + (1.4 * sinf(glfwGetTime() * 4));
+			//	translation.z = mesh.translation.x + (1.4 * cosf(glfwGetTime() * 4));
 			//	updatemesh |= true;
 			//}
 
