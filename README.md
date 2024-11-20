@@ -1,7 +1,7 @@
-<h1>CelestiumPT 0.2: A CUDA-based Interactive Pathtracer</h1>
+<h1><em>CelestiumPT 0.2.1:</em> A CUDA-based Interactive Pathtracer</h1>
 <hr>
-<img src="assets/repo_splash3.png">
-<img src="assets/repo_splash2.png">
+<img src="assets/repo_splash4.png">
+<img src="assets/repo_splash5.png">
 <h3>WORK IN PROGRESS ⚠</h3>
 <code>The library is not yet usable for external applications</code><br><br>
 CelestiumPT is a <a href="https://developer.nvidia.com/cuda-zone#:~:text=CUDA%C2%AE%20is%20a%20parallel,harnessing%20the%20power%20of%20GPUs.">CUDA</a> based hobby pathtracer that is being developed for learning purposes and to be suitable for realtime applications.<br>
@@ -23,10 +23,10 @@ For now, the project can only be built via  visual studio(recommended: visual st
 <li>Albedo texturing</li>
 <li>Multiple Importance Sampling</li>
 <li>Basic random light sampler</li>
-<li>Solid sky</li>
-<li>COD:Advanced Warfare style bloom</li>
+<li>Nishita sky model</li>
+<li>COD: Advanced Warfare style bloom</li>
 <li>AgX tonemapping</li>
-<li>Histogram-based auto-exposure</li>
+<li>Histogram-based centre-weighted auto-exposure</li>
 </ul>
 
 <hr>
@@ -36,7 +36,7 @@ The plan is to make the pathtracer somewhat closer to the kind used by Quake2RTX
 <h3>Planned features:</h3>
 <li>Metallic, glossy opaque dielectric materials</li>
 <li>Full PBR textures input support</li>
-<li>HDR environment map</li>
+<li>HDRI environment maps</li>
 <li>FSR 2</li>
 <li>Volumetrics</li>
 <li>ReSTIR</li>
